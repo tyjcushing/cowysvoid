@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cowy’s Void — dev • mtg • sci‑fantasy</title>
+  <meta name="description" content="Cowy’s Void — Tyler’s corner of the net: dev notes, MTG decks, and projects." />
+  <style>
+    :root{
+      --bg: #0b0d10;
+      --card: #0f1318;
+      --text: #e6edf3;
+      --muted: #9aa4ae;
+      --accent: #5cc8ff;
+      --accent-2: #8fff85;
+      --ring: rgba(92,200,255,.35);
+    }
+    @media (prefers-color-scheme: light) {
+      :root{ --bg:#f6f8fa; --card:#ffffff; --text:#0b0d10; --muted:#5a646d; --accent:#0077cc; --accent-2:#0a8f2d; --ring: rgba(0,119,204,.25); }
+    }
+
+    /* Base */
+    *{box-sizing:border-box}
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:inherit; text-decoration:none}
+    .container{max-width:1080px; margin:0 auto; padding:24px}
+
+    /* Shell */
+    header{position:sticky; top:0; z-index:10; backdrop-filter:saturate(140%) blur(8px); background:linear-gradient(to bottom, rgba(11,13,16,.8), rgba(11,13,16,.3)); border-bottom:1px solid rgba(255,255,255,.06)}
+    .nav{display:flex; align-items:center; gap:16px; justify-content:space-between; padding:14px 24px}
+    .brand{display:flex; align-items:center; gap:12px}
+    .brand-mark{width:28px; height:28px; border-radius:8px; background:
+      radial-gradient(140% 120% at 30% 20%, rgba(92,200,255,.16), transparent 60%),
+      radial-gradient(140% 120% at 80% 90%, rgba(143,255,133,.16), transparent 60%), var(--card);
+      border:1px solid rgba(255,255,255,.08); box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    .brand b{letter-spacing:.2px}
+    .nav a{padding:8px 10px; border-radius:10px; color:var(--muted)}
+    .nav a:hover{color:var(--text); background:rgba(255,255,255,.04)}
+
+    /* Hero card (re-uses your avatar vibe) */
+    .hero{margin-top:28px; border-radius:24px; background:
+      radial-gradient(120% 120% at 30% 20%, rgba(92,200,255,.16), transparent 60%),
+      radial-gradient(120% 120% at 80% 90%, rgba(143,255,133,.16), transparent 60%), var(--card);
+      border:1px solid rgba(255,255,255,.06); box-shadow:0 24px 60px rgba(0,0,0,.35); overflow:hidden; position:relative;
+      display:grid; grid-template-columns:1.1fr 1fr; gap:0; min-height:300px;
+    }
+    @media (max-width:900px){ .hero{grid-template-columns:1fr} }
+
+    .hero-left{padding:38px}
+    .code{line-height:.9; font-weight:900; font-size: clamp(48px, 12vmin, 120px); letter-spacing:-.03em;
+      background:linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow:0 0 18px rgba(92,200,255,.25);
+    }
+    .title{font-weight:800; font-size: clamp(18px, 3.6vmin, 28px); color:var(--text)}
+    .sub{font-size:clamp(12px,2.4vmin,14px); color:var(--muted)}
+    .cursor{ display:inline-block; width:.6ch; height:.8em; background: currentColor; opacity:.7; margin-left:3px; border-radius:2px; animation:blink 1s steps(2,start) infinite; }
+    @keyframes blink{50%{opacity:.15}}
+
+    .hero-actions{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap}
+    .btn{padding:10px 14px; border-radius:12px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); color:var(--text)}
+    .btn:hover{background:rgba(255,255,255,.08)}
+    .btn.primary{background:linear-gradient(90deg, var(--accent), var(--accent-2)); color:#0b0d10; font-weight:700; border:none}
+
+    .hero-right{display:flex; align-items:center; justify-content:center; padding:28px}
+    .hero-card{width:min(420px, 92%); aspect-ratio:1 / 1; border-radius:20px; background:
+      radial-gradient(120% 120% at 30% 20%, rgba(92,200,255,.16), transparent 60%),
+      radial-gradient(120% 120% at 80% 90%, rgba(143,255,133,.16), transparent 60%), var(--card);
+      border:1px solid rgba(255,255,255,.08); box-shadow:0 20px 50px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+      position:relative; overflow:hidden
+    }
+    .hero-chip{position:absolute; top:12px; left:12px; font-size:12px; color:var(--muted); background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); padding:6px 10px; border-radius:999px}
+
+    /* Quick cards */
+    .grid{display:grid; grid-template-columns:repeat(12,1fr); gap:16px; margin-top:22px}
+    .card{grid-column: span 6; background:var(--card); border:1px solid rgba(255,255,255,.06); border-radius:18px; padding:18px; box-shadow:0 10px 35px rgba(0,0,0,.25)}
+    @media (max-width:900px){ .card{grid-column: span 12} }
+    .card h3{margin:0 0 8px 0; font-size:18px}
+    .card p{margin:0; color:var(--muted); font-size:14px}
+    .list{margin:10px 0 0 0; padding:0; list-style:none; display:grid; gap:8px}
+    .list a{display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.03)}
+    .list a:hover{border-color:var(--ring); box-shadow:0 0 0 3px var(--ring)}
+
+    /* Footer */
+    footer{margin:40px 0 12px; color:var(--muted); font-size:12px; text-align:center}
+
+    /* Tiny flourish */
+    .ring{ position:absolute; inset:auto -40px -40px auto; width:180px; height:180px; border-radius:999px; background:radial-gradient(closest-side, rgba(92,200,255,.18), transparent); filter: blur(10px); pointer-events:none}
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="nav container" aria-label="Primary">
+      <div class="brand"><div class="brand-mark" aria-hidden="true"></div><b>Cowy’s Void</b></div>
+      <div class="links" role="menubar" aria-label="Main">
+        <a href="/index.html" role="menuitem" aria-current="page">Home</a>
+        <a href="/about.html" role="menuitem">About</a>
+        <a href="/decks.html" role="menuitem">MTG Decks</a>
+        <a href="/projects.html" role="menuitem">Projects</a>
+        <a href="/blog/" role="menuitem">Blog</a>
+        <a href="/contact.html" role="menuitem">Contact</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container" id="content">
+    <section class="hero" aria-labelledby="site-title">
+      <div class="hero-left">
+        <div class="code">Cowy</div>
+        <h1 class="title" id="site-title">Welcome to the Void<span class="cursor" aria-hidden="true"></span></h1>
+        <p class="sub">dev • mtg • sci‑fantasy — notes, projects, and decks I’m tinkering with.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="/decks.html">Browse MTG Decks</a>
+          <a class="btn" href="/about.html">About me</a>
+          <button class="btn" id="copyDiscord" aria-label="Copy Discord tag">Copy Discord</button>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="hero-card" role="img" aria-label="Minimal avatar canvas with soft gradients">
+          <div class="hero-chip">cowysvoid.dev</div>
+          <div class="code" aria-hidden="true"><>/</div>
+          <div class="title">Tyler • Commander Cowy</div>
+          <div class="sub" id="discordLine">Discord: <b id="discordTag">commander_cowy</b></div>
+          <div class="ring" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="Quick sections">
+      <article class="card" aria-labelledby="mtg-head">
+        <h3 id="mtg-head">Latest MTG Decks</h3>
+        <p>Commander brews and notes. Linked out to Archidekt.</p>
+        <ul class="list" id="latestDecks">
+          <!-- Filled by JS from /data/decks.json if present -->
+          <li style="color:var(--muted)">Add <code>/data/decks.json</code> to auto‑list recent decks.</li>
+        </ul>
+      </article>
+
+      <article class="card" aria-labelledby="notes-head">
+        <h3 id="notes-head">Dev Notes</h3>
+        <p>Salesforce/LWC, Python scripts, and web toybox.</p>
+        <ul class="list">
+          <li><a href="/blog/">Blog index →</a></li>
+          <li><a href="/projects.html">Featured projects →</a></li>
+          <li><a href="/uses.html">Setup / Uses →</a></li>
+        </ul>
+      </article>
+
+      <article class="card" aria-labelledby="about-head">
+        <h3 id="about-head">About</h3>
+        <p>Short bio, what I’m building, and how to reach me.</p>
+        <ul class="list">
+          <li><a href="/about.html">Read the bio →</a></li>
+          <li><a href="/contact.html">Contact & socials →</a></li>
+          <li><a href="/resume.pdf" target="_blank" rel="noopener">Résumé (PDF) →</a></li>
+        </ul>
+      </article>
+
+      <article class="card" aria-labelledby="now-head">
+        <h3 id="now-head">/now</h3>
+        <p>A living status page of what I’m learning and playing.</p>
+        <ul class="list">
+          <li><a href="/now.html">See the /now page →</a></li>
+          <li><a href="/library.html">Reading & watch list →</a></li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">© <span id="year"></span> Cowy’s Void — Built with vanilla HTML/CSS/JS. Colors/animation per site vibe.
+    </div>
+  </footer>
+
+  <script>
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Discord copy helper — set your actual tag once and it just works.
+    const discord = document.getElementById('discordTag').textContent.trim();
+    document.getElementById('copyDiscord').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(discord); 
+        const btn = document.getElementById('copyDiscord');
+        const old = btn.textContent; btn.textContent = 'Copied!';
+        setTimeout(()=> btn.textContent = old, 1200);
+      } catch(e){ alert('Copy failed'); }
+    });
+
+    // Optional: hydrate Latest MTG Decks from /data/decks.json if it exists
+    ;(async () => {
+      try {
+        const res = await fetch('/data/decks.json', { cache: 'no-store' });
+        if (!res.ok) return; // leave placeholder
+        const decks = await res.json();
+        const ul = document.getElementById('latestDecks');
+        ul.innerHTML = '';
+        // Expect shape: [{ name, archidekt, color, notes }]
+        decks.slice(0,4).forEach(d => {
+          const li = document.createElement('li');
+          li.innerHTML = `<a href="${d.archidekt}" target="_blank" rel="noopener">${d.name} →</a>` + (d.notes? `<span style="margin-left:8px; color:var(--muted)">${d.notes}</span>`: '');
+          ul.appendChild(li);
+        });
+      } catch(_){}
+    })();
+  </script>
+</body>
+</html>
