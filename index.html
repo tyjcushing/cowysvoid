@@ -152,39 +152,73 @@
   </script>
   <!-- Partials injector -->
   <script>
-    (async ()=>{
-      try{
-        // Helper: fetch a partial, hoist any <style> tags into <head>, and return the first non-style element
-        async function loadPartial(url){
-          const res = await fetch(url, {cache:'no-store'});
-          if(!res.ok) return null;
-          const html = await res.text();
-          const tpl = document.createElement('template');
-          tpl.innerHTML = html.trim();
-          // Move all <style> tags to <head> so CSS always applies
-          const styles = tpl.content.querySelectorAll('style');
-          styles.forEach(st => document.head.appendChild(st.cloneNode(true)));
-          // Return remaining content (first element)
-          const firstEl = [...tpl.content.children].find(el => el.tagName !== 'STYLE');
-          return firstEl ? firstEl : null;
+  (async () => {
+    try {
+      // Helper: fetch partial, hoist <style> into <head>, return the element
+      async function loadPartial(url) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+
+        // move all <style> tags to <head>
+        tpl.content.querySelectorAll('style').forEach(st => {
+          document.head.appendChild(st.cloneNode(true));
+          st.remove();
+        });
+
+        const el = tpl.content.firstElementChild;
+        return el || null;
+      }
+
+      // Inject NAV
+      const header = document.getElementById('site-header');
+      const navEl = await loadPartial('/partials/nav.html');
+      if (header && navEl) {
+        header.innerHTML = '';
+        header.appendChild(navEl);
+        initNav(header);  // <-- bind handlers now that it exists in DOM
+      }
+
+      // Inject DISCORD
+      const discordEl = await loadPartial('/partials/discord.html');
+      if (discordEl) document.body.appendChild(discordEl);
+
+      // Inject FOOTER
+      const footerEl = await loadPartial('/partials/footer.html');
+      if (footerEl) document.body.appendChild(footerEl);
+
+      // init function lives in the host page (not in the partial)
+      function initNav(scope) {
+        const btn   = scope.querySelector('.menu-toggle');
+        const panel = scope.querySelector('#nav-panel');
+
+        if (btn && panel) {
+          btn.addEventListener('click', () => {
+            const open = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
         }
 
-        // Inject Navbar into header
-        const header = document.getElementById('site-header');
-        const navEl = await loadPartial('/partials/nav.html');
-        if (navEl) { header.innerHTML = ''; header.appendChild(navEl); }
-
-        // Inject Discord button (append element to body end)
-        const discordEl = await loadPartial('/partials/discord.html');
-        if (discordEl) { document.body.appendChild(discordEl); }
-
-        // Inject Footer at the very end of <body>
-        const footerEl = await loadPartial('/partials/footer.html');
-        if (footerEl) { document.body.appendChild(footerEl); }
-      } catch (e) {
-        console.warn('Partial load failed:', e);
+        // mark active link
+        const here = location.pathname.replace(/\/+$/, '');
+        scope.querySelectorAll('.nav-link').forEach(a => {
+          let href = a.getAttribute('href')?.replace(/\/+$/, '') || '';
+          if (href === '/blog/') href = '/blog';
+          if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
+            a.setAttribute('aria-current', 'page');
+          }
+          if (here.startsWith('/blog') && href === '/blog') {
+            a.setAttribute('aria-current', 'page');
+          }
+        });
       }
-    })();
-  </script>
+    } catch (e) {
+      console.warn('Partial load failed:', e);
+    }
+  })();
+</script>
+
 </body>
 </html>
