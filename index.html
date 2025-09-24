@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cowy’s Void — dev • mtg • sci‑fantasy</title>
+  <title>Cowy’s Void — dev • mtg • sci-fantasy</title>
   <meta name="description" content="Cowy’s Void — Tyler’s corner of the net: dev notes, MTG decks, and projects." />
   <!-- Icons -->
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
@@ -74,6 +74,9 @@
     footer{margin:40px 0 12px; color:var(--muted); font-size:12px; text-align:center}
 
     .ring{ position:absolute; inset:auto -40px -40px auto; width:180px; height:180px; border-radius:999px; background:radial-gradient(closest-side, rgba(92,200,255,.18), transparent); filter: blur(10px); pointer-events:none}
+
+    /* Optional visual hint for disabled links while UC flag is on */
+    .uc-disabled { cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -107,7 +110,7 @@
         <h3 id="mtg-head">Latest MTG Decks</h3>
         <p>Commander brews and notes. Linked out to Archidekt.</p>
         <ul class="list" id="latestDecks">
-          <li style="color:var(--muted)">Add <code>/data/decks.json</code> to auto‑list recent decks.</li>
+          <li style="color:var(--muted)">Add <code>/data/decks.json</code> to auto-list recent decks.</li>
         </ul>
       </article>
 
@@ -127,7 +130,7 @@
         <ul class="list">
           <li><a href="/about.html">Read the bio →</a></li>
           <li><a href="/contact.html">Contact & socials →</a></li>
-          <li><a href="/resume.pdf" target="_blank" rel="noopener">Résumé (PDF) →</a></li>
+          <li><a href="/resume.pdf" target="_blank" rel="noopener" data-uc="off">Résumé (PDF) →</a></li>
         </ul>
       </article>
 
@@ -150,6 +153,46 @@
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
   </script>
+
+  <!-- Under Construction flag (HOME SCREEN ONLY) -->
+  <script>
+    // Toggle here when you’re ready to re-enable links:
+    const UC = {
+      enabled: true,                      // set to false to restore real links
+      url: '/under-construction.html',    // where to send users for now
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!UC.enabled) return;
+      // Limit to the home screen content area so nav/discord/footer still work
+      const scope = document.getElementById('content') || document;
+      const anchors = scope.querySelectorAll('a[href]');
+      anchors.forEach(a => {
+        // Allow opt-out per-link with data-uc="off"
+        if (a.dataset.uc === 'off') return;
+
+        // Skip hash-only anchors and mailto/tel
+        const href = a.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+
+        // Keep original href for later restore/debug
+        a.dataset.originalHref = href;
+
+        // Visually hint (optional)
+        a.classList.add('uc-disabled');
+        a.setAttribute('aria-disabled', 'true');
+        if (!a.title) a.title = 'Under construction';
+
+        // Intercept clicks (respect new-tab / modifier keys)
+        a.addEventListener('click', (e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank') return;
+          e.preventDefault();
+          window.location.href = UC.url;
+        });
+      });
+    });
+  </script>
+
   <!-- Partials injector -->
   <script>
   (async () => {
@@ -218,7 +261,7 @@
       console.warn('Partial load failed:', e);
     }
   })();
-</script>
+  </script>
 
 </body>
 </html>

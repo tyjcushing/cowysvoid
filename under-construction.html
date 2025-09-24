@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Under Construction — cowysVoid.dev</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <style>
+    :root{
+      --bg:#090a12; --card:#0b0f17; --text:#e8eaff; --muted:#9aa4c7;
+      --accent:#6aa7ff; --accent-2:#b388ff; --ring:rgba(130,160,255,.35);
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f6f7ff; --card:#ffffff; --text:#0b0d10; --muted:#5e6b85; --accent:#3d6cff; --accent-2:#7f68ff; --ring:rgba(61,108,255,.25); }
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:inherit; text-decoration:none}
+
+    .container{max-width:980px;margin:0 auto;padding:24px}
+    main{display:grid;place-items:center;padding:24px}
+    .wrap{
+      width:min(960px, 94vw);
+      border-radius:22px;
+      background:
+        radial-gradient(120% 120% at 30% 20%, rgba(106,167,255,.14), transparent 60%),
+        radial-gradient(120% 120% at 85% 90%, rgba(179,136,255,.14), transparent 60%),
+        var(--card);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:0 24px 60px rgba(0,0,0,.35);
+      padding:28px; text-align:center; position:relative; overflow:hidden;
+    }
+
+    /* “Console” tag */
+    .tag{
+      display:inline-flex; align-items:center; gap:8px;
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      color:var(--muted); font-size:12px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+    }
+    .blink{display:inline-block;width:.6ch;height:.9em;background:currentColor;opacity:.8;margin-left:4px;border-radius:2px;animation:blink 1s steps(2,start) infinite}
+    @keyframes blink{50%{opacity:.15}}
+    @media (prefers-reduced-motion: reduce){ .blink{animation:none;opacity:.5} }
+
+    .title{
+      margin:12px 0 6px;
+      font-weight:900; letter-spacing:-.02em;
+      font-size: clamp(28px, 6.5vw, 56px);
+      background:linear-gradient(90deg, var(--accent), var(--accent-2));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow:0 0 18px rgba(120,140,255,.35);
+    }
+    .sub{color:var(--muted); font-size:clamp(13px,2.8vw,16px); margin:0 auto 14px; max-width:64ch}
+
+    /* Image slot for your graphic */
+    .image-slot{
+      width:min(620px, 90%); aspect-ratio: 2 / 1;  /* roomy, fits 1000x500 nicely */
+      margin:18px auto; border-radius:16px;
+      border:1px dashed rgba(255,255,255,.16);
+      background:repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 10px, transparent 10px 20px);
+      display:grid; place-items:center; color:var(--muted);
+      overflow:hidden;
+    }
+    .image-slot img{display:block; width:100%; height:auto}
+
+    /* Progress */
+    .progress{
+      --p: 38%;
+      margin: 14px auto 6px; width:min(620px, 90%);
+      height: 10px; border-radius:999px;
+      background:rgba(255,255,255,.06); overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      position:relative;
+    }
+    .progress > span{
+      display:block; height:100%; width:var(--p);
+      background:linear-gradient(90deg, var(--accent), var(--accent-2));
+      box-shadow:0 0 20px rgba(106,167,255,.45);
+      transition:width .35s ease;
+    }
+    .progress-label{color:var(--muted); font-size:12px}
+
+    /* Buttons */
+    .actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px}
+    .btn{
+      padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04); color:var(--text); font-weight:600;
+      transition:background .2s, border-color .2s, transform .1s;
+    }
+    .btn:hover{ background:rgba(255,255,255,.08); border-color:var(--ring); transform:translateY(-1px) }
+    .btn.primary{ background:linear-gradient(90deg, var(--accent), var(--accent-2)); color:#0b0d10; border:none }
+
+    /* Checklist */
+    .checklist{margin:16px auto 0; padding:0; list-style:none; display:grid; gap:8px; max-width:620px; text-align:left}
+    .checklist li{
+      background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+      padding:10px 12px; border-radius:12px; color:var(--muted); font-size:14px;
+      display:flex; gap:10px; align-items:center;
+    }
+    .checklist code{color:var(--text)}
+
+    .ring{ position:absolute; inset:auto -40px -40px auto; width:200px; height:200px; border-radius:50%;
+      background:radial-gradient(closest-side, rgba(92,200,255,.18), transparent); filter:blur(10px); pointer-events:none; }
+  </style>
+</head>
+<body>
+  <!-- Optional partials -->
+  <header id="site-header"></header>
+
+  <main class="container">
+    <section class="wrap" aria-labelledby="u-title">
+      <span class="tag">dev/void:build <span class="blink" aria-hidden="true"></span></span>
+      <h1 class="title" id="u-title">Under Construction</h1>
+      <p class="sub" id="uc-sub">deploying code with more TODOs than features</p>
+
+      <div class="image-slot" id="drop">
+        <span>drop your hero image here (1000×500 looks great)</span>
+        <!-- <img src="/assets/your-image.png" alt="WIP art"> -->
+      </div>
+
+      <div class="progress" aria-label="Build progress">
+        <span id="uc-progress-bar" style="--p:42%"></span>
+      </div>
+      <div class="progress-label" id="uc-status">status: linting cosmos… 42%</div>
+
+      <div class="actions">
+        <a class="btn primary" href="/index.html">Take me home</a>
+        <a class="btn" href="/blog/">Peek at the blog</a>
+        <a class="btn" href="/decks.html">MTG decks</a>
+      </div>
+
+      <ul class="checklist" aria-label="Punch list">
+        <li>✅ hook up <code>/partials/nav.html</code>, <code>discord.html</code>, <code>footer.html</code></li>
+        <li>🔧 wire <code>decks.json</code> → deck list on <code>/decks.html</code></li>
+        <li>🧪 add a few posts to <code>/blog/</code></li>
+        <li>🗂️ build <code>/projects.html</code> cards</li>
+        <li>🎨 integrate BlackHole icon into manifest</li>
+        <li>📄 add <code>/uses.html</code> & <code>/now.html</code></li>
+        <li>🔒 set up proper security headers</li>
+        <li>⚡ minify & preload critical CSS</li>
+        <li>🧭 add sitemap & Open Graph tags</li>
+      </ul>
+
+      <div class="ring" aria-hidden="true"></div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <!-- Partials injector (re-use across pages) -->
+  <script>
+    (async ()=>{
+      try{
+        async function loadPartial(url){
+          const res = await fetch(url, {cache:'no-store'}); if(!res.ok) return null;
+          const html = await res.text();
+          const tpl = document.createElement('template'); tpl.innerHTML = html.trim();
+          // hoist any <style> into <head>
+          tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+          return tpl.content.firstElementChild || null;
+        }
+        const header = document.getElementById('site-header');
+        const nav = await loadPartial('/partials/nav.html'); if (header && nav){ header.innerHTML=''; header.appendChild(nav); if (window.initNav) initNav(header); }
+
+        const discord = await loadPartial('/partials/discord.html'); if (discord) document.body.appendChild(discord);
+        const footerHost = document.getElementById('site-footer');
+        const footer = await loadPartial('/partials/footer.html'); if (footer && footerHost){ footerHost.replaceWith(footer); }
+      }catch(e){ console.warn('partial load failed:', e); }
+    })();
+  </script>
+
+  <!-- Random pick on load (no cycling) -->
+  <script>
+    const subs = [
+      "deploying code with more TODOs than features",
+      "summoning ducks from the rubber duck oracle",
+      "404: finished product not found",
+      "ship it! (after three more coffees)",
+      "writing code that even future me won’t understand",
+      "npm installing the entire internet…",
+      "currently refactoring spaghetti into lasagna",
+      "debugging in production: the sequel",
+      "documenting… just kidding",
+      "waiting for CI to fail faster"
+    ];
+    const statuses = [
+      { text: "compiling jokes… 17%", pct: 17 },
+      { text: "linting cosmos… 42%", pct: 42 },
+      { text: "optimizing pizza delivery algorithm… 66%", pct: 66 },
+      { text: "re-rolling initiative… 5%", pct: 5 },
+      { text: "summoning merge dragons… 88%", pct: 88 },
+      { text: "running tests (on my patience)… 13%", pct: 13 },
+      { text: "deploying to the multiverse… 74%", pct: 74 },
+      { text: "goblins negotiating coffee breaks… 23%", pct: 23 },
+      { text: "hotfixing the hotfix… 91%", pct: 91 },
+      { text: "achieving 100% code coverage (in dreams)… 99%", pct: 99 }
+    ];
+    const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
+    const sub = pick(subs);
+    const st  = pick(statuses);
+    document.getElementById("uc-sub").textContent = sub;
+    document.getElementById("uc-status").textContent = "status: " + st.text;
+    document.getElementById("uc-progress-bar").style.setProperty("--p", `${st.pct}%`);
+  </script>
+</body>
+</html>
