@@ -1,9 +1,38 @@
-<!-- /partials/discord.html -->
+<style>
+  .discord-link {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 50;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: #9aa4c7;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45);
+    transition: background .25s, color .25s, border-color .25s, transform .15s;
+    text-decoration: none;
+  }
+  .discord-link:hover {
+    background: rgba(255,255,255,.08);
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .discord-icon {
+    width: 24px;
+    height: 24px;
+    filter: invert(90%) brightness(1.2);
+    flex-shrink: 0;
+  }
+</style>
+
 <a href="https://discordapp.com/users/273650695725514752"
-   target="_blank" rel="noopener" class="discord-link" style="
-   position:fixed; right:22px; bottom:22px; z-index:50; display:inline-flex; align-items:center; gap:10px;
-   background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px 14px; color:#9aa4c7;
-   box-shadow:0 10px 30px rgba(0,0,0,.45); transition:background .25s, color .25s, border-color .25s, transform .15s">
-  <img src="/assets/icons/discord.svg" class="discord-icon" alt="Discord" style="width:24px; height:24px; filter:invert(90%) brightness(1.2)"/>
+   target="_blank" rel="noopener"
+   class="discord-link">
+  <img src="/assets/icons/discord.svg" class="discord-icon" alt="Discord" />
   <span>Commander Cowy</span>
 </a>

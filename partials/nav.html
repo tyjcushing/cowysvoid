@@ -1,3 +1,49 @@
+<style>
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: rgba(11, 13, 16, .8);
+    backdrop-filter: blur(8px) saturate(140%);
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+  }
+  .nav .brand {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    font-weight: 700;
+    gap: 10px;
+  }
+  .nav .brand-mark {
+    width: 28px;
+    height: 28px;
+    background: url("/assets/icons/BlackHole.png") center/cover no-repeat;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .nav .links {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav .links a {
+    color: var(--text);
+    text-decoration: none;
+    padding: 6px 8px;
+    border-radius: 8px;
+    transition: background .25s, color .25s;
+  }
+  .nav .links a:hover {
+    background: rgba(255,255,255,.06);
+  }
+  .nav .links a[aria-current="page"] {
+    color: var(--accent);
+    font-weight: 600;
+  }
+</style>
+
 <nav class="nav container" aria-label="Primary">
   <div class="brand">
     <div class="brand-mark" aria-hidden="true"></div>

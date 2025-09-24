@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cowy’s Void — dev • mtg • sci‑fantasy</title>
+  <title>Cowy’s Void — dev • mtg • sci-fantasy</title>
   <meta name="description" content="Cowy’s Void — Tyler’s corner of the net: dev notes, MTG decks, and projects." />
   <!-- Icons -->
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
@@ -29,19 +29,6 @@
     html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     a{color:inherit; text-decoration:none}
     .container{max-width:1080px; margin:0 auto; padding:24px}
-
-    header{position:sticky; top:0; z-index:10; backdrop-filter:saturate(140%) blur(8px); background:linear-gradient(to bottom, rgba(11,13,16,.8), rgba(11,13,16,.3)); border-bottom:1px solid rgba(255,255,255,.06)}
-    .nav{display:flex; align-items:center; gap:16px; justify-content:space-between; padding:14px 24px}
-    .brand{display:flex; align-items:center; gap:12px}
-    .brand-mark{width:28px; height:28px; border-radius:8px; background:
-      radial-gradient(140% 120% at 30% 20%, rgba(92,200,255,.16), transparent 60%),
-      radial-gradient(140% 120% at 80% 90%, rgba(143,255,133,.16), transparent 60%), var(--card);
-      border:1px solid rgba(255,255,255,.08); box-shadow:0 10px 30px rgba(0,0,0,.35);
-      background-image:url('/assets/icons/BlackHole.png'); background-size:cover; background-position:center;
-    }
-    .brand b{letter-spacing:.2px}
-    .nav a{padding:8px 10px; border-radius:10px; color:var(--muted)}
-    .nav a:hover{color:var(--text); background:rgba(255,255,255,.04)}
 
     .hero{margin-top:28px; border-radius:24px; background:
       radial-gradient(120% 120% at 30% 20%, rgba(106,167,255,.18), transparent 60%),
@@ -87,13 +74,6 @@
     footer{margin:40px 0 12px; color:var(--muted); font-size:12px; text-align:center}
 
     .ring{ position:absolute; inset:auto -40px -40px auto; width:180px; height:180px; border-radius:999px; background:radial-gradient(closest-side, rgba(92,200,255,.18), transparent); filter: blur(10px); pointer-events:none}
-
-    /* Discord social link */
-    .discord-link{position:fixed; right:22px; bottom:22px; z-index:50; display:inline-flex; align-items:center; gap:10px;
-      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px 14px; color:var(--muted);
-      box-shadow:0 10px 30px rgba(0,0,0,.45); transition:background .25s, color .25s, border-color .25s, transform .15s}
-    .discord-link:hover{color:var(--text); background:rgba(255,255,255,.08); border-color:var(--ring); transform:translateY(-2px)}
-    .discord-icon{width:24px; height:24px; display:block; filter:invert(90%) brightness(1.2)}
   </style>
 </head>
 <body>
@@ -127,7 +107,7 @@
         <h3 id="mtg-head">Latest MTG Decks</h3>
         <p>Commander brews and notes. Linked out to Archidekt.</p>
         <ul class="list" id="latestDecks">
-          <li style="color:var(--muted)">Add <code>/data/decks.json</code> to auto‑list recent decks.</li>
+          <li style="color:var(--muted)">Add <code>/data/decks.json</code> to auto-list recent decks.</li>
         </ul>
       </article>
 
@@ -167,26 +147,17 @@
     </div>
   </footer>
 
-  <!-- Discord Social Link -->
-  <a href="https://discordapp.com/users/273650695725514752" target="_blank" rel="noopener" class="discord-link">
-    <img src="/assets/icons/discord.png" alt="Discord icon" class="discord-icon"/>
-    <span>Commander Cowy</span>
-  </a>
-
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
   </script>
-  <!-- Partials injector (optional): include this on every page to auto-inject shared UI like the Navbar and Discord button) -->
+  <!-- Partials injector -->
   <script>
-    // If a partial exists at /partials/discord.html, fetch & append it to the body on load
     (async ()=>{
       try{
         // Inject Navbar
         const header = document.getElementById('site-header');
         const navRes = await fetch('/partials/nav.html', {cache:'no-store'});
-        if (navRes.ok) {
-          header.innerHTML = await navRes.text();
-        }
+        if (navRes.ok) header.innerHTML = await navRes.text();
         // Inject Discord button
         const res = await fetch('/partials/discord.html', {cache:'no-store'});
         if(res.ok){
