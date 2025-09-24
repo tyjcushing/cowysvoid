@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cowy’s Void — dev • mtg • sci-fantasy</title>
+  <title>Cowy’s Void — dev • mtg • sci‑fantasy</title>
   <meta name="description" content="Cowy’s Void — Tyler’s corner of the net: dev notes, MTG decks, and projects." />
   <!-- Icons -->
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
@@ -107,7 +107,7 @@
         <h3 id="mtg-head">Latest MTG Decks</h3>
         <p>Commander brews and notes. Linked out to Archidekt.</p>
         <ul class="list" id="latestDecks">
-          <li style="color:var(--muted)">Add <code>/data/decks.json</code> to auto-list recent decks.</li>
+          <li style="color:var(--muted)">Add <code>/data/decks.json</code> to auto‑list recent decks.</li>
         </ul>
       </article>
 
@@ -154,19 +154,27 @@
   <script>
     (async ()=>{
       try{
-        // Inject Navbar
+        // Inject Navbar into header
         const header = document.getElementById('site-header');
         const navRes = await fetch('/partials/nav.html', {cache:'no-store'});
         if (navRes.ok) header.innerHTML = await navRes.text();
-        // Inject Discord button
-        const res = await fetch('/partials/discord.html', {cache:'no-store'});
-        if(res.ok){
-          const html = await res.text();
-          const wrap = document.createElement('div');
-          wrap.innerHTML = html;
-          document.body.appendChild(wrap.firstElementChild);
+
+        // Inject Discord button (append full HTML, not just first child)
+        const discordRes = await fetch('/partials/discord.html', {cache:'no-store'});
+        if (discordRes.ok) {
+          const discordHTML = await discordRes.text();
+          document.body.insertAdjacentHTML('beforeend', discordHTML);
         }
-      }catch(_){/* silently ignore */}
+
+        // Inject Footer at the very end of <body>
+        const footerRes = await fetch('/partials/footer.html', {cache:'no-store'});
+        if (footerRes.ok) {
+          const footerHTML = await footerRes.text();
+          document.body.insertAdjacentHTML('beforeend', footerHTML);
+        }
+      } catch (e) {
+        console.warn('Partial load failed:', e);
+      }
     })();
   </script>
 </body>

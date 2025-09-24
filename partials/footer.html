@@ -1,0 +1,33 @@
+<style>
+  .site-footer {
+    margin: 40px 0 12px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    padding: 20px 0;
+    border-top: 1px solid rgba(255,255,255,.06);
+    background: rgba(11, 13, 16, .6);
+    backdrop-filter: blur(6px) saturate(140%);
+  }
+  .site-footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .site-footer a:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<footer class="site-footer">
+  <div class="container">
+    © <span id="year"></span> Cowy’s Void —
+    <a href="/about.html">About</a> •
+    <a href="/contact.html">Contact</a> •
+    <a href="/projects.html">Projects</a>
+  </div>
+</footer>
+
+<script>
+  // Ensure year is updated dynamically
+  document.querySelector('.site-footer #year').textContent = new Date().getFullYear();
+</script>
