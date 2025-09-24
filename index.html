@@ -154,24 +154,33 @@
   <script>
     (async ()=>{
       try{
+        // Helper: fetch a partial, hoist any <style> tags into <head>, and return the first non-style element
+        async function loadPartial(url){
+          const res = await fetch(url, {cache:'no-store'});
+          if(!res.ok) return null;
+          const html = await res.text();
+          const tpl = document.createElement('template');
+          tpl.innerHTML = html.trim();
+          // Move all <style> tags to <head> so CSS always applies
+          const styles = tpl.content.querySelectorAll('style');
+          styles.forEach(st => document.head.appendChild(st.cloneNode(true)));
+          // Return remaining content (first element)
+          const firstEl = [...tpl.content.children].find(el => el.tagName !== 'STYLE');
+          return firstEl ? firstEl : null;
+        }
+
         // Inject Navbar into header
         const header = document.getElementById('site-header');
-        const navRes = await fetch('/partials/nav.html', {cache:'no-store'});
-        if (navRes.ok) header.innerHTML = await navRes.text();
+        const navEl = await loadPartial('/partials/nav.html');
+        if (navEl) { header.innerHTML = ''; header.appendChild(navEl); }
 
-        // Inject Discord button (append full HTML, not just first child)
-        const discordRes = await fetch('/partials/discord.html', {cache:'no-store'});
-        if (discordRes.ok) {
-          const discordHTML = await discordRes.text();
-          document.body.insertAdjacentHTML('beforeend', discordHTML);
-        }
+        // Inject Discord button (append element to body end)
+        const discordEl = await loadPartial('/partials/discord.html');
+        if (discordEl) { document.body.appendChild(discordEl); }
 
         // Inject Footer at the very end of <body>
-        const footerRes = await fetch('/partials/footer.html', {cache:'no-store'});
-        if (footerRes.ok) {
-          const footerHTML = await footerRes.text();
-          document.body.insertAdjacentHTML('beforeend', footerHTML);
-        }
+        const footerEl = await loadPartial('/partials/footer.html');
+        if (footerEl) { document.body.appendChild(footerEl); }
       } catch (e) {
         console.warn('Partial load failed:', e);
       }
