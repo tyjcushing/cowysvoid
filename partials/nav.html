@@ -1,45 +1,103 @@
 <style>
-  .nav {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:16px 24px;
-    background:rgba(11,13,16,.8);
-    backdrop-filter: blur(8px) saturate(140%);
-    border-bottom:1px solid rgba(255,255,255,.06);
+  /* Shell */
+  .site-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(11, 13, 16, .75);
+    backdrop-filter: blur(10px) saturate(140%);
+    border-bottom: 1px solid rgba(255,255,255,.06);
   }
-  .nav .brand { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:700; }
-  .nav .brand-mark{
-    display:block;
-    inline-size:28px;  /* width */
-    block-size:28px;   /* height */
-    border-radius:6px;
-    border:1px solid rgba(255,255,255,.08);
-    box-shadow:0 10px 30px rgba(0,0,0,.35);
-    /* Make sure nothing overrides the image */
-    background-color: transparent;
-    background-image: url("/assets/icons/BlackHole.png");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: cover;
+  .site-nav .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
   }
-  .nav .links{ display:flex; gap:20px; font-size:14px; font-weight:500; }
-  .nav .links a{
-    color: var(--text); text-decoration:none; padding:6px 8px; border-radius:8px; transition: background .25s, color .25s;
+
+  /* Brand (icon + title) */
+  .brand {
+    display: flex; align-items: center; gap: 10px;
   }
-  .nav .links a:hover{ background: rgba(255,255,255,.06); }
-  .nav .links a[aria-current="page"]{ color: var(--accent); font-weight:600; }
+  .brand-icon {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    display: block;
+  }
+  .brand-title {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-weight: 700; font-size: 16px; letter-spacing: .3px;
+    color: var(--text);
+  }
+
+  /* Links */
+  .nav-links {
+    display: flex; align-items: center; gap: 18px;
+  }
+  .nav-link {
+    position: relative;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 14px; font-weight: 600;
+    padding: 6px 8px; border-radius: 10px;
+    transition: color .2s ease, background .2s ease, text-shadow .25s ease, transform .12s ease;
+  }
+  .nav-link:hover, .nav-link:focus-visible {
+    color: var(--text);
+    background: rgba(255,255,255,.05);
+    text-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent-2);
+    transform: translateY(-1px);
+    outline: none;
+  }
+
+  /* Active page indicator */
+  .nav-link[aria-current="page"] {
+    color: var(--accent);
+    background: linear-gradient(90deg, rgba(106,167,255,.12), rgba(179,136,255,.12));
+    text-shadow: 0 0 8px rgba(106,167,255,.4);
+  }
+
+  /* Mobile wrap if needed */
+  @media (max-width: 720px){
+    .site-nav .nav-inner { gap: 10px; }
+    .nav-links { gap: 12px; }
+  }
 </style>
 
-<nav class="nav container" aria-label="Primary">
-  <div class="brand">
-    <div class="brand-mark" aria-hidden="true"></div>
-    <b>Cowy’s Void</b>
-  </div>
-  <div class="links" role="menubar" aria-label="Main">
-    <a href="/index.html" role="menuitem" aria-current="page">Home</a>
-    <a href="/about.html" role="menuitem">About</a>
-    <a href="/decks.html" role="menuitem">MTG Decks</a>
-    <a href="/projects.html" role="menuitem">Projects</a>
-    <a href="/blog/" role="menuitem">Blog</a>
-    <a href="/contact.html" role="menuitem">Contact</a>
+<nav class="site-nav" aria-label="Primary">
+  <div class="nav-inner container">
+    <div class="brand">
+      <!-- Use a real <img> so path issues are obvious in DevTools -->
+      <img src="/assets/icons/BlackHole.png" alt="" class="brand-icon" />
+      <span class="brand-title">cowysVoid.dev</span>
+    </div>
+
+    <div class="nav-links" role="menubar" aria-label="Main">
+      <a href="/index.html" class="nav-link" role="menuitem">Home</a>
+      <a href="/projects.html" class="nav-link" role="menuitem">Projects</a>
+      <a href="/blog/" class="nav-link" role="menuitem">Blog</a>
+      <a href="/decks.html" class="nav-link" role="menuitem">MTG</a>
+    </div>
   </div>
 </nav>
+
+<script>
+  // Mark current page active (aria-current="page")
+  (function() {
+    var here = location.pathname.replace(/\/+$/, ""); // trim trailing slash
+    document.querySelectorAll('.nav-link').forEach(function(a){
+      var href = a.getAttribute('href').replace(/\/+$/, "");
+      if (!href) return;
+      // treat /blog/ index as /blog
+      if (href === "/blog/") href = "/blog";
+      if (here === href || (here === "" && href === "/index.html")) {
+        a.setAttribute('aria-current', 'page');
+      }
+      // Also mark root "/" as Home for hosts that serve index at "/"
+      if (here === "" || here === "/") {
+        if (href === "/index.html") a.setAttribute('aria-current', 'page');
+      }
+      // If you're serving /blog as a directory, match any /blog/* paths
+      if (here.startsWith("/blog") && href === "/blog") {
+        a.setAttribute('aria-current', 'page');
+      }
+    });
+  })();
+</script>
