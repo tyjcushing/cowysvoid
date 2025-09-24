@@ -1,67 +1,48 @@
 <style>
-  /* Mobile-first shell */
+  /* Shell */
   .site-nav {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(11,13,16,.78);
+    background: rgba(11, 13, 16, .75);
     backdrop-filter: blur(10px) saturate(140%);
     border-bottom: 1px solid rgba(255,255,255,.06);
   }
   .site-nav .nav-inner {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px;
+    padding: 14px 24px;
   }
 
-  /* Brand (icon keeps 2:1 ratio) */
-  .brand { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
-  .brand-icon-wrap {
-    display: inline-block;
-    width: 44px;              /* mobile icon width */
+  /* Brand (icon + title) */
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0;
   }
   .brand-icon {
-    display: block;
-    width: 100%;
-    height: auto;             /* preserve aspect ratio (2:1) */
-    border-radius: 6px;
+    width: 28px; height: 28px; border-radius: 6px;
     border: 1px solid rgba(255,255,255,.08);
-    box-shadow: 0 8px 20px rgba(0,0,0,.35);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    display: block;
+    object-fit: cover;          /* avoids squish if the image is 1000x500 */
+    object-position: center;
   }
   .brand-title {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-weight: 700; font-size: 15px; letter-spacing: .25px;
-    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-weight: 700; font-size: 16px; letter-spacing: .3px;
+    color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  /* Menu button (mobile) */
-  .menu-toggle {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.03); color: var(--text);
-    transition: background .2s ease, border-color .2s ease;
-  }
-  .menu-toggle:hover { background: rgba(255,255,255,.08); border-color: var(--accent); }
-  .menu-toggle svg { width: 20px; height: 20px; }
-
-  /* Collapsible links area (mobile first: hidden) */
-  .nav-panel {
-    display: none;
-    border-top: 1px solid rgba(255,255,255,.06);
-    padding: 8px 12px 12px;
-  }
-  .nav-panel.open { display: block; }
-
-  /* Links list */
+  /* Desktop links (top-right inline) */
   .nav-links {
-    display: grid; gap: 8px;
-    margin: 0; padding: 0; list-style: none;
+    display: flex; align-items: center; gap: 18px;
+    list-style: none; margin: 0; padding: 0;
   }
   .nav-link {
     position: relative;
     color: var(--muted);
     text-decoration: none;
     font-size: 14px; font-weight: 600;
-    padding: 10px 12px; border-radius: 12px;
+    padding: 6px 8px; border-radius: 10px;
     transition: color .2s ease, background .2s ease, text-shadow .25s ease, transform .12s ease;
-    display: block;
   }
   .nav-link:hover, .nav-link:focus-visible {
     color: var(--text);
@@ -76,38 +57,63 @@
     text-shadow: 0 0 8px rgba(106,167,255,.4);
   }
 
-  /* Desktop / wider screens */
-  @media (min-width: 760px) {
-    .site-nav .nav-inner { padding: 14px 24px; }
-    .brand-icon-wrap { width: 52px; }        /* slightly larger icon on desktop */
-    .brand-title { font-size: 16px; }
-    .menu-toggle { display: none; }
-    .nav-panel { display: block; padding: 0; border-top: 0; }
-    .nav-links {
-      display: flex; align-items: center; gap: 18px;
-    }
-    .nav-link { padding: 8px 10px; }
+  /* Mobile menu (hamburger + dropdown) */
+  .menu-toggle {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.03); color: var(--text);
+    transition: background .2s ease, border-color .2s ease;
+  }
+  .menu-toggle:hover { background: rgba(255,255,255,.08); border-color: var(--accent); }
+  .menu-toggle svg { width: 20px; height: 20px; }
+
+  /* Mobile-only dropdown panel (hidden on desktop) */
+  .nav-panel {
+    display: none;
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding: 8px 12px 12px;
+  }
+  .nav-panel .nav-links {
+    display: grid; gap: 8px;
+  }
+  .nav-panel.open { display: block; }
+
+  /* Responsive behavior */
+  @media (max-width: 720px){
+    .site-nav .nav-inner { gap: 10px; }
+    /* Hide desktop inline links on mobile, show hamburger */
+    .site-nav .nav-links { display: none; }
+    .menu-toggle { display: inline-flex; }
   }
 </style>
 
 <nav class="site-nav" aria-label="Primary">
   <div class="nav-inner container">
     <div class="brand">
-      <span class="brand-icon-wrap">
-        <!-- width/height hints help layout stability; ratio ~2:1 -->
-        <img src="/assets/icons/BlackHole.png" width="1000" height="500" alt="" class="brand-icon">
-      </span>
+      <!-- Real <img> so path issues are obvious in DevTools -->
+      <img src="/assets/icons/BlackHole.png" alt="" class="brand-icon" />
       <span class="brand-title">cowysVoid.dev</span>
     </div>
 
+    <!-- Desktop inline links (right) -->
+    <ul class="nav-links" role="menubar" aria-label="Main">
+      <li><a href="/index.html"    class="nav-link" role="menuitem">Home</a></li>
+      <li><a href="/projects.html" class="nav-link" role="menuitem">Projects</a></li>
+      <li><a href="/blog/"         class="nav-link" role="menuitem">Blog</a></li>
+      <li><a href="/decks.html"    class="nav-link" role="menuitem">MTG</a></li>
+    </ul>
+
+    <!-- Mobile hamburger -->
     <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-panel">
-      <!-- hamburger -->
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/>
       </svg>
     </button>
   </div>
 
+  <!-- Mobile dropdown -->
   <div id="nav-panel" class="nav-panel" role="region" aria-label="Main menu">
     <ul class="nav-links" role="menubar">
       <li><a href="/index.html"    class="nav-link" role="menuitem">Home</a></li>
@@ -117,35 +123,3 @@
     </ul>
   </div>
 </nav>
-
-<script>
-  // Mobile toggle logic + mark current page
-  (function(){
-    var btn = document.querySelector('.menu-toggle');
-    var panel = document.getElementById('nav-panel');
-
-    if (btn && panel) {
-      btn.addEventListener('click', function(){
-        var open = panel.classList.toggle('open');
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
-    }
-
-    // Mark current page active (aria-current="page")
-    var here = location.pathname.replace(/\/+$/, ""); // trim trailing slash
-    document.querySelectorAll('.nav-link').forEach(function(a){
-      var href = a.getAttribute('href').replace(/\/+$/, "");
-      if (!href) return;
-      if (href === "/blog/") href = "/blog";
-      if (here === href || (here === "" && href === "/index.html")) {
-        a.setAttribute('aria-current', 'page');
-      }
-      if (here === "" || here === "/") {
-        if (href === "/index.html") a.setAttribute('aria-current', 'page');
-      }
-      if (here.startsWith("/blog") && href === "/blog") {
-        a.setAttribute('aria-current', 'page');
-      }
-    });
-  })();
-</script>
