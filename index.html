@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cowy’s Void — dev • mtg • sci‑fantasy</title>
   <meta name="description" content="Cowy’s Void — Tyler’s corner of the net: dev notes, MTG decks, and projects." />
+  <!-- Icons -->
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="64x64">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="180x180">
+  <link rel="apple-touch-icon" href="/assets/icons/BlackHole.png">
   <style>
     :root{
       --bg: #090a12;
@@ -31,6 +37,7 @@
       radial-gradient(140% 120% at 30% 20%, rgba(92,200,255,.16), transparent 60%),
       radial-gradient(140% 120% at 80% 90%, rgba(143,255,133,.16), transparent 60%), var(--card);
       border:1px solid rgba(255,255,255,.08); box-shadow:0 10px 30px rgba(0,0,0,.35);
+      background-image:url('/assets/icons/BlackHole.png'); background-size:cover; background-position:center;
     }
     .brand b{letter-spacing:.2px}
     .nav a{padding:8px 10px; border-radius:10px; color:var(--muted)}
@@ -118,7 +125,7 @@
       <div class="hero-right">
         <div class="hero-card" role="img" aria-label="Black hole image with blue-purple accents">
           <div class="hero-chip">cowysvoid.dev</div>
-          <img class="blackhole-img" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Black_hole_-_Messier_87_crop_max_res.jpg/512px-Black_hole_-_Messier_87_crop_max_res.jpg" alt="Event Horizon Telescope image of the M87 black hole" style="width:80%;max-width:360px;border-radius:16px;aspect-ratio:1/1;object-fit:cover;border:1px solid rgba(255,255,255,.08)"/>
+          <img class="blackhole-img" src="/assets/icons/BlackHole.png" alt="Stylized black hole icon" style="width:80%;max-width:360px;border-radius:16px;aspect-ratio:1/1;object-fit:cover;border:1px solid rgba(255,255,255,.08)"/>
           <div class="title" style="margin-top:8px">Blue • Purple • Space</div>
           <div class="sub">dev | MTG Commander | D&amp;D &amp; worldbuilder</div>
           <div class="ring" aria-hidden="true"></div>
@@ -168,7 +175,7 @@
   </main>
 
   <footer>
-    <div class="container">© <span id="year"></span> Cowy’s Void — Built with vanilla HTML/CSS/JS. Colors/animation per site vibe.
+    <div class="container">© <span id="year"></span> Cowy’s Void.
     </div>
   </footer>
 
@@ -180,6 +187,20 @@
 
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+  <!-- Partials injector (optional): include this on every page to auto-inject shared UI like the Discord button) -->
+  <script>
+    // If a partial exists at /partials/discord.html, fetch & append it to the body on load
+    (async ()=>{
+      try{
+        const res = await fetch('/partials/discord.html', {cache:'no-store'});
+        if(!res.ok) return;
+        const html = await res.text();
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html;
+        document.body.appendChild(wrap.firstElementChild);
+      }catch(_){/* silently ignore */}
+    })();
   </script>
 </body>
 </html>
