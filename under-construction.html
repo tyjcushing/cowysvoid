@@ -123,7 +123,7 @@
       <div class="progress" aria-label="Build progress">
         <span id="uc-progress-bar" style="--p:42%"></span>
       </div>
-      <div class="progress-label" id="uc-status">status: linting cosmos… 42%</div>
+      <div class="progress-label" id="uc-status">STATUS: linting cosmos… 42%</div>
 
       <div class="actions">
         <a class="btn primary" href="/index.html">Take me home</a>
@@ -204,7 +204,7 @@
     //const sub = pick(subs);
     const st  = pick(statuses);
    //document.getElementById("uc-sub").textContent = sub;
-    document.getElementById("uc-status").textContent = "status: " + st.text;
+    document.getElementById("uc-status").textContent = "STATUS: " + st.text;
     document.getElementById("uc-progress-bar").style.setProperty("--p", `${st.pct}%`);
   </script>
 </body>
