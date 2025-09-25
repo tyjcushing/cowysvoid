@@ -45,7 +45,7 @@
     }
     .title{font-weight:800; font-size: clamp(18px, 3.6vmin, 28px); color:var(--text)}
     .sub{font-size:clamp(12px,2.4vmin,14px); color:var(--muted)}
-    .cursor{ display:inline-block; width:.6ch; height:.8em; background: currentColor; opacity:.7; margin-left:3px; border-radius:2px; animation:blink 5s steps(2,start) infinite; }
+    .cursor{ display:inline-block; width:.6ch; height:.8em; background: currentColor; opacity:.7; margin-left:3px; border-radius:2px; animation:blink 1s steps(5,start) infinite; }
     @keyframes blink{50%{opacity:.15}}
 
     .hero-actions{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap}
@@ -147,10 +147,10 @@
     </section>
   </main>
 
-  <footer>
+  <!--<footer>
     <div class="container">© <span id="year"></span> Cowy’s Void.
     </div>
-  </footer>
+  </footer>-->
 
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
