@@ -113,7 +113,7 @@
     <section class="wrap" aria-labelledby="u-title">
       <span class="tag">dev/void:build <span class="blink" aria-hidden="true"></span></span>
       <h1 class="title" id="u-title">Under Construction</h1>
-      <p class="sub" id="uc-sub">deploying code with more TODOs than features</p>
+      <!--<p class="sub" id="uc-sub">deploying code with more TODOs than features</p>-->
 
       <!--<div class="image-slot" id="drop">
         <span>drop your hero image here (1000×500 looks great)</span>
@@ -133,10 +133,10 @@
 
       <ul class="checklist" aria-label="Punch list">
         <li>✅ hook up <code>/partials/nav.html</code>, <code>discord.html</code>, <code>footer.html</code></li>
+        <li>✅ write a todo list for the <code>under-construction.html</code> page </li>
         <li>🔧 wire <code>decks.json</code> → deck list on <code>/decks.html</code></li>
         <li>🧪 add a few posts to <code>/blog/</code></li>
         <li>🗂️ build <code>/projects.html</code> cards</li>
-        <li>🎨 integrate BlackHole icon into manifest</li>
         <li>📄 add <code>/uses.html</code> & <code>/now.html</code></li>
         <li>🔒 set up proper security headers</li>
         <li>⚡ minify & preload critical CSS</li>
@@ -174,16 +174,15 @@
   <!-- Random pick on load (no cycling) -->
   <script>
     const subs = [
-      "deploying code with more TODOs than features",
-      "summoning ducks from the rubber duck oracle",
-      "404: finished product not found",
-      "ship it! (after three more coffees)",
-      "writing code that even future me won’t understand",
-      "npm installing the entire internet…",
-      "currently refactoring spaghetti into lasagna",
+      "deploying code with more TODOs",
+      "summoning ducks",
+      "404: progress not found",
+      "ship it! (it's probably fine)",
+      "writing code that future me won’t understand",
+      "throwing hands",
+      "refactoring spaghetti into lasagna",
       "debugging in production: the sequel",
-      "documenting… just kidding",
-      "waiting for CI to fail faster"
+      "documenting… eh nevermind"
     ];
     const statuses = [
       { text: "compiling jokes… 17%", pct: 17 },
@@ -195,12 +194,16 @@
       { text: "deploying to the multiverse… 74%", pct: 74 },
       { text: "goblins negotiating coffee breaks… 23%", pct: 23 },
       { text: "hotfixing the hotfix… 91%", pct: 91 },
-      { text: "achieving 100% code coverage (in dreams)… 99%", pct: 99 }
+      { text: "achieving 100% code coverage (in dreams)… 99%", pct: 99 },
+      { text: "summoning ducks", pct: 1 },
+      { text: "debugging in production: the sequel", pct: 10 },
+      { text: "404: progress not found", pct: 0 },
+      { text: "awriting code that future me won’t understand", pct: 75 }
     ];
     const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
-    const sub = pick(subs);
+    //const sub = pick(subs);
     const st  = pick(statuses);
-    document.getElementById("uc-sub").textContent = sub;
+   //document.getElementById("uc-sub").textContent = sub;
     document.getElementById("uc-status").textContent = "status: " + st.text;
     document.getElementById("uc-progress-bar").style.setProperty("--p", `${st.pct}%`);
   </script>
