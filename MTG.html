@@ -113,8 +113,15 @@
 
   <!-- Helpers: robust extractors + mana pips + Scryfall -->
   <script>
-  const DEBUG = false;
+  // === DEBUG SWITCH ===
+  const DEBUG = true;
   const log = (...a) => DEBUG && console.log('[MTG]', ...a);
+  const warn = (...a) => DEBUG && console.warn('[MTG]', ...a);
+
+  // Set this to match your function path:
+  // - functions/api/archidekt/[id].js       -> '/api/archidekt'
+  // - functions/api/archidekt/deck/[id].js  -> '/api/archidekt/deck'
+  const ARCHIDEKT_ENDPOINT = '/api/archidekt';
 
   function renderPips(colors) {
     if (!Array.isArray(colors) || !colors.length) return '';
@@ -163,16 +170,39 @@
     return [...colors];
   }
 
+  // Fetch helper that won't crash on HTML responses
+  async function debugFetchJson(url, fetchOpts = {}) {
+    const res = await fetch(url, fetchOpts);
+    const ct = res.headers.get('content-type') || '';
+    const isJson = ct.includes('application/json');
+    log('FETCH', { url, status: res.status, ok: res.ok, contentType: ct });
+
+    if (!isJson) {
+      const text = await res.text();
+      warn('Non-JSON response body (first 300 chars):\n', text.slice(0, 300));
+      return { ok: res.ok, status: res.status, json: null, text, contentType: ct };
+    }
+
+    try {
+      const json = await res.json();
+      return { ok: res.ok, status: res.status, json, text: null, contentType: ct };
+    } catch (e) {
+      warn('JSON parse error:', e);
+      const text = await res.clone().text().catch(()=>'');
+      warn('Raw body (first 300 chars):', text.slice(0,300));
+      return { ok: false, status: res.status, json: null, text, contentType: ct };
+    }
+  }
+
   const _imgCache = new Map();
   async function fetchCommanderImage(name) {
     if (!name) return null;
     if (_imgCache.has(name)) return _imgCache.get(name);
 
     async function tryUrl(url) {
-      const r = await fetch(url, { cache: 'force-cache' });
-      if (!r.ok) return null;
-      const j = await r.json();
-      return j?.image_uris?.art_crop || j?.image_uris?.normal || j?.image_uris?.large || null;
+      const { ok, json, status } = await debugFetchJson(url, { cache: 'force-cache' });
+      if (!ok || !json) { warn('Scryfall fetch failed', { url, status }); return null; }
+      return json?.image_uris?.art_crop || json?.image_uris?.normal || json?.image_uris?.large || null;
     }
 
     let img = await tryUrl(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
@@ -193,7 +223,11 @@
     try{
       const res = await fetch('/data/decks.json', { cache: 'no-store' });
       if(res.ok) state.all = (await res.json()) || [];
-    }catch{ state.all = []; }
+      log('Loaded /data/decks.json', state.all);
+    }catch(e){
+      warn('Failed to load /data/decks.json', e);
+      state.all = [];
+    }
 
     state.all.sort((a,b)=> new Date(b.updated||0) - new Date(a.updated||0));
     state.filtered = state.all.slice();
@@ -282,7 +316,6 @@
     render();
   }
 
-  // NOTE: *** Endpoint changed here to match your repo structure ***
   async function enrichDecksFromAPI(items){
     const limit = 3;
     const queue = items.slice();
@@ -292,14 +325,18 @@
     async function worker(){
       while(queue.length){
         const d = queue.shift();
-        const api = d.apiUrl || (d.id ? `/api/archidekt/${d.id}` : null); // <-- no /deck
-        if(!api) continue;
+        const api = d.apiUrl || (d.id ? `${ARCHIDEKT_ENDPOINT}/${d.id}` : null);
+        if(!api) { warn('No API URL for deck', d); continue; }
 
         try{
-          const res = await fetch(api, { cache: 'no-store' });
-          if(!res.ok) throw new Error(`API ${res.status}`);
-          const json = await res.json();
-          log('API json for', d.id, json);
+          const { ok, status, json, text, contentType } = await debugFetchJson(api, { cache: 'no-store' });
+
+          if (!ok || !json) {
+            warn('Enrich failed', { id: d.id, status, contentType, sample: (text||'').slice(0,120) });
+            continue; // keep the card with whatever we had locally
+          }
+
+          log('Enrich json (id=' + d.id + ')', json);
 
           const title = getDeckTitle(json);
           if (title && !d.title) d.title = title;
@@ -323,7 +360,7 @@
             if (img) d.commanderImage = img;
           }
         }catch(e){
-          console.warn('API enrich failed for', d.id, e);
+          warn('Worker exception for id='+d.id, e);
         }
       }
     }
@@ -336,8 +373,10 @@
         await enrichDecksFromAPI(state.all);
         state.filtered = state.all.slice();
         render();
+      } else {
+        warn('No deck ids in /data/decks.json — enrichment skipped.');
       }
-    }catch(e){ console.warn(e); }
+    }catch(e){ warn('DOMContentLoaded error', e); }
 
     const q = document.getElementById('q');
     const clearBtn = document.getElementById('clearBtn');
@@ -381,12 +420,12 @@
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
           });
         }
-        const here = location.pathname.replace(/\/+$/, '');
+        const here = location.pathname.replace(/\/+$/, '').toLowerCase();
         scope.querySelectorAll('.nav-link').forEach(a => {
-          let href = a.getAttribute('href')?.replace(/\/+$/, '') || '';
+          let href = (a.getAttribute('href') || '').replace(/\/+$/, '').toLowerCase();
           if (href === '/blog/') href = '/blog';
           if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
-          if (here.toLowerCase().includes('/mtg')) a.setAttribute('aria-current', 'page'); // handle MTG.html
+          if (here.includes('/mtg')) a.setAttribute('aria-current', 'page');
           if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
         });
       }
