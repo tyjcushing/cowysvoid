@@ -1,4 +1,3 @@
-// functions/api/archidekt/deck/[id].js
 export async function onRequest(context) {
   const { params, request } = context;
   const id = params?.id;
@@ -24,7 +23,6 @@ export async function onRequest(context) {
   }
 
   if (!upstreamRes.ok) {
-    // Surface upstream error as JSON so you can see what’s wrong
     return json({
       ok:false, where:'upstream',
       status: upstreamRes.status, statusText: upstreamRes.statusText,
