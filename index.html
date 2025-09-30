@@ -31,7 +31,7 @@
     .container{max-width:1080px; margin:0 auto; padding:24px}
 
     /* === Background video layer (behind everything) === */
-    .bg-video { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+    .bg-video { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
     .bg-video video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s ease; }
     .bg-video.ready video { opacity: 0.35; }
     .bg-video::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 120% at 50% 35%, rgba(0,0,0,.2), rgba(0,0,0,.55)); pointer-events: none; }
@@ -44,14 +44,15 @@
     }
     @media (max-width:900px){ .hero{grid-template-columns:1fr} }
 
-    .hero-left{padding:38px}
+    .hero-left{padding:48px 72px}
     .code{
-      display:block; width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      display:block; width:100%; white-space:nowrap; overflow:hidden; text-overflow:clip;
       line-height:.9; font-weight:900; 
       font-size: clamp(48px, 12vmin, 120px); letter-spacing:-.03em;
       background:linear-gradient(90deg, var(--accent), var(--accent-2)); 
       -webkit-background-clip:text; background-clip:text; color:transparent;
       text-shadow:0 0 22px rgba(120,140,255,.35);
+      padding-inline: .2em;
     }
     .title{font-weight:800; font-size: clamp(18px, 3.6vmin, 28px); color:var(--text)}
     .sub{font-size:clamp(12px,2.4vmin,14px); color:var(--muted)}
@@ -87,15 +88,20 @@
 
     /* Optional visual hint for disabled links while UC flag is on */
     .uc-disabled { cursor: not-allowed; }
+  
+    /* Raise content above video */
+    .app-layer { position: relative; z-index: 1; }
   </style>
 </head>
 <body>
-  <!-- Background video container (injected only on good connections via JS) -->
+  <!-- Background video container (kept behind via z-index:0 so it isn't hidden by the body background) -->
   <div id="bgVideo" class="bg-video" aria-hidden="true">
-    <video id="bgVideoEl" playsinline muted loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
   </div>
 
-  <header id="site-header" aria-label="Primary"></header>
+  <!-- Content layer raised above the video -->
+  <div class="app-layer">
+    <header id="site-header" aria-label="Primary"></header>
 
   <main class="container" id="content">
     <section class="hero" aria-labelledby="site-title">
@@ -163,6 +169,7 @@
       </article>-->
     </section>
   </main>
+  </div><!-- /.app-layer -->
 
   <!--<footer>
     <div class="container">© <span id="year"></span> Cowy’s Void.
@@ -179,34 +186,19 @@
 
   <!-- Under Construction flag (HOME SCREEN ONLY) -->
   <script>
-    // Toggle here when you’re ready to re-enable links:
-    const UC = {
-      enabled: true,                      // set to false to restore real links
-      url: '/under-construction.html',    // where to send users for now
-    };
-
+    const UC = { enabled: true, url: '/under-construction.html' };
     document.addEventListener('DOMContentLoaded', () => {
       if (!UC.enabled) return;
-      // Limit to the home screen content area so nav/discord/footer still work
       const scope = document.getElementById('content') || document;
       const anchors = scope.querySelectorAll('a[href]');
       anchors.forEach(a => {
-        // Allow opt-out per-link with data-uc="off"
         if (a.dataset.uc === 'off') return;
-
-        // Skip hash-only anchors and mailto/tel
         const href = a.getAttribute('href');
         if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
-
-        // Keep original href for later restore/debug
         a.dataset.originalHref = href;
-
-        // Visually hint (optional)
         a.classList.add('uc-disabled');
         a.setAttribute('aria-disabled', 'true');
         if (!a.title) a.title = 'Under construction';
-
-        // Intercept clicks (respect new-tab / modifier keys)
         a.addEventListener('click', (e) => {
           if (e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank') return;
           e.preventDefault();
@@ -220,54 +212,40 @@
   <script>
   (async () => {
     try {
-      // Helper: fetch partial, hoist <style> into <head>, return the element
       async function loadPartial(url) {
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) return null;
         const html = await res.text();
         const tpl = document.createElement('template');
         tpl.innerHTML = html.trim();
-
-        // move all <style> tags to <head>
         tpl.content.querySelectorAll('style').forEach(st => {
           document.head.appendChild(st.cloneNode(true));
           st.remove();
         });
-
         const el = tpl.content.firstElementChild;
         return el || null;
       }
-
-      // Inject NAV
       const header = document.getElementById('site-header');
       const navEl = await loadPartial('/partials/nav.html');
       if (header && navEl) {
         header.innerHTML = '';
         header.appendChild(navEl);
-        initNav(header);  // <-- bind handlers now that it exists in DOM
+        initNav(header);
       }
-
-      // Inject DISCORD
       const discordEl = await loadPartial('/partials/discord.html');
       if (discordEl) document.body.appendChild(discordEl);
-
-      // Inject FOOTER
       const footerEl = await loadPartial('/partials/footer.html');
       if (footerEl) document.body.appendChild(footerEl);
 
-      // init function lives in the host page (not in the partial)
       function initNav(scope) {
         const btn   = scope.querySelector('.menu-toggle');
         const panel = scope.querySelector('#nav-panel');
-
         if (btn && panel) {
           btn.addEventListener('click', () => {
             const open = panel.classList.toggle('open');
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
           });
         }
-
-        // mark active link
         const here = location.pathname.replace(/\/+$/, '');
         scope.querySelectorAll('.nav-link').forEach(a => {
           let href = a.getAttribute('href')?.replace(/\/+$/, '') || '';
@@ -290,26 +268,31 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      // Heuristic: require fast connection, not on data saver, and prefer wifi/ethernet when detectable
       const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
       const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
       const allowVideo = isFast && isWifiLike;
-
-      if (!allowVideo) return; // keep gradient/card bg only
 
       const wrap = document.getElementById('bgVideo');
       const vid  = document.getElementById('bgVideoEl');
       if (!wrap || !vid) return;
 
-      // Set src late so the browser doesn't fetch unless allowed
+      if (!allowVideo) {
+        wrap.style.display = 'none';
+        return;
+      }
+
       vid.src = '/assets/Blackhole_Animtation.mp4';
-      vid.addEventListener('loadeddata', () => {
+
+      const onReady = () => {
         wrap.classList.add('ready');
         const p = vid.play();
         if (p && typeof p.catch === 'function') p.catch(() => {});
-      }, { once: true });
+      };
+
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
     });
   </script>
 
 </body>
-</html>
