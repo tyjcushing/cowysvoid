@@ -30,6 +30,12 @@
     a{color:inherit; text-decoration:none}
     .container{max-width:1080px; margin:0 auto; padding:24px}
 
+    /* === Background video layer (behind everything) === */
+    .bg-video { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+    .bg-video video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s ease; }
+    .bg-video.ready video { opacity: 0.35; }
+    .bg-video::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 120% at 50% 35%, rgba(0,0,0,.2), rgba(0,0,0,.55)); pointer-events: none; }
+
     .hero{margin-top:28px; border-radius:24px; background:
       radial-gradient(120% 120% at 30% 20%, rgba(106,167,255,.18), transparent 60%),
       radial-gradient(120% 120% at 80% 90%, rgba(179,136,255,.18), transparent 60%), var(--card);
@@ -39,13 +45,17 @@
     @media (max-width:900px){ .hero{grid-template-columns:1fr} }
 
     .hero-left{padding:38px}
-    .code{line-height:.9; font-weight:900; font-size: clamp(48px, 12vmin, 120px); letter-spacing:-.03em;
-      background:linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent;
+    .code{
+      display:block; width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      line-height:.9; font-weight:900; 
+      font-size: clamp(48px, 12vmin, 120px); letter-spacing:-.03em;
+      background:linear-gradient(90deg, var(--accent), var(--accent-2)); 
+      -webkit-background-clip:text; background-clip:text; color:transparent;
       text-shadow:0 0 22px rgba(120,140,255,.35);
     }
     .title{font-weight:800; font-size: clamp(18px, 3.6vmin, 28px); color:var(--text)}
     .sub{font-size:clamp(12px,2.4vmin,14px); color:var(--muted)}
-    .cursor{ display:inline-block; width:.6ch; height:.8em; background: currentColor; opacity:.7; margin-left:3px; border-radius:2px; animation:blink 1s steps(5,start) infinite; }
+    .cursor{ display:inline-block; width:.6ch; height:.7em; background: currentColor; opacity:.7; margin-left:3px; border-radius:2px; animation:blink 2s steps(50,start) infinite; }
     @keyframes blink{50%{opacity:.15}}
 
     .hero-actions{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap}
@@ -80,12 +90,17 @@
   </style>
 </head>
 <body>
+  <!-- Background video container (injected only on good connections via JS) -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
   <header id="site-header" aria-label="Primary"></header>
 
   <main class="container" id="content">
     <section class="hero" aria-labelledby="site-title">
       <div class="hero-left">
-        <div class="code">Cowy</div>
+        <div class="code">Cowy's <> Void</div>
         <h1 class="title" id="site-title">Welcome to the Void<span class="cursor" aria-hidden="true"></span></h1>
         <p class="sub">Salesforce dev & LWC tinkerer • MTG Commander brewer • D&amp;D &amp; worldbuilder.</p>
         <div class="hero-actions">
@@ -108,13 +123,14 @@
     </section>
 
     <section class="grid" aria-label="Quick sections">
+      <!--
       <article class="card" aria-labelledby="mtg-head">
         <h3 id="mtg-head">Latest MTG Decks</h3>
         <p>Commander brews and notes. Linked out to Archidekt.</p>
         <ul class="list" id="latestDecks">
           <li style="color:var(--muted)">Add <code>/data/decks.json</code> to auto-list recent decks.</li>
         </ul>
-      </article>
+      </article>-->
 
       <article class="card" aria-labelledby="notes-head">
         <h3 id="notes-head">Dev Notes</h3>
@@ -126,6 +142,7 @@
         </ul>
       </article>
 
+      <!--
       <article class="card" aria-labelledby="about-head">
         <h3 id="about-head">About</h3>
         <p>Short bio, what I’m building, and how to reach me.</p>
@@ -134,8 +151,8 @@
           <li><a href="/contact.html">Contact & socials →</a></li>
           <li><a href="/resume.pdf" target="_blank" rel="noopener" data-uc="off">Résumé (PDF) →</a></li>
         </ul>
-      </article>
-
+      </article>-->
+      <!--
       <article class="card" aria-labelledby="now-head">
         <h3 id="now-head">/now</h3>
         <p>A living status page of what I’m learning and playing.</p>
@@ -143,7 +160,7 @@
           <li><a href="/now.html">See the /now page →</a></li>
           <li><a href="/library.html">Reading & watch list →</a></li>
         </ul>
-      </article>
+      </article>-->
     </section>
   </main>
 
@@ -153,7 +170,11 @@
   </footer>-->
 
   <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
+    // Guard in case #year doesn't exist while footer is commented
+    (function(){
+      const y = document.getElementById('year');
+      if (y) y.textContent = new Date().getFullYear();
+    })();
   </script>
 
   <!-- Under Construction flag (HOME SCREEN ONLY) -->
@@ -263,6 +284,31 @@
       console.warn('Partial load failed:', e);
     }
   })();
+  </script>
+
+  <!-- Connection-aware background video loader -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      // Heuristic: require fast connection, not on data saver, and prefer wifi/ethernet when detectable
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      if (!allowVideo) return; // keep gradient/card bg only
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      // Set src late so the browser doesn't fetch unless allowed
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+      vid.addEventListener('loadeddata', () => {
+        wrap.classList.add('ready');
+        const p = vid.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      }, { once: true });
+    });
   </script>
 
 </body>
