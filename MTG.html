@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MTG — Cowy’s Void</title>
+  <meta name="description" content="Magic: The Gathering hub — deck library with API-powered details and commander art." />
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+  <style>
+    :root{ --bg:#090a12; --card:#0b0f17; --text:#e8eaff; --muted:#9aa4c7; --accent:#6aa7ff; --accent-2:#b388ff; --ring:rgba(130,160,255,.35) }
+    @media (prefers-color-scheme: light){ :root{ --bg:#f6f7ff; --card:#ffffff; --text:#0b0d10; --muted:#5e6b85; --accent:#3d6cff; --accent-2:#7f68ff; --ring:rgba(61,108,255,.25) } }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:1080px;margin:0 auto;padding:24px}
+
+    header.page h1{margin:6px 0 6px;font-weight:900;letter-spacing:-.015em;font-size:clamp(28px,3.8vmin,44px)}
+    header.page p{margin:0;color:var(--muted)}
+
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+    .input{flex:1 1 260px;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .input input{all:unset;flex:1}
+    .btn{padding:10px 14px;border-radius:12px;background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#0b0d10;font-weight:700;cursor:pointer}
+    .btn.ghost{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text)}
+
+    .filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+    .chip{font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,.08);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.03);cursor:pointer}
+    .chip.active{color:var(--text);border-color:var(--ring);box-shadow:0 0 0 3px var(--ring)}
+
+    .section{margin:18px 0 8px}
+    .section h2{margin:0 0 6px;font-size:18px;color:var(--text)}
+
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:12px}
+
+    /* Media card layout (no iframes) */
+    .card{grid-column:span 6;background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:start}
+    @media (max-width:900px){ .card{grid-column:span 12} }
+    @media (max-width:600px){ .card{grid-template-columns:1fr} }
+
+    .card h3{margin:0 0 6px 0;font-size:18px}
+    .meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-bottom:8px}
+    .notes{color:var(--muted);font-size:14px;margin:8px 0 12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+
+    /* Commander image */
+    .thumb{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg, rgba(255,255,255,.04), rgba(255,255,255,.02));box-shadow:0 6px 18px rgba(0,0,0,.25)}
+
+    /* Mana pips */
+    .pips{display:flex;gap:6px;align-items:center}
+    .pip{width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;border:1px solid rgba(255,255,255,.18);box-shadow:0 0 0 1px rgba(0,0,0,.15) inset}
+    .pip.W{background:#f4f0d9;color:#221}
+    .pip.U{background:#b7d6f3;color:#022}
+    .pip.B{background:#d0c8cf;color:#111}
+    .pip.R{background:#f4c0b3;color:#210}
+    .pip.G{background:#c7e2c1;color:#021}
+
+    /* Tiny stats row */
+    .stats{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+    .stats .pill{padding:3px 8px}
+
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);font-size:12px;color:var(--text)}
+    .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+    .tag{font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,.08);padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.03)}
+
+    .empty{color:var(--muted);padding:24px;border:1px dashed rgba(255,255,255,.12);border-radius:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <header id="site-header" aria-label="Primary"></header>
+
+  <main class="container">
+    <header class="page">
+      <h1>Magic: The Gathering</h1>
+      <p>Deck library with search, tags, mana pips, commander art, and live details via API.</p>
+    </header>
+
+    <div class="toolbar" role="search">
+      <label class="input" aria-label="Search decks">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input id="q" placeholder="Search title, commander, colors, tags…" />
+      </label>
+      <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+    </div>
+
+    <div class="filters" id="tagFilters" aria-label="Tag filters"></div>
+
+    <div class="section"><h2>All Decks</h2></div>
+    <section id="deckGrid" class="grid" aria-live="polite"></section>
+    <div id="empty" class="empty" hidden>No decks match your search.</div>
+  </main>
+
+  <!-- Helpers: mana pips + Scryfall -->
+  <script>
+  function renderPips(colors) {
+    if (!Array.isArray(colors) || !colors.length) return '';
+    const uniq = [...new Set(colors)];
+    return `<span class="pips">${uniq.map(c => `<span class="pip ${c}">${c}</span>`).join('')}</span>`;
+  }
+  const _imgCache = new Map();
+  async function fetchCommanderImage(name) {
+    if (!name) return null;
+    if (_imgCache.has(name)) return _imgCache.get(name);
+    try {
+      const r = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`, { cache: 'force-cache' });
+      if (!r.ok) throw new Error('scryfall');
+      const j = await r.json();
+      const url = j?.image_uris?.art_crop || j?.image_uris?.normal || j?.image_uris?.large || null;
+      _imgCache.set(name, url);
+      return url;
+    } catch { return null; }
+  }
+  </script>
+
+  <!-- Data + UI -->
+  <script>
+  // Optional local manifest at /data/decks.json
+  // Minimal entries: { id, archidektUrl?, tags?, bracket?, notes?, updated? }
+  const state = { all: [], filtered: [], activeTags: new Set() };
+
+  async function loadDecks(){
+    // 1) Try local JSON (lets you add notes/tags/bracket)
+    try{
+      const res = await fetch('/data/decks.json', { cache: 'no-store' });
+      if(res.ok) state.all = (await res.json()) || [];
+    }catch{ /* ignore */ }
+
+    // 2) If empty, you can still manually add entries here or keep it empty
+    // The enrichment step needs at least an `id` to call your proxy.
+    state.all.sort((a,b)=> new Date(b.updated||0) - new Date(a.updated||0));
+    state.filtered = state.all.slice();
+    render();
+    buildTagChips();
+  }
+
+  function esc(s){return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+
+  function templateCard(d){
+    const title = esc(d.title || `Deck ${d.id||''}`);
+    const url = esc(d.archidektUrl || (d.id?`https://archidekt.com/decks/${d.id}`:'')); // just for a button/link
+    const notes = esc(d.notes||'');
+    const commander = esc(d.commander||'');
+    const colors = Array.isArray(d.colors)? d.colors : [];
+    const bracket = esc(d.bracket||'');
+    const tags = Array.isArray(d.tags)? d.tags.map(esc) : [];
+    const updated = d.updated ? new Date(d.updated).toLocaleDateString() : '';
+    const cardCount = d.cardCount ? `${d.cardCount} cards` : '';
+    const img = d.commanderImage ? esc(d.commanderImage) : '';
+
+    return `
+      <article class="card">
+        ${img ? `<img class="thumb" src="${img}" alt="Commander: ${commander || title}">`
+               : `<div class="thumb" role="img" aria-label="No image available"></div>`}
+        <div class="body">
+          <h3>${title}</h3>
+          <div class="meta">
+            ${commander?`<span>Commander: ${commander}</span>`:''}
+            ${colors.length?`<span>${renderPips(colors)}</span>`:''}
+          </div>
+          ${notes?`<div class="notes">${notes}</div>`:''}
+          ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
+          <div class="stats" style="margin-top:8px">
+            ${bracket?`<span class="pill">${bracket}</span>`:''}
+            ${cardCount?`<span>${cardCount}</span>`:''}
+            ${updated?`<span>Updated: ${updated}</span>`:''}
+          </div>
+          <div class="row" style="margin-top:12px">
+            ${url?`<a class="btn" href="${url}" target="_blank" rel="noopener">View on Archidekt</a>`:''}
+          </div>
+        </div>
+      </article>`;
+  }
+
+  function render(){
+    const grid = document.getElementById('deckGrid');
+    if(!state.filtered.length){
+      grid.innerHTML = '';
+      document.getElementById('empty').hidden = false;
+      return;
+    }
+    document.getElementById('empty').hidden = true;
+    grid.innerHTML = state.filtered.map(templateCard).join('');
+  }
+
+  function buildTagChips(){
+    const allTags = new Set();
+    state.all.forEach(d => (d.tags||[]).forEach(t => allTags.add(t)));
+    const list = document.getElementById('tagFilters');
+    list.innerHTML = '';
+    [...allTags].sort().forEach(tag => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = tag;
+      chip.addEventListener('click', () => {
+        if(state.activeTags.has(tag)) state.activeTags.delete(tag); else state.activeTags.add(tag);
+        chip.classList.toggle('active');
+        applyFilters();
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  function applyFilters(){
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    const tags = state.activeTags;
+    state.filtered = state.all.filter(d => {
+      const hay = [d.title,d.notes,d.commander,(d.tags||[]).join(' '),(d.colors||[]).join('')].join(' ').toLowerCase();
+      const matchesSearch = !q || hay.includes(q);
+      const deckTags = new Set(d.tags||[]);
+      const matchesTags = !tags.size || [...tags].every(t => deckTags.has(t));
+      return matchesSearch && matchesTags;
+    });
+    render();
+  }
+
+  // Enrich each item via your Cloudflare proxy to Archidekt, and Scryfall for art
+  async function enrichDecksFromAPI(items){
+    const limit = 3;
+    const queue = items.slice();
+    const workers = Array.from({length: limit}, () => worker());
+    await Promise.all(workers);
+
+    async function worker(){
+      while(queue.length){
+        const d = queue.shift();
+        const api = d.apiUrl || (d.id ? `/api/archidekt/deck/${d.id}` : null);
+        if(!api) continue;
+        try{
+          const res = await fetch(api, { cache: 'no-store' });
+          if(!res.ok) throw new Error(`API ${res.status}`);
+          const json = await res.json();
+
+          // map fields defensively
+          d.title = d.title || json.name || json.title || d.title;
+          d.commander = d.commander || json.commander || (json?.commanders?.[0]?.card?.oracleCard?.name) || (json?.commanders?.[0]?.name) || d.commander;
+          d.cardCount = d.cardCount || json.cardCount || (Array.isArray(json.cards) ? json.cards.length : undefined);
+          d.colors = d.colors && d.colors.length ? d.colors : (json.colors || json.colorIdentity || json.identity || []);
+          d.updated = d.updated || json.updatedAt || d.updated;
+
+          if (!d.archidektUrl && (json.publicId || json.id)){
+            const id = json.publicId || json.id;
+            d.archidektUrl = `https://archidekt.com/decks/${id}`;
+          }
+          if (!d.commanderImage && d.commander) {
+            d.commanderImage = await fetchCommanderImage(d.commander);
+          }
+        }catch(e){ console.warn('API enrich failed for', d.id, e); }
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    try{
+      await loadDecks();
+      // Only enrich if we have IDs
+      if (state.all.some(d => d.id)) {
+        await enrichDecksFromAPI(state.all);
+        state.filtered = state.all.slice();
+        render();
+      }
+    }catch(e){ console.warn(e); }
+
+    const q = document.getElementById('q');
+    const clearBtn = document.getElementById('clearBtn');
+    q.addEventListener('input', applyFilters);
+    clearBtn.addEventListener('click', ()=>{ 
+      q.value=''; 
+      state.activeTags.clear(); 
+      document.querySelectorAll('.chip.active').forEach(c=>c.classList.remove('active')); 
+      applyFilters(); 
+    });
+  });
+  </script>
+
+  <!-- Partials injector (nav, discord, footer) -->
+  <script>
+  (async () => {
+    try {
+      async function loadPartial(url) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+        return tpl.content.firstElementChild || null;
+      }
+      const header = document.getElementById('site-header');
+      const navEl = await loadPartial('/partials/nav.html');
+      if (header && navEl) { header.innerHTML = ''; header.appendChild(navEl); initNav(header); }
+      const discordEl = await loadPartial('/partials/discord.html');
+      if (discordEl) document.body.appendChild(discordEl);
+      const footerEl = await loadPartial('/partials/footer.html');
+      if (footerEl) document.body.appendChild(footerEl);
+
+      function initNav(scope) {
+        const btn = scope.querySelector('.menu-toggle');
+        const panel = scope.querySelector('#nav-panel');
+        if (btn && panel) {
+          btn.addEventListener('click', () => {
+            const open = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+        }
+        const here = location.pathname.replace(/\/+$/, '');
+        scope.querySelectorAll('.nav-link').forEach(a => {
+          let href = a.getAttribute('href')?.replace(/\/+$/, '') || '';
+          if (href === '/blog/') href = '/blog';
+          if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
+          if (here.startsWith('/mtg') && href === '/mtg.html') a.setAttribute('aria-current', 'page');
+          if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+        });
+      }
+    } catch (e) { console.warn('Partial load failed:', e); }
+  })();
+  </script>
+</body>
+</html>
