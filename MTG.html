@@ -282,6 +282,7 @@
     render();
   }
 
+  // NOTE: *** Endpoint changed here to match your repo structure ***
   async function enrichDecksFromAPI(items){
     const limit = 3;
     const queue = items.slice();
@@ -291,7 +292,7 @@
     async function worker(){
       while(queue.length){
         const d = queue.shift();
-        const api = d.apiUrl || (d.id ? `/api/archidekt/deck/${d.id}` : null);
+        const api = d.apiUrl || (d.id ? `/api/archidekt/${d.id}` : null); // <-- no /deck
         if(!api) continue;
 
         try{
@@ -385,7 +386,7 @@
           let href = a.getAttribute('href')?.replace(/\/+$/, '') || '';
           if (href === '/blog/') href = '/blog';
           if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
-          if (here.startsWith('/mtg') && href === '/mtg.html') a.setAttribute('aria-current', 'page');
+          if (here.toLowerCase().includes('/mtg')) a.setAttribute('aria-current', 'page'); // handle MTG.html
           if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
         });
       }
