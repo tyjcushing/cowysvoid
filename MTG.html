@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MTG — Cowy’s Void</title>
-  <meta name="description" content="Magic: The Gathering hub — deck library with API-powered details and commander art." />
+  <meta name="description" content="Magic: The Gathering hub — deck library with Scryfall-powered art and mana symbols." />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
   <style>
@@ -32,57 +32,47 @@
     .section h2{margin:0 0 6px;font-size:18px;color:var(--text)}
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:12px}
 
-    /* Media card layout */
+    /* Card layout */
     .card{
       grid-column:span 6;
       background:var(--card);
       border:1px solid rgba(255,255,255,.06);
-      border-radius:16px;
+      border-radius:18px;
       padding:16px;
       box-shadow:0 10px 30px rgba(0,0,0,.25);
       display:grid;
-      grid-template-columns:120px 1fr;
-      gap:14px;
-      align-items:start
+      grid-template-columns:140px 1fr;
+      gap:16px;
+      align-items:start;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
     }
+    .card:hover{ transform: translateY(-2px); border-color: var(--ring); box-shadow:0 14px 36px rgba(0,0,0,.30) }
     @media (max-width:900px){ .card{grid-column:span 12} }
-    @media (max-width:600px){ .card{grid-template-columns:1fr} }
+    @media (max-width:640px){ .card{grid-template-columns:1fr} }
 
-    .card h3{margin:0 0 6px 0;font-size:18px}
-    .meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-bottom:8px}
-    .notes{color:var(--muted);font-size:14px;margin:8px 0 12px}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .title-row{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
+    .card h3{margin:0;font-size:18px;line-height:1.1}
+    .card h3 .subtitle{display:block;font-weight:600;color:var(--muted);font-size:12px;margin-top:3px}
 
-    /* Commander image */
-    .thumb{
-      width:100%; aspect-ratio:3/4; object-fit:cover;
-      border-radius:12px; border:1px solid rgba(255,255,255,.08);
-      background:linear-gradient(135deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      box-shadow:0 6px 18px rgba(0,0,0,.25)
-    }
-
-    /* Mana pips */
-    .pips{display:flex;gap:6px;align-items:center}
-    .pip{
-      width:18px;height:18px;border-radius:999px;
-      display:inline-flex;align-items:center;justify-content:center;
-      font-size:11px;font-weight:800;
-      border:1px solid rgba(255,255,255,.18);
-      box-shadow:0 0 0 1px rgba(0,0,0,.15) inset
-    }
-    .pip.W{background:#f4f0d9;color:#221}
-    .pip.U{background:#b7d6f3;color:#022}
-    .pip.B{background:#d0c8cf;color:#111}
-    .pip.R{background:#f4c0b3;color:#210}
-    .pip.G{background:#c7e2c1;color:#021}
-
-    /* Tiny stats row */
+    .notes{color:var(--muted);font-size:14px;margin:8px 0 10px}
     .stats{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
-    .stats .pill{padding:3px 8px}
-
     .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);font-size:12px;color:var(--text)}
     .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
     .tag{font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,.08);padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.03)}
+
+    /* Commander image(s) */
+    .thumbwrap{
+      position:relative;width:100%;aspect-ratio:3/4;border-radius:14px;overflow:hidden;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(135deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      box-shadow:0 6px 18px rgba(0,0,0,.25)
+    }
+    .thumbwrap.grid2{display:grid;grid-template-columns:1fr 1fr}
+    .thumb{width:100%;height:100%;object-fit:cover}
+
+    /* Mana symbols (Scryfall) */
+    .pips{display:flex;gap:6px;align-items:center}
+    .ms{width:18px;height:18px;display:inline-block;vertical-align:middle}
 
     .empty{color:var(--muted);padding:24px;border:1px dashed rgba(255,255,255,.12);border-radius:12px;text-align:center}
   </style>
@@ -93,13 +83,13 @@
   <main class="container">
     <header class="page">
       <h1>Magic: The Gathering</h1>
-      <p>Deck library with search, tags, mana pips, commander art, and live details via API.</p>
+      <p>Deck library with search, tags, commander art, and official mana symbols.</p>
     </header>
 
     <div class="toolbar" role="search">
       <label class="input" aria-label="Search decks">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <input id="q" placeholder="Search title, commander, colors, tags…" />
+        <input id="q" placeholder="Search title, tags…  (try: black · b · c:wb · 3)" />
       </label>
       <button id="clearBtn" class="btn ghost" type="button">Clear</button>
     </div>
@@ -111,177 +101,267 @@
     <div id="empty" class="empty" hidden>No decks match your search.</div>
   </main>
 
-  <!-- Helpers: robust extractors + mana pips + Scryfall -->
+  <!-- === Scryfall helpers (with MDFC face control) === -->
   <script>
-  // === DEBUG SWITCH ===
-  const DEBUG = true;
+  const DEBUG = false;
   const log = (...a) => DEBUG && console.log('[MTG]', ...a);
   const warn = (...a) => DEBUG && console.warn('[MTG]', ...a);
 
-  // Set this to match your function path:
-  // - functions/api/archidekt/[id].js       -> '/api/archidekt'
-  // - functions/api/archidekt/deck/[id].js  -> '/api/archidekt/deck'
-  const ARCHIDEKT_ENDPOINT = '/api/archidekt';
-
-  function renderPips(colors) {
+  // Scryfall mana SVGs
+  const MANA_SVG = l => `https://svgs.scryfall.io/card-symbols/${l.toUpperCase()}.svg`;
+  function renderManaSymbols(colors){
     if (!Array.isArray(colors) || !colors.length) return '';
-    const uniq = [...new Set(colors)];
-    return `<span class="pips">${uniq.map(c => `<span class="pip ${c}">${c}</span>`).join('')}</span>`;
+    const uniq = [...new Set(colors.map(c=>c.toUpperCase()))];
+    return `<span class="pips">${uniq.map(c => `<img class="ms" src="${MANA_SVG(c)}" alt="${c}">`).join('')}</span>`;
   }
 
-  function getDeckTitle(json) {
-    return json?.name || json?.title || json?.deck?.name || json?.result?.name || null;
+  // ---- Robust Scryfall fetch (single + double-faced) ----
+  const _cardCache = new Map();
+
+  function pickImage(imgs){
+    return imgs?.art_crop || imgs?.normal || imgs?.large || imgs?.png || null;
+  }
+  function normalizeColorsFromFaces(faces){
+    const set = new Set();
+    (faces || []).forEach(f => {
+      const arr = f.color_identity || f.colors || f.colorIndicator || [];
+      (arr || []).forEach(c => set.add(c));
+    });
+    return [...set];
+  }
+  async function fetchJson(url){
+    const r = await fetch(url, { cache: 'force-cache' });
+    if (!r.ok) return null;
+    return r.json();
   }
 
-  function getCommanderNames(json) {
-    const names = new Set();
-
-    if (Array.isArray(json?.commanders)) {
-      json.commanders.forEach(c => {
-        const n = c?.card?.oracleCard?.name || c?.name;
-        if (n) names.add(n);
-      });
-    }
-
-    if (!names.size && Array.isArray(json?.cards)) {
-      json.cards.forEach(entry => {
-        const name = entry?.card?.oracleCard?.name || entry?.name;
-        const role = (entry?.role || '').toLowerCase();
-        const cats = (entry?.categories || []).map(String).join(' ').toLowerCase();
-        const isCmdr = role.includes('commander') || cats.includes('commander') || entry?.isCommander;
-        if (name && isCmdr) names.add(name);
-      });
-    }
-
-    if (!names.size && json?.commander) names.add(json.commander);
-    return [...names];
-  }
-
-  function getColors(json) {
-    const direct = json?.colors || json?.colorIdentity || json?.identity;
-    if (Array.isArray(direct) && direct.length) return direct;
-    const colors = new Set();
-    if (Array.isArray(json?.commanders)) {
-      json.commanders.forEach(c => (c?.card?.oracleCard?.color_identity || c?.colorIdentity || []).forEach(x => colors.add(x)));
-    }
-    if (!colors.size && Array.isArray(json?.cards)) {
-      json.cards.forEach(entry => (entry?.card?.oracleCard?.color_identity || []).forEach(x => colors.add(x)));
-    }
-    return [...colors];
-  }
-
-  // Fetch helper that won't crash on HTML responses
-  async function debugFetchJson(url, fetchOpts = {}) {
-    const res = await fetch(url, fetchOpts);
-    const ct = res.headers.get('content-type') || '';
-    const isJson = ct.includes('application/json');
-    log('FETCH', { url, status: res.status, ok: res.ok, contentType: ct });
-
-    if (!isJson) {
-      const text = await res.text();
-      warn('Non-JSON response body (first 300 chars):\n', text.slice(0, 300));
-      return { ok: res.ok, status: res.status, json: null, text, contentType: ct };
-    }
-
-    try {
-      const json = await res.json();
-      return { ok: res.ok, status: res.status, json, text: null, contentType: ct };
-    } catch (e) {
-      warn('JSON parse error:', e);
-      const text = await res.clone().text().catch(()=>'');
-      warn('Raw body (first 300 chars):', text.slice(0,300));
-      return { ok: false, status: res.status, json: null, text, contentType: ct };
-    }
-  }
-
-  const _imgCache = new Map();
-  async function fetchCommanderImage(name) {
+  /**
+   * getScryfallCard(name, { face: 'front'|'back', faceIndex?: 0|1 })
+   * Returns { image, colors, raw }
+   */
+  async function getScryfallCard(name, opts = {}){
     if (!name) return null;
-    if (_imgCache.has(name)) return _imgCache.get(name);
+    const cacheKey = `${name}::${opts.face ?? ''}::${Number.isInteger(opts.faceIndex)?opts.faceIndex:''}`;
+    if (_cardCache.has(cacheKey)) return _cardCache.get(cacheKey);
 
-    async function tryUrl(url) {
-      const { ok, json, status } = await debugFetchJson(url, { cache: 'force-cache' });
-      if (!ok || !json) { warn('Scryfall fetch failed', { url, status }); return null; }
-      return json?.image_uris?.art_crop || json?.image_uris?.normal || json?.image_uris?.large || null;
+    let j = await fetchJson(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+    if (!j) j = await fetchJson(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`);
+    if (!j) { warn('Scryfall not found for', name); return null; }
+
+    let image = null;
+    let colors = Array.isArray(j.color_identity) ? j.color_identity.slice() : [];
+
+    if (j.image_uris) {
+      image = pickImage(j.image_uris);
+    } else if (Array.isArray(j.card_faces) && j.card_faces.length) {
+      const faces = j.card_faces;
+      let idx = 0;
+
+      if (Number.isInteger(opts.faceIndex)) {
+        idx = Math.max(0, Math.min(faces.length - 1, opts.faceIndex));
+      } else if (opts.face === 'back') {
+        idx = Math.min(1, faces.length - 1);
+      } else if (opts.face === 'front') {
+        idx = 0;
+      } else {
+        // default: try match left side of "A // B"
+        const left = String(name).split('//')[0].trim().toLowerCase();
+        const m = faces.findIndex(f => (f.name || '').toLowerCase() === left);
+        idx = m >= 0 ? m : 0;
+      }
+
+      const face = faces[idx] || faces[0];
+      image = pickImage(face.image_uris || {});
+      if (!colors.length) colors = normalizeColorsFromFaces(faces);
     }
 
-    let img = await tryUrl(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
-    if (!img) img = await tryUrl(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`);
+    const out = { image, colors, raw: j };
+    _cardCache.set(cacheKey, out);
+    return out;
+  }
 
-    if (img) _imgCache.set(name, img);
-    return img;
+  // Union color identity for 1+ commanders (works with MDFC + partners)
+  async function unionColorsFromCommanders(cmds){
+    const set = new Set();
+    for (const c of cmds || []) {
+      const name = typeof c === 'string' ? c : c?.name;
+      const face = typeof c === 'object' ? c?.face : undefined;
+      const faceIndex = typeof c === 'object' ? c?.faceIndex : undefined;
+      const card = await getScryfallCard(name, { face, faceIndex });
+      (card?.colors || []).forEach(x => set.add(x));
+    }
+    return [...set];
   }
   </script>
 
-  <!-- Data + UI -->
+  <!-- === Data + UI === -->
   <script>
-  // Optional local manifest at /data/decks.json
-  // Minimal entries: { id, archidektUrl?, tags?, bracket?, notes?, updated? }
+  // Expect /data/decks.json entries like:
+  // { id, title, archidektUrl?, commanders:[ "Name" | {name, face?, faceIndex?} ], tags?, bracket?, notes?, updated? }
   const state = { all: [], filtered: [], activeTags: new Set() };
 
-  async function loadDecks(){
-    try{
-      const res = await fetch('/data/decks.json', { cache: 'no-store' });
-      if(res.ok) state.all = (await res.json()) || [];
-      log('Loaded /data/decks.json', state.all);
-    }catch(e){
-      warn('Failed to load /data/decks.json', e);
-      state.all = [];
-    }
+  function esc(s){return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 
-    state.all.sort((a,b)=> new Date(b.updated||0) - new Date(a.updated||0));
+  async function loadDecks(){
+    const res = await fetch('/data/decks.json', { cache: 'no-store' });
+    if(!res.ok) throw new Error('Failed to load decks.json');
+    state.all = (await res.json()) || [];
+
+    // Normalize and prebuild
+    state.all.forEach((d, i) => {
+      d._idx = i; // stable tie-break
+      if (!Array.isArray(d.commanders)) d.commanders = [];
+      // Normalize commanders to objects with {name, face?, faceIndex?}
+      d._cmds = d.commanders.map(c => typeof c === 'string' ? ({ name: c }) : ({
+        name: c?.name || '',
+        face: c?.face,
+        faceIndex: Number.isInteger(c?.faceIndex) ? c.faceIndex : undefined
+      })).filter(c => c.name);
+
+      if (!d.archidektUrl && d.id) d.archidektUrl = `https://archidekt.com/decks/${d.id}`;
+    });
+
+    // Enrich with Scryfall
+    await enrichFromScryfall(state.all);
+
+    // Default sort: updated desc, then title
+    state.all.sort((a,b)=>{
+      const ad = new Date(a.updated||0).getTime(), bd = new Date(b.updated||0).getTime();
+      if (bd - ad) return bd - ad;
+      return (a.title||'').localeCompare(b.title||'');
+    });
+
     state.filtered = state.all.slice();
-    render();
     buildTagChips();
+    render();
   }
 
-  function esc(s){return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+  async function enrichFromScryfall(items){
+    const limit = 3; // polite concurrency
+    const queue = items.slice();
+    const workers = Array.from({length: limit}, () => worker());
+    await Promise.all(workers);
+
+    async function worker(){
+      while(queue.length){
+        const d = queue.shift();
+        try {
+          // Commander images (up to two), honoring MDFC face hints
+          const imgs = [];
+          const colorSet = new Set();
+          for (const c of d._cmds) {
+            const card = await getScryfallCard(c.name, { face: c.face, faceIndex: c.faceIndex });
+            if (card?.image) imgs.push(card.image);
+            (card?.colors || []).forEach(x => colorSet.add(x));
+          }
+          d.commanderImages = imgs.slice(0, 2);
+          d.commanderImage  = imgs[0] || d.commanderImage;
+
+          // Colors (union)
+          if (colorSet.size) d.colors = [...colorSet];
+        } catch(e){
+          console.warn('Scryfall enrich failed for', d.title || d.id, e);
+        }
+      }
+    }
+  }
+
+  /* ---------- Search ---------- */
+
+  const COLOR_WORDS = {
+    white:'W', w:'W',
+    blue:'U',  u:'U',
+    black:'B', b:'B',
+    red:'R',   r:'R',
+    green:'G', g:'G',
+    colorless:'C', c:'C'
+  };
+
+  function parseQuery(raw){
+    const q = (raw||'').trim();
+    const out = { text:'', colorSet:new Set(), usedOperator:false, preferNameSort:false, bracketDigit:null };
+    if (!q) return out;
+
+    // c:<letters> operator (e.g. c:wb, c:bug)
+    const opMatch = q.match(/(^|\s)c:([wubrgc]+)/i);
+    let textNoOp = q;
+    if (opMatch){
+      out.usedOperator = true;
+      for (const ch of opMatch[2].toUpperCase()) out.colorSet.add(ch);
+      textNoOp = q.replace(opMatch[0],'').trim();
+    }
+
+    // bracket digit: whole query is a single digit
+    const digitOnly = textNoOp.match(/^\s*([0-9])\s*$/);
+    if (digitOnly) {
+      out.bracketDigit = digitOnly[1];
+      out.preferNameSort = true; // name-first for pure digit queries
+      out.text = '';
+      return out;
+    }
+
+    // color words/letters (only if not using c:)
+    if (!out.usedOperator){
+      const tokens = textNoOp.toLowerCase().split(/\s+/).filter(Boolean);
+      let allColorWords = true;
+      for (const t of tokens){
+        if (COLOR_WORDS[t]) out.colorSet.add(COLOR_WORDS[t]);
+        else allColorWords = false;
+      }
+      // If the query is ONLY color words/letters, don't require text match
+      if (tokens.length && allColorWords) {
+        out.text = '';
+        // prefer name sort when the query is a single color token like "b" or "black"
+        if (tokens.length === 1) out.preferNameSort = true;
+        return out;
+      }
+    }
+
+    out.text = textNoOp;
+    return out;
+  }
+
+  function matchesColorFilter(deckColors=[], filterSet){
+    if (!filterSet || !filterSet.size) return true;
+    const dc = new Set((deckColors||[]).map(c=>c.toUpperCase()));
+    for (const f of filterSet){ if (!dc.has(f)) return false; }
+    return true;
+  }
 
   function templateCard(d){
     const title = esc(d.title || `Deck ${d.id||''}`);
-    const url = esc(d.archidektUrl || (d.id?`https://archidekt.com/decks/${d.id}`:''));
+    const url = esc(d.archidektUrl || '');
     const notes = esc(d.notes||'');
-    const commander = esc(d.commander||'');
+    const commanderNames = (d._cmds||[]).map(x=>x.name);
+    const shownNames = commanderNames.map(esc);
     const colors = Array.isArray(d.colors)? d.colors : [];
     const bracket = esc(d.bracket||'');
     const tags = Array.isArray(d.tags)? d.tags.map(esc) : [];
     const updated = d.updated ? new Date(d.updated).toLocaleDateString() : '';
-    const cardCount = d.cardCount ? `${d.cardCount} cards` : '';
-    const img = d.commanderImage ? esc(d.commanderImage) : '';
+    const img1 = d.commanderImages?.[0] ? esc(d.commanderImages[0]) : '';
+    const img2 = d.commanderImages?.[1] ? esc(d.commanderImages[1]) : '';
+
+    const imageBlock = (img1 && img2)
+      ? `<div class="thumbwrap grid2"><img class="thumb" src="${img1}" alt="Commander: ${shownNames[0]||title}"><img class="thumb" src="${img2}" alt="Commander: ${shownNames[1]||title}"></div>`
+      : `<div class="thumbwrap">${img1 ? `<img class="thumb" src="${img1}" alt="Commander: ${shownNames[0]||title}">` : ''}</div>`;
 
     return `
       <article class="card">
-        ${img ? `<img class="thumb" src="${img}" alt="Commander: ${commander || title}">`
-               : `<div class="thumb" role="img" aria-label="No image available"></div>`}
+        ${imageBlock}
         <div class="body">
-          <h3>${title}</h3>
-          <div class="meta">
-            ${commander?`<span>Commander: ${commander}</span>`:''}
-            ${colors.length?`<span>${renderPips(colors)}</span>`:''}
+          <div class="title-row">
+            <h3>${title}${shownNames.length?`<span class="subtitle">${shownNames.join(' / ')}</span>`:''}</h3>
+            ${colors.length?`${renderManaSymbols(colors)}`:''}
           </div>
           ${notes?`<div class="notes">${notes}</div>`:''}
           ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
-          <div class="stats" style="margin-top:8px">
+          <div class="stats" style="margin-top:10px">
             ${bracket?`<span class="pill">${bracket}</span>`:''}
-            ${cardCount?`<span>${cardCount}</span>`:''}
-            ${updated?`<span>Updated: ${updated}</span>`:''}
-          </div>
-          <div class="row" style="margin-top:12px">
+            ${updated?`<span class="pill">Updated: ${updated}</span>`:''}
             ${url?`<a class="btn" href="${url}" target="_blank" rel="noopener">View on Archidekt</a>`:''}
           </div>
         </div>
       </article>`;
-  }
-
-  function render(){
-    const grid = document.getElementById('deckGrid');
-    if(!state.filtered.length){
-      grid.innerHTML = '';
-      document.getElementById('empty').hidden = false;
-      return;
-    }
-    document.getElementById('empty').hidden = true;
-    grid.innerHTML = state.filtered.map(templateCard).join('');
   }
 
   function buildTagChips(){
@@ -303,94 +383,82 @@
     });
   }
 
-  function applyFilters(){
-    const q = document.getElementById('q').value.trim().toLowerCase();
-    const tags = state.activeTags;
-    state.filtered = state.all.filter(d => {
-      const hay = [d.title,d.notes,d.commander,(d.tags||[]).join(' '),(d.colors||[]).join('')].join(' ').toLowerCase();
-      const matchesSearch = !q || hay.includes(q);
-      const deckTags = new Set(d.tags||[]);
-      const matchesTags = !tags.size || [...tags].every(t => deckTags.has(t));
-      return matchesSearch && matchesTags;
-    });
-    render();
+  function render(){
+    const grid = document.getElementById('deckGrid');
+    if(!state.filtered.length){
+      grid.innerHTML = '';
+      document.getElementById('empty').hidden = false;
+      return;
+    }
+    document.getElementById('empty').hidden = true;
+    grid.innerHTML = state.filtered.map(templateCard).join('');
   }
 
-  async function enrichDecksFromAPI(items){
-    const limit = 3;
-    const queue = items.slice();
-    const workers = Array.from({length: limit}, () => worker());
-    await Promise.all(workers);
+  function applyFilters(){
+    const raw = document.getElementById('q').value;
+    const tags = state.activeTags;
+    const { text, colorSet, usedOperator, preferNameSort, bracketDigit } = parseQuery(raw);
 
-    async function worker(){
-      while(queue.length){
-        const d = queue.shift();
-        const api = d.apiUrl || (d.id ? `${ARCHIDEKT_ENDPOINT}/${d.id}` : null);
-        if(!api) { warn('No API URL for deck', d); continue; }
-
-        try{
-          const { ok, status, json, text, contentType } = await debugFetchJson(api, { cache: 'no-store' });
-
-          if (!ok || !json) {
-            warn('Enrich failed', { id: d.id, status, contentType, sample: (text||'').slice(0,120) });
-            continue; // keep the card with whatever we had locally
-          }
-
-          log('Enrich json (id=' + d.id + ')', json);
-
-          const title = getDeckTitle(json);
-          if (title && !d.title) d.title = title;
-
-          const commanders = getCommanderNames(json);
-          if (commanders.length && !d.commander) d.commander = commanders.join(' / ');
-
-          const cols = getColors(json);
-          if ((!Array.isArray(d.colors) || !d.colors.length) && cols.length) d.colors = cols;
-
-          if (!d.cardCount) d.cardCount = json?.cardCount || (Array.isArray(json?.cards) ? json.cards.length : undefined);
-          if (!d.updated && (json?.updatedAt || json?.lastUpdated)) d.updated = json.updatedAt || json.lastUpdated;
-
-          if (!d.archidektUrl && (json?.publicId || json?.id)){
-            const id = json.publicId || json.id;
-            d.archidektUrl = `https://archidekt.com/decks/${id}`;
-          }
-
-          if (!d.commanderImage && commanders.length) {
-            const img = await fetchCommanderImage(commanders[0]);
-            if (img) d.commanderImage = img;
-          }
-        }catch(e){
-          warn('Worker exception for id='+d.id, e);
-        }
+    // filter
+    let results = state.all.filter(d => {
+      // bracket digit filter
+      if (bracketDigit){
+        const b = String(d.bracket || '');
+        if (!b.includes(bracketDigit)) return false;
       }
+
+      // color filter
+      if (!matchesColorFilter(d.colors, colorSet)) return false;
+
+      // tags filter (all selected tags must be present)
+      const deckTags = new Set(d.tags||[]);
+      if (tags.size && ![...tags].every(t => deckTags.has(t))) return false;
+
+      // text search (if any remains after color parsing)
+      if (!text) return true;
+      const hay = [
+        d.title,
+        (d._cmds||[]).map(x=>x.name).join(' / '),
+        d.notes,
+        (d.tags||[]).join(' ')
+      ].join(' ').toLowerCase();
+      return hay.includes(text.toLowerCase());
+    });
+
+    // sort:
+    // - if query is pure color or pure digit, sort by title asc
+    // - else default: updated desc, then title
+    if (preferNameSort && !usedOperator){
+      results.sort((a,b)=> (a.title||'').localeCompare(b.title||'') || (a._idx-b._idx));
+    } else {
+      results.sort((a,b)=>{
+        const ad = new Date(a.updated||0).getTime(), bd = new Date(b.updated||0).getTime();
+        if (bd - ad) return bd - ad;
+        return (a.title||'').localeCompare(b.title||'') || (a._idx-b._idx);
+      });
     }
+
+    state.filtered = results;
+    render();
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
     try{
       await loadDecks();
-      if (state.all.some(d => d.id)) {
-        await enrichDecksFromAPI(state.all);
-        state.filtered = state.all.slice();
-        render();
-      } else {
-        warn('No deck ids in /data/decks.json — enrichment skipped.');
-      }
-    }catch(e){ warn('DOMContentLoaded error', e); }
+    }catch(e){ console.warn(e); }
 
     const q = document.getElementById('q');
     const clearBtn = document.getElementById('clearBtn');
     q.addEventListener('input', applyFilters);
     clearBtn.addEventListener('click', ()=>{ 
-      q.value=''; 
-      state.activeTags.clear(); 
+      q.value=''; state.activeTags.clear(); 
       document.querySelectorAll('.chip.active').forEach(c=>c.classList.remove('active')); 
       applyFilters(); 
     });
   });
   </script>
 
-  <!-- Partials injector (nav, discord, footer) -->
+  <!-- === Partials injector (nav, discord, footer) === -->
   <script>
   (async () => {
     try {
@@ -420,12 +488,12 @@
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
           });
         }
-        const here = location.pathname.replace(/\/+$/, '').toLowerCase();
+        const here = location.pathname.toLowerCase().replace(/\/+$/, '');
         scope.querySelectorAll('.nav-link').forEach(a => {
-          let href = (a.getAttribute('href') || '').replace(/\/+$/, '').toLowerCase();
+          let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
           if (href === '/blog/') href = '/blog';
           if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
-          if (here.includes('/mtg')) a.setAttribute('aria-current', 'page');
+          if (here.includes('/mtg')) a.setAttribute('aria-current', 'page'); // MTG highlight
           if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
         });
       }

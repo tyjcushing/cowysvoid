@@ -1,9 +1,132 @@
 [
   {
     "id": 16150986,
+    "title": "Captive Catapult",
     "archidektUrl": "https://archidekt.com/decks/16150986/captive_catapult",
-    "bracket": "Upgraded (3)",
+    "commanders": ["Ziatora, the Incinerator"], 
     "tags": ["Dragons", "Fling"],
-    "notes": "Flingy dragon shenanigans."
+    "bracket": "Upgraded (3)",
+    "notes": "Steal your creatures, throw them at you, reanimate my own.",
+    "updated": "2025-09-30"
+  },
+  {
+    "id": 16348051,
+    "title": "The Ultimate Spider-man",
+    "archidektUrl": "https://archidekt.com/decks/16348051/the_ultimate_spiderman",
+    "commanders": [{ "name": "Miles Morales // Ultimate Spider-Man", "face": "back" }],
+    "tags": ["Counters", "Spiders", "Legends"],
+    "bracket": "Core (2)",
+    "notes": "Toss together of legends that care about counters and spiderman cards.",
+    "updated": "2025-09-30"
+  },
+  {
+    "id": 16138377,
+    "title": "Dragonic Duality",
+    "archidektUrl": "https://archidekt.com/decks/16138377/dragonic_duality",
+    "commanders": ["Miirym, Sentinel Wyrm"],
+    "tags": ["Dragons", "Clones"],
+    "bracket": "Optimized (4)",
+    "notes": "Combo with Dragon copies giving me card draw or ping damage.",
+    "updated": "2025-09-30"
+  },
+  {
+    "id": 16165967,
+    "title": "Food Service",
+    "archidektUrl": "https://archidekt.com/decks/16165967/food_service",
+    "commanders": ["Rocco, Street Chef"],
+    "tags": ["Food", "Politics", "Artifacts"],
+    "bracket": "Core (2)",
+    "notes": "Fully chef themed. Make a shit ton of food tokens, then do something with them.",
+    "updated": "2025-09-30"
+  },
+  {
+    "id": 16122123,
+    "title": "Holey Moley",
+    "archidektUrl": "https://archidekt.com/decks/16122123/holey_moley",
+    "commanders": ["Anzrag, the Quake-Mole"],
+    "tags": ["Voltron", "Stompy"],
+    "bracket": "Upgraded (3)",
+    "notes": "The Church of Bonk's greatest acolyte.",
+    "updated": "2025-09-30"
+  },
+  {
+    "id": 15152123,
+    "title": "The Humble Bumble",
+    "archidektUrl": "https://archidekt.com/decks/15152123/the_humble_bumble",
+    "commanders": ["Ms. Bumbleflower"],
+    "tags": ["Group Hug", "Alternate Wincon", "Draw", "Politics"],
+    "bracket": "Upgraded (3.5)",
+    "notes": "She givith, and she taketh away. Wins with second sun, twenty-toed toad, sometimes commander damage.",
+    "updated": "2025-09-30"
+  },
+  {
+    "id": 16208550,
+    "title": "Into the Dungeon",
+    "archidektUrl": "https://archidekt.com/decks/16208550/into_the_dungeon",
+    "commanders": ["Hama Pashar, Ruin Seeker"],
+    "tags": ["Dungeon"],
+    "bracket": "Core (2)",
+    "notes": "D&D dungeons the whollllle wayyy.",
+    "updated": "2025-09-15"
+  },
+  {
+    "id": 16208115,
+    "title": "Oops, all Upkeeps",
+    "archidektUrl": "https://archidekt.com/decks/16208115/oops_all_upkeeps",
+    "commanders": ["Obeka, Splitter of Seconds"],
+    "tags": ["Extra Upkeeps", "Monarch"],
+    "bracket": "Core (2)",
+    "notes": "Yeah, just every upkeep trigger.",
+    "updated": "2025-08-30"
+  },
+  {
+    "id": 16196742,
+    "title": "Izzet Dragons? It is",
+    "archidektUrl": "https://archidekt.com/decks/16196742/izzet_dragons_it_is",
+    "commanders": ["Galazeth Prismari"],
+    "tags": ["Spellslinger", "Dragons", "Artifacts"],
+    "bracket": "Core (2)",
+    "notes": "Izzet spells but is all dragon themed.",
+    "updated": "2025-09-15"
+  },
+  {
+    "id": 16160280,
+    "title": "Myyyy Shorikai",
+    "archidektUrl": "https://archidekt.com/decks/16160280/myyyy_shorikai",
+    "commanders": ["Shorikai, Genesis Engine"],
+    "tags": ["Alternate Wincon", "Draw", "Artifacts"],
+    "bracket": "Upgraded (3)",
+    "notes": "Who needs tutors when you just draw 80 cards? Then win with lab man.",
+    "updated": "2025-09-30"
+  },
+  {
+    "id": 16190980,
+    "title": "Cats",
+    "archidektUrl": "https://archidekt.com/decks/16190980/cats",
+    "commanders": ["Sovereign Okinec Ahau"],
+    "tags": ["+1/+1 Counters", "Voltron"],
+    "bracket": "Upgraded (3)",
+    "notes": "Gets out of hand quickly with counters and big creatures.",
+    "updated": "2025-09-30"
+  },
+  {
+    "id": 16193767,
+    "title": "Minthara",
+    "archidektUrl": "https://archidekt.com/decks/16193767/minthara",
+    "commanders": ["Minthara, Merciless Soul"],
+    "tags": ["Aristocrats", "Sacrifice", "Lifegain"],
+    "bracket": "Core (2)",
+    "notes": "Life drain with some token swarming.",
+    "updated": "2025-09-15"
+  },
+  {
+    "id": 15376479,
+    "title": "Simy",
+    "archidektUrl": "https://archidekt.com/decks/15376479/simy",
+    "commanders": ["Troyan, Gutsy Explorer"],
+    "tags": ["Landfall", "Big Mana", "Stompy"],
+    "bracket": "Upgraded (3)",
+    "notes": "Where's Craterhoof?",
+    "updated": "2025-09-30"
   }
 ]
