@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MTG — Cowy’s Void</title>
-  <meta name="description" content="Magic: The Gathering hub — deck library with Scryfall-powered art and mana symbols." />
+  <meta name="description" content="Magic: The Gathering hub — deck library with Scryfall-powered art, colors, and smart search." />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
   <style>
@@ -89,7 +89,7 @@
     <div class="toolbar" role="search">
       <label class="input" aria-label="Search decks">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <input id="q" placeholder="Search title, tags…  (try: black · b · c:wb · 3)" />
+        <input id="q" placeholder="Search by title, tags, color, etc." />
       </label>
       <button id="clearBtn" class="btn ghost" type="button">Clear</button>
     </div>
@@ -279,45 +279,56 @@
 
   function parseQuery(raw){
     const q = (raw||'').trim();
-    const out = { text:'', colorSet:new Set(), usedOperator:false, preferNameSort:false, bracketDigit:null };
+    const out = { text:'', colorSet:new Set(), usedColorOp:false, preferNameSort:false, bracketToken:null, pureDigit:null };
     if (!q) return out;
 
-    // c:<letters> operator (e.g. c:wb, c:bug)
-    const opMatch = q.match(/(^|\s)c:([wubrgc]+)/i);
-    let textNoOp = q;
-    if (opMatch){
-      out.usedOperator = true;
-      for (const ch of opMatch[2].toUpperCase()) out.colorSet.add(ch);
-      textNoOp = q.replace(opMatch[0],'').trim();
+    let working = q;
+
+    // c:<letters or words> supports commas (e.g., c:wb, c:w,b, c:white,black)
+    const colorOp = working.match(/(^|\s)c:([a-z,]+)/i);
+    if (colorOp){
+      out.usedColorOp = true;
+      const payload = colorOp[2].toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
+      for (const token of payload){
+        const mapped = COLOR_WORDS[token] || token.toUpperCase();
+        for (const ch of mapped.replace(/[^WUBRGC]/g,'')) out.colorSet.add(ch);
+      }
+      working = working.replace(colorOp[0], '').trim();
     }
 
-    // bracket digit: whole query is a single digit
-    const digitOnly = textNoOp.match(/^\s*([0-9])\s*$/);
-    if (digitOnly) {
-      out.bracketDigit = digitOnly[1];
-      out.preferNameSort = true; // name-first for pure digit queries
-      out.text = '';
-      return out;
+    // b:<text> bracket filter (e.g., b:3, b:upgraded)
+    const bracketOp = working.match(/(^|\s)b:([^\s]+)/i);
+    if (bracketOp){
+      out.bracketToken = bracketOp[2];
+      working = working.replace(bracketOp[0], '').trim();
+      // If query is just a bracket op, prefer name sort
+      if (!working) out.preferNameSort = true;
     }
 
-    // color words/letters (only if not using c:)
-    if (!out.usedOperator){
-      const tokens = textNoOp.toLowerCase().split(/\s+/).filter(Boolean);
-      let allColorWords = true;
+    // Single digit fallback (if user types just "3")
+    const digitOnly = working.match(/^([0-9])$/);
+    if (digitOnly){
+      out.pureDigit = digitOnly[1];
+      out.preferNameSort = true;
+      working = '';
+    }
+
+    // color words/letters if no c:
+    if (!out.usedColorOp){
+      const tokens = working.toLowerCase().split(/\s+/).filter(Boolean);
+      let allColorWords = tokens.length>0; // assume, prove otherwise
       for (const t of tokens){
         if (COLOR_WORDS[t]) out.colorSet.add(COLOR_WORDS[t]);
         else allColorWords = false;
       }
-      // If the query is ONLY color words/letters, don't require text match
-      if (tokens.length && allColorWords) {
-        out.text = '';
-        // prefer name sort when the query is a single color token like "b" or "black"
-        if (tokens.length === 1) out.preferNameSort = true;
-        return out;
+      if (tokens.length && allColorWords){
+        // pure color word query => no text filter, name sort
+        out.preferNameSort = tokens.length === 1;
+        working = '';
       }
     }
 
-    out.text = textNoOp;
+    out.text = working.trim();
     return out;
   }
 
@@ -397,14 +408,16 @@
   function applyFilters(){
     const raw = document.getElementById('q').value;
     const tags = state.activeTags;
-    const { text, colorSet, usedOperator, preferNameSort, bracketDigit } = parseQuery(raw);
+    const { text, colorSet, usedColorOp, preferNameSort, bracketToken, pureDigit } = parseQuery(raw);
 
-    // filter
     let results = state.all.filter(d => {
-      // bracket digit filter
-      if (bracketDigit){
+      // bracket filter (operator or single-digit fallback)
+      if (bracketToken){
+        const b = String(d.bracket || '').toLowerCase();
+        if (!b.includes(String(bracketToken).toLowerCase())) return false;
+      } else if (pureDigit){
         const b = String(d.bracket || '');
-        if (!b.includes(bracketDigit)) return false;
+        if (!b.includes(pureDigit)) return false;
       }
 
       // color filter
@@ -414,7 +427,7 @@
       const deckTags = new Set(d.tags||[]);
       if (tags.size && ![...tags].every(t => deckTags.has(t))) return false;
 
-      // text search (if any remains after color parsing)
+      // text search (title, commander names, notes, tags)
       if (!text) return true;
       const hay = [
         d.title,
@@ -426,9 +439,9 @@
     });
 
     // sort:
-    // - if query is pure color or pure digit, sort by title asc
+    // - if query is pure color (no c:) or pure bracket (b: only or single digit), sort by title asc
     // - else default: updated desc, then title
-    if (preferNameSort && !usedOperator){
+    if (preferNameSort && !usedColorOp){
       results.sort((a,b)=> (a.title||'').localeCompare(b.title||'') || (a._idx-b._idx));
     } else {
       results.sort((a,b)=>{
