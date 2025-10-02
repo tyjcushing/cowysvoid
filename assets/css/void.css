@@ -86,7 +86,7 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberat
 @media (max-width:900px){ .hero{ grid-template-columns:1fr } }
 
 .hero-left{ padding:48px 23px }
-.hero-left .code { padding-bottom: 30px;}
+.hero-left .code { padding-bottom: 30px; padding-right: 70px;}
 .title{
   font-weight:800; font-size: clamp(18px, 3.6vmin, 28px); color:var(--text)
 }
@@ -291,4 +291,40 @@ header.page p{ margin:0 }
 .input-solid{
   background: var(--card);
   border-color: rgba(255,255,255,.12);
+}
+
+/* ===== Solid surfaces (no translucency) ===== */
+.solid-surface{
+  background: var(--card) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: var(--shadow-md);
+}
+
+/* Search input: solid */
+.input-solid{
+  background: var(--card) !important;         /* override any rgba() glass */
+  border-color: rgba(255,255,255,.16) !important;
+}
+
+/* Solid chips in the page header panel */
+.page-panel .chip,
+.solid-chip{
+  background: var(--card) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: var(--text) !important;
+}
+
+/* Solid “ghost” button in the panel (e.g., Clear) */
+.page-panel .btn.ghost,
+.solid-ghost-btn.btn.ghost{
+  background: var(--card) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  color: var(--text) !important;
+}
+
+/* Toolbar stretch: already added earlier, but keep for completeness */
+.toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:stretch; }
+.toolbar-wide .input{ flex: 1 1 100%; }
+@media (min-width: 720px){
+  .toolbar-wide .input{ flex: 1 1 0%; }
 }
