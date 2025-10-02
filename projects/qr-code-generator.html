@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QR Code Generator — Cowy’s Void</title>
-  <meta name="description" content="Generate QR codes with high error correction and download as PNG." />
+  <meta name="description" content="Generate QR codes with adjustable error correction, scale, and margin. Download PNG instantly." />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
 
@@ -45,13 +45,12 @@
     .card h2{margin:0 0 8px 0; font-size:18px}
 
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    .field{display:flex;flex-direction:column;gap:6px;min-width:240px;flex:1}
+    .field{display:flex;flex-direction:column;gap:6px;min-width:220px;flex:1}
     .input, .selectlike{
       display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;
       background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
     }
-    .input input{all:unset;flex:1}
-    .hint{color:var(--muted); font-size:12px}
+    .input input, .input select{all:unset;flex:1}
 
     /* Output */
     #qrcode{margin-top:16px; display:flex; align-items:center; justify-content:flex-start}
@@ -71,10 +70,9 @@
   <main class="container">
     <section class="hero">
       <div class="title">QR Code Generator</div>
-      <div class="sub">High error-correction (H), crisp canvas output, quick PNG download.</div>
+      <div class="sub">Adjust error correction, scale, and margin. Download as PNG.</div>
       <div class="hero-actions">
         <a class="btn ghost" href="/projects.html">← Back to Projects</a>
-        <a class="btn" href="#generator">Jump to Generator</a>
       </div>
     </section>
 
@@ -88,24 +86,38 @@
             <div class="input">
               <input id="qr-input" type="text" placeholder="https://cowysvoid.dev" value="https://cowysvoid.dev" />
             </div>
-            <div class="hint">Press Enter or click Generate</div>
           </div>
 
-          <!-- Keep your exact options: errorCorrectionLevel 'H', scale 25, margin 0.3 -->
-          <div class="field" style="max-width:220px">
-            <label>Quality</label>
-            <div class="selectlike">
-              <span class="pill">ECC: H</span>
-              <span class="pill">Scale: 25</span>
-              <span class="pill">Margin: 0.3</span>
+          <div class="field" style="max-width:200px">
+            <label for="ecc">Error Correction</label>
+            <div class="input">
+              <select id="ecc">
+                <option value="L">L (Low)</option>
+                <option value="M">M (Medium)</option>
+                <option value="Q">Q (Quartile)</option>
+                <option value="H" selected>H (High)</option>
+              </select>
             </div>
-            <div class="hint">Fixed to match your previous settings</div>
           </div>
 
-          <div class="row" style="margin-top:6px">
-            <button class="btn" id="genBtn" type="button">Generate QR Code</button>
-            <button class="btn ghost" id="download-btn" type="button" disabled>Download PNG</button>
+          <div class="field" style="max-width:180px">
+            <label for="scale">Scale</label>
+            <div class="input">
+              <input id="scale" type="number" min="1" max="50" step="1" value="25" />
+            </div>
           </div>
+
+          <div class="field" style="max-width:180px">
+            <label for="margin">Margin</label>
+            <div class="input">
+              <input id="margin" type="number" min="0" max="10" step="0.1" value="0.3" />
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="genBtn" type="button">Generate QR Code</button>
+          <button class="btn ghost" id="download-btn" type="button" disabled>Download PNG</button>
         </div>
 
         <div id="qrcode" aria-live="polite" aria-label="QR output"></div>
@@ -117,11 +129,18 @@
     </section>
   </main>
 
-  <!-- Your original library (unchanged) -->
+  <!-- QRCode library (unchanged) -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
   <script>
     let currentCanvas = null;
+
+    function getOpts(){
+      const ecc = document.getElementById('ecc').value || 'H';
+      const scale = Math.max(1, Math.min(50, parseInt(document.getElementById('scale').value || 25, 10)));
+      const margin = Math.max(0, Math.min(10, parseFloat(document.getElementById('margin').value || 0.3)));
+      return { errorCorrectionLevel: ecc, scale, margin };
+    }
 
     function generateQRCode() {
       const input = document.getElementById('qr-input').value.trim();
@@ -138,12 +157,8 @@
 
       if (!input) return;
 
-      // Same options as you had: ECC H, scale 25, margin 0.3
-      QRCode.toCanvas(input, {
-        errorCorrectionLevel: 'H',
-        scale: 25,
-        margin: 0.3
-      }, function (err, canvas) {
+      const opts = getOpts();
+      QRCode.toCanvas(input, opts, function (err, canvas) {
         if (err) { console.error(err); return; }
         currentCanvas = canvas;
         currentCanvas.classList.add('qr');
@@ -154,10 +169,8 @@
         const w = currentCanvas.width, h = currentCanvas.height;
         pxSize.textContent = `Canvas: ${w}×${h}px`;
 
-        // Rough data URL size (for curiosity)
         try {
           const dataURL = currentCanvas.toDataURL('image/png');
-          // base64 length -> bytes estimate
           const size = Math.ceil((dataURL.length - 'data:image/png;base64,'.length) * 3/4);
           bytes.textContent = `~${(size/1024).toFixed(1)} KB`;
           meta.hidden = false;
@@ -176,9 +189,10 @@
     // Wire up
     document.getElementById('genBtn').addEventListener('click', generateQRCode);
     document.getElementById('download-btn').addEventListener('click', downloadQRCode);
-    document.getElementById('qr-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') generateQRCode();
-    });
+    document.getElementById('qr-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') generateQRCode(); });
+    document.getElementById('ecc').addEventListener('change', generateQRCode);
+    document.getElementById('scale').addEventListener('change', generateQRCode);
+    document.getElementById('margin').addEventListener('change', generateQRCode);
 
     // First render
     generateQRCode();
