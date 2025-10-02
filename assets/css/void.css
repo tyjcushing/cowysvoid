@@ -264,3 +264,31 @@ header.page p{ margin:0 }
 
 /* Project blurb paragraph */
 .blurb{ color:var(--muted); font-size:14px; margin:6px 0 10px }
+
+/* ===== Page panel (solid surface for headers & controls) ===== */
+.panel{
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+}
+.panel + .panel{ margin-top: 12px; }
+
+/* Make the page header sit nicely inside a panel */
+.page-panel .page{ margin: 0 0 10px; }
+.page-panel .page .sub{ color: var(--muted); }
+
+/* ===== Toolbar: make the search stretch full width ===== */
+.toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:stretch; }
+.toolbar-wide .input{ flex: 1 1 100%; }          /* takes the row */
+@media (min-width: 720px){
+  .toolbar-wide .input{ flex: 1 1 0%; }          /* grows, leaves room for Clear */
+}
+.toolbar .btn{ align-self: stretch; }
+
+/* Optional: solid-looking control surface inside a panel */
+.input-solid{
+  background: var(--card);
+  border-color: rgba(255,255,255,.12);
+}
