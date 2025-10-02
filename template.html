@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cowy’s Void — dev • mtg • sci-fantasy</title>
-  <meta name="description" content="Cowy’s Void — Tyler’s corner of the net: dev notes, MTG decks, and projects." />
+  <title>Page Title — Cowy’s Void</title>
+  <meta name="description" content="Short description for this page." />
 
   <!-- Icons -->
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
@@ -17,62 +17,43 @@
   <link rel="stylesheet" href="/assets/css/void.css">
 </head>
 <body>
+
   <!-- Background video container (behind everything) -->
   <div id="bgVideo" class="bg-video" aria-hidden="true">
     <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
   </div>
 
-  <!-- Content layer above background -->
+  <!-- Content layer -->
   <div class="app-layer">
     <header id="site-header" aria-label="Primary"></header>
 
     <main class="container" id="content">
-      <!-- HERO -->
-      <section class="hero" aria-labelledby="site-title">
+      <!-- Page header -->
+      <header class="page" style="margin: 8px 0 12px">
+        <h1 class="title" id="page-title">Page Title</h1>
+        <p class="sub">Optional page subtitle goes here.</p>
+      </header>
+
+      <!-- Example hero (optional, remove if not needed) -->
+      <section class="hero" aria-labelledby="page-title" style="margin-top:18px">
         <div class="hero-left">
-          <div class="code">Cowy's &lt;&gt; Void</div>
-          <h1 class="title" id="site-title">Welcome to the Void<span class="cursor" aria-hidden="true"></span></h1>
-          <p class="sub">Salesforce dev & LWC tinkerer • MTG Commander brewer • D&amp;D &amp; worldbuilder.</p>
-          <div class="hero-actions">
-            <a class="btn primary" href="/MTG.html">Browse MTG Decks</a>
-            <a class="btn" href="/projects.html">Projects</a>
-            <a class="btn" href="/under-construction.html">About me</a>
+          <div class="code">Section Headline</div>
+          <h2 class="title">Intro headline<span class="cursor" aria-hidden="true"></span></h2>
+          <p class="sub">A short sentence explaining this page.</p>
+          <div class="hero-actions" style="margin-top:14px">
+            <a class="btn primary" href="#">Primary</a>
+            <a class="btn" href="#">Secondary</a>
           </div>
         </div>
-        <!-- Optional right column (keep for future art/preview)
-        <div class="hero-right">
-          <div class="hero-card" role="img" aria-label="Black hole themed card">
-            <div class="hero-chip">cowysvoid.dev</div>
-            <div class="title" style="margin-top:8px">Blue • Purple • Space</div>
-            <div class="sub">dev | MTG Commander | D&amp;D &amp; worldbuilder</div>
-            <div class="ring" aria-hidden="true"></div>
-          </div>
-        </div>
-        -->
+        <!-- Optional right column (images/cards) can go here -->
       </section>
 
-      <!-- QUICK SECTIONS -->
-      <section class="grid" aria-label="Quick sections" style="margin-top:22px">
-        <article class="card" aria-labelledby="notes-head">
-          <h3 id="notes-head">Dev Notes</h3>
-          <p>Salesforce/LWC, Python scripts, and web toybox.</p>
-          <ul class="list">
-            <li><a href="/under-construction.html">Blog index →</a></li>
-            <li><a href="/projects.html">Featured projects →</a></li>
-            <li><a href="/under-construction.html">Setup / Uses →</a></li>
-          </ul>
+      <!-- Page content placeholder -->
+      <section class="grid" aria-label="Content">
+        <article class="card">
+          <h3>Card Title</h3>
+          <p>Start building here. Duplicate/remove cards as needed.</p>
         </article>
-
-        <!-- Add more cards whenever you’re ready
-        <article class="card" aria-labelledby="news-head">
-          <h3 id="news-head">What’s new</h3>
-          <p>Recent updates, posts, or highlights.</p>
-          <ul class="list">
-            <li><a href="#">Latest post →</a></li>
-            <li><a href="#">Release notes →</a></li>
-          </ul>
-        </article>
-        -->
       </section>
     </main>
   </div><!-- /.app-layer -->
@@ -88,7 +69,7 @@
         const tpl = document.createElement('template');
         tpl.innerHTML = html.trim();
 
-        // Move inline <style> from partials into <head>
+        // move inline <style> from partials into <head>
         tpl.content.querySelectorAll('style').forEach(st => {
           document.head.appendChild(st.cloneNode(true));
           st.remove();
@@ -97,7 +78,7 @@
         return tpl.content.firstElementChild || null;
       }
 
-      // NAV
+      // Inject NAV
       const header = document.getElementById('site-header');
       const navEl = await loadPartial('/partials/nav.html');
       if (header && navEl) {
@@ -106,14 +87,15 @@
         initNav(header);
       }
 
-      // DISCORD
+      // Inject DISCORD
       const discordEl = await loadPartial('/partials/discord.html');
       if (discordEl) document.body.appendChild(discordEl);
 
-      // FOOTER
+      // Inject FOOTER
       const footerEl = await loadPartial('/partials/footer.html');
       if (footerEl) document.body.appendChild(footerEl);
 
+      // Nav helpers
       function initNav(scope) {
         const btn   = scope.querySelector('.menu-toggle');
         const panel = scope.querySelector('#nav-panel');
@@ -123,6 +105,8 @@
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
           });
         }
+
+        // mark active link
         const here = location.pathname.replace(/\/+$/, '').toLowerCase();
         scope.querySelectorAll('.nav-link').forEach(a => {
           let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
@@ -133,6 +117,7 @@
           if (here.startsWith('/blog') && href === '/blog') {
             a.setAttribute('aria-current', 'page');
           }
+          // Add custom highlights per section if desired:
           if (here.includes('/mtg') && href === '/mtg.html') a.setAttribute('aria-current','page');
           if (here.includes('/projects') && href === '/projects.html') a.setAttribute('aria-current','page');
         });
@@ -174,13 +159,14 @@
     });
   </script>
 
-  <!-- Optional: Under-Construction click-guard (home-only)
+  <!-- (Optional) Under Construction click-guard for content area
   <script>
     const UC = { enabled: false, url: '/under-construction.html' };
     document.addEventListener('DOMContentLoaded', () => {
       if (!UC.enabled) return;
       const scope = document.getElementById('content') || document;
-      scope.querySelectorAll('a[href]').forEach(a => {
+      const anchors = scope.querySelectorAll('a[href]');
+      anchors.forEach(a => {
         if (a.dataset.uc === 'off') return;
         const href = a.getAttribute('href');
         if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;

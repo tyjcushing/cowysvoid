@@ -5,97 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Projects — Cowy’s Void</title>
   <meta name="description" content="Project library — searchable cards linking to individual project pages." />
+
+  <!-- Icons -->
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
-  <style>
-    :root{ --bg:#090a12; --card:#0b0f17; --text:#e8eaff; --muted:#9aa4c7; --accent:#6aa7ff; --accent-2:#b388ff; --ring:rgba(130,160,255,.35) }
-    @media (prefers-color-scheme: light){ :root{ --bg:#f6f7ff; --card:#ffffff; --text:#0b0d10; --muted:#5e6b85; --accent:#3d6cff; --accent-2:#7f68ff; --ring:rgba(61,108,255,.25) } }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    a{color:inherit;text-decoration:none}
-    .container{max-width:1080px;margin:0 auto;padding:24px}
 
-    header.page h1{margin:6px 0 6px;font-weight:900;letter-spacing:-.015em;font-size:clamp(28px,3.8vmin,44px)}
-    header.page p{margin:0;color:var(--muted)}
-
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
-    .input{flex:1 1 260px;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
-    .input input{all:unset;flex:1}
-    .btn{padding:10px 14px;border-radius:12px;background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#0b0d10;font-weight:700;cursor:pointer}
-    .btn.ghost{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text)}
-
-    .filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-    .chip{font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,.08);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.03);cursor:pointer}
-    .chip.active{color:var(--text);border-color:var(--ring);box-shadow:0 0 0 3px var(--ring)}
-
-    .section{margin:18px 0 8px}
-    .section h2{margin:0 0 6px;font-size:18px;color:var(--text)}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:12px}
-
-    /* Card layout (clickable) */
-    .card{
-      grid-column:span 6;
-      background:var(--card);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:18px;
-      padding:16px;
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-      display:grid;
-      grid-template-columns:180px 1fr;
-      gap:16px;
-      align-items:start;
-      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-      cursor:pointer;
-    }
-    .card:hover{ transform: translateY(-2px); border-color: var(--ring); box-shadow:0 14px 36px rgba(0,0,0,.30) }
-    @media (max-width:900px){ .card{grid-column:span 12} }
-    @media (max-width:640px){ .card{grid-template-columns:1fr} }
-
-    .title-row{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
-    .card h3{margin:0;font-size:18px;line-height:1.1}
-    .card h3 .subtitle{display:block;font-weight:600;color:var(--muted);font-size:12px;margin-top:3px}
-
-    .blurb{color:var(--muted);font-size:14px;margin:6px 0 10px}
-    .meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);font-size:12px;color:var(--text)}
-
-    /* Preview image */
-    .thumbwrap{
-      position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;
-      border:1px solid rgba(255,255,255,.08);
-      background:linear-gradient(135deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      box-shadow:0 6px 18px rgba(0,0,0,.25)
-    }
-    .thumb{width:100%;height:100%;object-fit:cover}
-    .thumb.fallback{display:flex;align-items:center;justify-content:center;font-weight:900;font-size:42px;letter-spacing:-.02em;color:var(--muted)}
-
-    .empty{color:var(--muted);padding:24px;border:1px dashed rgba(255,255,255,.12);border-radius:12px;text-align:center}
-  </style>
+  <!-- Unified styles -->
+  <link rel="stylesheet" href="/assets/css/void.css">
 </head>
 <body>
-  <header id="site-header" aria-label="Primary"></header>
+  <!-- Background video (behind everything) -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
 
-  <main class="container">
-    <header class="page">
-      <h1>Projects</h1>
-      <p>Searchable gallery of things I built. Click a card to open the project.</p>
-    </header>
+  <!-- Content above the video -->
+  <div class="app-layer">
+    <header id="site-header" aria-label="Primary"></header>
 
-    <div class="toolbar" role="search">
-      <label class="input" aria-label="Search projects">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <input id="q" placeholder="Search by title, tags, tech, etc." />
-      </label>
-      <button id="clearBtn" class="btn ghost" type="button">Clear</button>
-    </div>
+    <main class="container">
+      <header class="page">
+        <h1>Projects</h1>
+        <p class="sub">Searchable gallery of things I built. Click a card to open the project.</p>
+      </header>
 
-    <div class="filters" id="tagFilters" aria-label="Tag filters"></div>
+      <div class="toolbar" role="search">
+        <label class="input" aria-label="Search projects">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input id="q" placeholder="Search by title, tags, tech, etc." />
+        </label>
+        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+      </div>
 
-    <div class="section"><h2>All Projects</h2></div>
-    <section id="projGrid" class="grid" aria-live="polite"></section>
-    <div id="empty" class="empty" hidden>No projects match your search.</div>
-  </main>
+      <div class="filters" id="tagFilters" aria-label="Tag filters"></div>
 
+      <div class="section"><h2>All Projects</h2></div>
+      <section id="projGrid" class="grid" aria-live="polite"></section>
+      <div id="empty" class="empty" hidden>No projects match your search.</div>
+    </main>
+  </div><!-- /.app-layer -->
+
+  <!-- Data + UI -->
   <script>
   const state = { all: [], filtered: [], activeTags: new Set() };
 
@@ -106,7 +58,7 @@
     if(!res.ok) throw new Error('Failed to load projects.json');
     state.all = (await res.json()) || [];
 
-    // Normalize & sort
+    // normalize + sort
     state.all.forEach((p,i)=>{ p._idx=i; });
     state.all.sort((a,b)=>{
       const ad = new Date(a.updated||0).getTime(), bd = new Date(b.updated||0).getTime();
@@ -137,7 +89,7 @@
     if (updated) meta.push(`<span>Updated: ${updated}</span>`);
 
     return `
-      <article class="card" data-url="${url}" tabindex="0" role="button" aria-label="Open ${title}">
+      <article class="card project-card" data-url="${url}" tabindex="0" role="button" aria-label="Open ${title}">
         ${thumb}
         <div class="body">
           <div class="title-row">
@@ -190,7 +142,6 @@
     const q = document.getElementById('q').value.trim().toLowerCase();
     const tags = state.activeTags;
     state.filtered = state.all.filter(p => {
-      // tag filter (require all active tags)
       const ptags = new Set(p.tags||[]);
       if (tags.size && ![...tags].every(t => ptags.has(t))) return false;
 
@@ -199,9 +150,10 @@
       return hay.includes(q);
     });
 
-    // sort: if a query exists, prefer title asc; else updated desc
-    if (q){ state.filtered.sort((a,b)=> (a.title||'').localeCompare(b.title||'') || (a._idx-b._idx)); }
-    else {
+    // sort: if query exists, prefer title asc; else updated desc
+    if (q){
+      state.filtered.sort((a,b)=> (a.title||'').localeCompare(b.title||'') || (a._idx-b._idx));
+    } else {
       state.filtered.sort((a,b)=>{
         const ad = new Date(a.updated||0).getTime(), bd = new Date(b.updated||0).getTime();
         if (bd - ad) return bd - ad;
@@ -217,11 +169,46 @@
     const q = document.getElementById('q');
     const clearBtn = document.getElementById('clearBtn');
     q.addEventListener('input', applyFilters);
-    clearBtn.addEventListener('click', ()=>{ q.value=''; state.activeTags.clear(); document.querySelectorAll('.chip.active').forEach(c=>c.classList.remove('active')); applyFilters(); });
+    clearBtn.addEventListener('click', ()=>{ 
+      q.value=''; state.activeTags.clear(); 
+      document.querySelectorAll('.chip.active').forEach(c=>c.classList.remove('active')); 
+      applyFilters(); 
+    });
   });
   </script>
 
-  <!-- Partials injector (nav, discord, footer) -->
+  <!-- Background video loader -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) {
+        wrap.style.display = 'none';
+        return;
+      }
+
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+
+      const onReady = () => {
+        wrap.classList.add('ready');
+        const p = vid.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      };
+
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
+  </script>
+
+  <!-- Partials injector -->
   <script>
   (async () => {
     try {
@@ -256,7 +243,7 @@
           let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
           if (href === '/blog/') href = '/blog';
           if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
-          if (here.includes('/projects')) a.setAttribute('aria-current', 'page');
+          if (here.includes('/projects')) a.setAttribute('aria-current', 'page'); // highlight projects
           if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
         });
       }
