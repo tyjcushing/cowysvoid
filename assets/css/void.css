@@ -447,3 +447,7 @@ body > footer .container {
   margin: 0 auto;
   padding: 0 24px;
 }
+
+.project-card .pill {
+    margin-top: 10px;
+}
