@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QR Code Generator — Cowy’s Void</title>
-  <meta name="description" content="Generate QR codes with adjustable error correction, scale, and margin. Download PNG instantly." />
+  <meta name="description" content="Generate QR codes with adjustable error correction, scale, margin, and optional centered logo overlay. Download PNG instantly." />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
 
@@ -51,11 +51,13 @@
       background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
     }
     .input input, .input select{all:unset;flex:1}
+    input[type="range"]{width:100%}
+    .hint{color:var(--muted); font-size:12px}
 
     /* Output */
     #qrcode{margin-top:16px; display:flex; align-items:center; justify-content:flex-start}
     canvas.qr{
-      width:min(420px, 100%); height:auto; image-rendering: crisp-edges; image-rendering: pixelated;
+      width:min(480px, 100%); height:auto; image-rendering: crisp-edges; image-rendering: pixelated;
       border-radius:12px; background:#fff; box-shadow:0 8px 24px rgba(0,0,0,.20);
       border:1px solid rgba(255,255,255,.08)
     }
@@ -70,7 +72,7 @@
   <main class="container">
     <section class="hero">
       <div class="title">QR Code Generator</div>
-      <div class="sub">Adjust error correction, scale, and margin. Download as PNG.</div>
+      <div class="sub">Adjust error correction, scale, margin, and add a centered logo overlay. Download as PNG.</div>
       <div class="hero-actions">
         <a class="btn ghost" href="/projects.html">← Back to Projects</a>
       </div>
@@ -115,6 +117,43 @@
           </div>
         </div>
 
+        <div class="row" style="margin-top:6px">
+          <div class="field" style="flex:2; min-width:260px">
+            <label for="logoFile">Logo Overlay</label>
+            <div class="row" style="gap:8px">
+              <div class="input" style="flex:2; min-width:240px">
+                <input id="logoUrl" type="text" placeholder="Paste logo image URL (requires CORS)" />
+              </div>
+              <input id="logoFile" type="file" accept="image/*" style="display:block" />
+              <button class="btn ghost" id="logoLoadUrl" type="button">Load</button>
+              <button class="btn ghost" id="logoClear" type="button">Clear</button>
+            </div>
+            <div class="hint">Tip: Uploading a local file always allows downloading. External URLs may block PNG download unless the server enables CORS.</div>
+          </div>
+          <div class="field" style="max-width:220px">
+            <label for="logoSize">Logo size (% of QR)</label>
+            <input id="logoSize" type="range" min="8" max="40" step="1" value="22" />
+            <div class="hint"><span id="logoSizeVal">22%</span></div>
+          </div>
+          <div class="field" style="max-width:220px">
+            <label for="logoPad">Background padding (px)</label>
+            <input id="logoPad" type="range" min="0" max="32" step="1" value="10" />
+            <div class="hint"><span id="logoPadVal">10px</span></div>
+          </div>
+          <div class="field" style="max-width:220px">
+            <label for="logoRadius">Corner radius (px)</label>
+            <input id="logoRadius" type="range" min="0" max="32" step="1" value="12" />
+            <div class="hint"><span id="logoRadiusVal">12px</span></div>
+          </div>
+          <div class="field" style="max-width:260px">
+            <label>Overlay style</label>
+            <div class="row" style="gap:8px">
+              <label class="pill" style="cursor:pointer"><input id="logoBg" type="checkbox" checked style="margin-right:6px"> White BG</label>
+              <label class="pill" style="cursor:pointer"><input id="logoBorder" type="checkbox" style="margin-right:6px"> Border</label>
+            </div>
+          </div>
+        </div>
+
         <div class="row" style="margin-top:10px">
           <button class="btn" id="genBtn" type="button">Generate QR Code</button>
           <button class="btn ghost" id="download-btn" type="button" disabled>Download PNG</button>
@@ -124,6 +163,7 @@
         <div class="meta" id="meta" hidden>
           <span class="pill" id="pxSize"></span>
           <span class="pill" id="bytes"></span>
+          <span class="pill" id="logoStatus" hidden></span>
         </div>
       </article>
     </section>
@@ -134,6 +174,7 @@
 
   <script>
     let currentCanvas = null;
+    const logo = { img: null, source: '', from: 'none' }; // from: 'file' | 'url' | 'none'
 
     function getOpts(){
       const ecc = document.getElementById('ecc').value || 'H';
@@ -149,11 +190,13 @@
       const meta = document.getElementById('meta');
       const pxSize = document.getElementById('pxSize');
       const bytes = document.getElementById('bytes');
+      const logoStatus = document.getElementById('logoStatus');
 
       container.innerHTML = '';
       currentCanvas = null;
       downloadBtn.disabled = true;
       meta.hidden = true;
+      logoStatus.hidden = true;
 
       if (!input) return;
 
@@ -162,10 +205,16 @@
         if (err) { console.error(err); return; }
         currentCanvas = canvas;
         currentCanvas.classList.add('qr');
+
+        // Draw logo overlay if present
+        if (logo.img) {
+          try { drawLogoOverlay(currentCanvas); logoStatus.textContent = `Logo: ${logo.from}`; logoStatus.hidden = false; }
+          catch(e){ console.warn('Logo draw failed', e); }
+        }
+
         container.appendChild(currentCanvas);
 
         // Enable download & show meta
-        downloadBtn.disabled = false;
         const w = currentCanvas.width, h = currentCanvas.height;
         pxSize.textContent = `Canvas: ${w}×${h}px`;
 
@@ -173,28 +222,138 @@
           const dataURL = currentCanvas.toDataURL('image/png');
           const size = Math.ceil((dataURL.length - 'data:image/png;base64,'.length) * 3/4);
           bytes.textContent = `~${(size/1024).toFixed(1)} KB`;
+          document.getElementById('download-btn').disabled = false;
           meta.hidden = false;
-        } catch(_) {}
+        } catch(_) {
+          bytes.textContent = `External image blocked PNG download (CORS)`;
+          document.getElementById('download-btn').disabled = true;
+          meta.hidden = false;
+        }
       });
+    }
+
+    function drawRoundedRect(ctx, x, y, w, h, r){
+      const rr = Math.max(0, Math.min(r, Math.min(w, h)/2));
+      ctx.beginPath();
+      ctx.moveTo(x+rr, y);
+      ctx.arcTo(x+w, y,   x+w, y+h, rr);
+      ctx.arcTo(x+w, y+h, x,   y+h, rr);
+      ctx.arcTo(x,   y+h, x,   y,   rr);
+      ctx.arcTo(x,   y,   x+w, y,   rr);
+      ctx.closePath();
+    }
+
+    function drawImageCover(ctx, img, dx, dy, dw, dh){
+      const sW = img.naturalWidth || img.width;
+      const sH = img.naturalHeight || img.height;
+      const scale = Math.max(dw / sW, dh / sH);
+      const cw = sW * scale;
+      const ch = sH * scale;
+      const sx = dx + (dw - cw)/2;
+      const sy = dy + (dh - ch)/2;
+      ctx.drawImage(img, sx, sy, cw, ch);
+    }
+
+    function drawLogoOverlay(canvas){
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const sizePct = Math.max(0.05, Math.min(0.6, (parseFloat(document.getElementById('logoSize').value)||22)/100));
+      const pad = Math.max(0, Math.min(64, parseFloat(document.getElementById('logoPad').value)||10));
+      const radius = Math.max(0, Math.min(64, parseFloat(document.getElementById('logoRadius').value)||12));
+      const wantBG = document.getElementById('logoBg').checked;
+      const wantBorder = document.getElementById('logoBorder').checked;
+
+      const dim = Math.floor(Math.min(W,H) * sizePct);
+      const x = Math.round((W - dim)/2);
+      const y = Math.round((H - dim)/2);
+
+      // Optional white background beneath logo (to "knock out" modules)
+      if (wantBG){
+        ctx.save();
+        drawRoundedRect(ctx, x - pad, y - pad, dim + 2*pad, dim + 2*pad, Math.max(radius - 2, 0));
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        if (wantBorder){ ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.stroke(); }
+        ctx.restore();
+      }
+
+      // Clip the logo to rounded rect then draw (cover)
+      ctx.save();
+      drawRoundedRect(ctx, x, y, dim, dim, radius);
+      ctx.clip();
+      drawImageCover(ctx, logo.img, x, y, dim, dim);
+      ctx.restore();
     }
 
     function downloadQRCode() {
       if (!currentCanvas) return;
       const link = document.createElement('a');
       link.download = 'qr-code.png';
-      link.href = currentCanvas.toDataURL('image/png');
+      try { link.href = currentCanvas.toDataURL('image/png'); }
+      catch(_) { return; }
       link.click();
     }
 
-    // Wire up
+    // Logo loaders
+    function loadLogoFromFile(file){
+      return new Promise((resolve, reject) => {
+        if (!file) return reject(new Error('No file'));
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => { logo.img = img; logo.source = '(file)'; logo.from = 'file'; resolve(); };
+          img.onerror = reject;
+          img.src = reader.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function loadLogoFromUrl(url){
+      return new Promise((resolve, reject) => {
+        if (!url) return reject(new Error('No URL'));
+        const img = new Image();
+        img.crossOrigin = 'anonymous'; // try to avoid taint; server must allow
+        img.onload = () => { logo.img = img; logo.source = url; logo.from = 'url'; resolve(); };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    // Wire up UI
     document.getElementById('genBtn').addEventListener('click', generateQRCode);
     document.getElementById('download-btn').addEventListener('click', downloadQRCode);
     document.getElementById('qr-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') generateQRCode(); });
-    document.getElementById('ecc').addEventListener('change', generateQRCode);
-    document.getElementById('scale').addEventListener('change', generateQRCode);
-    document.getElementById('margin').addEventListener('change', generateQRCode);
+    ['ecc','scale','margin'].forEach(id => document.getElementById(id).addEventListener('change', generateQRCode));
+
+    const logoUrl = document.getElementById('logoUrl');
+    document.getElementById('logoLoadUrl').addEventListener('click', async () => {
+      try{ await loadLogoFromUrl(logoUrl.value.trim()); generateQRCode(); } catch(e){ console.warn('Logo URL failed', e); }
+    });
+    document.getElementById('logoFile').addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      try{ await loadLogoFromFile(f); generateQRCode(); }
+      catch(err){ console.warn('Logo file failed', err); }
+      finally{ e.target.value = ''; }
+    });
+    document.getElementById('logoClear').addEventListener('click', () => { logo.img = null; logo.source=''; logo.from='none'; generateQRCode(); });
+
+    // Live overlay tweaks
+    const sizeEl = document.getElementById('logoSize');
+    const padEl = document.getElementById('logoPad');
+    const radEl = document.getElementById('logoRadius');
+    const sizeVal = document.getElementById('logoSizeVal');
+    const padVal = document.getElementById('logoPadVal');
+    const radVal = document.getElementById('logoRadiusVal');
+    function updateVals(){ sizeVal.textContent = `${sizeEl.value}%`; padVal.textContent = `${padEl.value}px`; radVal.textContent = `${radEl.value}px`; }
+    [sizeEl, padEl, radEl].forEach(el => el.addEventListener('input', () => { updateVals(); if (currentCanvas) generateQRCode(); }));
+    document.getElementById('logoBg').addEventListener('change', () => { if (currentCanvas) generateQRCode(); });
+    document.getElementById('logoBorder').addEventListener('change', () => { if (currentCanvas) generateQRCode(); });
 
     // First render
+    updateVals();
     generateQRCode();
   </script>
 

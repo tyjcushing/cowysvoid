@@ -4,7 +4,7 @@
     "title": "QR Code Generator",
     "subtitle": "Fast, offline, custom colors & logo overlays",
     "url": "/projects/qr-code-generator.html",
-    "blurb": "Generate QR codes with color, size, error correction and optional logo overlays. Works offline.",
+    "blurb": "Generate QR codes with color, size, error correction.",
     "tags": ["Tool", "Web", "Utility"],
     "tech": ["HTML", "JS", "Canvas"],
     "image": "/assets/projects/qr-thumb.png",
