@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QR Code Generator — Cowy’s Void</title>
+  <meta name="description" content="Generate QR codes with high error correction and download as PNG." />
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+
+  <style>
+    :root{
+      --bg:#090a12; --card:#0b0f17; --text:#e8eaff; --muted:#9aa4c7;
+      --accent:#6aa7ff; --accent-2:#b388ff; --ring:rgba(130,160,255,.35)
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f6f7ff; --card:#ffffff; --text:#0b0d10; --muted:#5e6b85; --accent:#3d6cff; --accent-2:#7f68ff; --ring:rgba(61,108,255,.25) }
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:1080px;margin:0 auto;padding:24px}
+
+    /* Hero */
+    .hero{
+      margin-top:28px;border-radius:24px;background:
+        radial-gradient(120% 120% at 30% 20%, rgba(106,167,255,.18), transparent 60%),
+        radial-gradient(120% 120% at 80% 90%, rgba(179,136,255,.18), transparent 60%), var(--card);
+      border:1px solid rgba(255,255,255,.06); box-shadow:0 24px 60px rgba(0,0,0,.35);
+      overflow:hidden; position:relative; padding:28px
+    }
+    .title{font-weight:900; letter-spacing:-.02em; font-size:clamp(26px,4.2vmin,44px)}
+    .sub{color:var(--muted); margin-top:6px}
+    .hero-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap}
+    .btn{padding:10px 14px;border-radius:12px;background:linear-gradient(90deg, var(--accent), var(--accent-2));
+      border:none;color:#0b0d10;font-weight:700;cursor:pointer}
+    .btn.ghost{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text)}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+
+    /* Card / form */
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:22px}
+    .card{grid-column: span 12; background:var(--card); border:1px solid rgba(255,255,255,.06);
+      border-radius:18px; padding:18px; box-shadow:0 10px 35px rgba(0,0,0,.25)}
+    .card h2{margin:0 0 8px 0; font-size:18px}
+
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .field{display:flex;flex-direction:column;gap:6px;min-width:240px;flex:1}
+    .input, .selectlike{
+      display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
+    }
+    .input input{all:unset;flex:1}
+    .hint{color:var(--muted); font-size:12px}
+
+    /* Output */
+    #qrcode{margin-top:16px; display:flex; align-items:center; justify-content:flex-start}
+    canvas.qr{
+      width:min(420px, 100%); height:auto; image-rendering: crisp-edges; image-rendering: pixelated;
+      border-radius:12px; background:#fff; box-shadow:0 8px 24px rgba(0,0,0,.20);
+      border:1px solid rgba(255,255,255,.08)
+    }
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);font-size:12px;color:var(--text)}
+    .meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:8px}
+  </style>
+</head>
+<body>
+  <header id="site-header" aria-label="Primary"></header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="title">QR Code Generator</div>
+      <div class="sub">High error-correction (H), crisp canvas output, quick PNG download.</div>
+      <div class="hero-actions">
+        <a class="btn ghost" href="/projects.html">← Back to Projects</a>
+        <a class="btn" href="#generator">Jump to Generator</a>
+      </div>
+    </section>
+
+    <section class="grid" id="generator">
+      <article class="card">
+        <h2>Generate</h2>
+
+        <div class="row" role="form" aria-labelledby="generator">
+          <div class="field" style="flex:2">
+            <label for="qr-input">Text / URL</label>
+            <div class="input">
+              <input id="qr-input" type="text" placeholder="https://cowysvoid.dev" value="https://cowysvoid.dev" />
+            </div>
+            <div class="hint">Press Enter or click Generate</div>
+          </div>
+
+          <!-- Keep your exact options: errorCorrectionLevel 'H', scale 25, margin 0.3 -->
+          <div class="field" style="max-width:220px">
+            <label>Quality</label>
+            <div class="selectlike">
+              <span class="pill">ECC: H</span>
+              <span class="pill">Scale: 25</span>
+              <span class="pill">Margin: 0.3</span>
+            </div>
+            <div class="hint">Fixed to match your previous settings</div>
+          </div>
+
+          <div class="row" style="margin-top:6px">
+            <button class="btn" id="genBtn" type="button">Generate QR Code</button>
+            <button class="btn ghost" id="download-btn" type="button" disabled>Download PNG</button>
+          </div>
+        </div>
+
+        <div id="qrcode" aria-live="polite" aria-label="QR output"></div>
+        <div class="meta" id="meta" hidden>
+          <span class="pill" id="pxSize"></span>
+          <span class="pill" id="bytes"></span>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <!-- Your original library (unchanged) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+  <script>
+    let currentCanvas = null;
+
+    function generateQRCode() {
+      const input = document.getElementById('qr-input').value.trim();
+      const container = document.getElementById('qrcode');
+      const downloadBtn = document.getElementById('download-btn');
+      const meta = document.getElementById('meta');
+      const pxSize = document.getElementById('pxSize');
+      const bytes = document.getElementById('bytes');
+
+      container.innerHTML = '';
+      currentCanvas = null;
+      downloadBtn.disabled = true;
+      meta.hidden = true;
+
+      if (!input) return;
+
+      // Same options as you had: ECC H, scale 25, margin 0.3
+      QRCode.toCanvas(input, {
+        errorCorrectionLevel: 'H',
+        scale: 25,
+        margin: 0.3
+      }, function (err, canvas) {
+        if (err) { console.error(err); return; }
+        currentCanvas = canvas;
+        currentCanvas.classList.add('qr');
+        container.appendChild(currentCanvas);
+
+        // Enable download & show meta
+        downloadBtn.disabled = false;
+        const w = currentCanvas.width, h = currentCanvas.height;
+        pxSize.textContent = `Canvas: ${w}×${h}px`;
+
+        // Rough data URL size (for curiosity)
+        try {
+          const dataURL = currentCanvas.toDataURL('image/png');
+          // base64 length -> bytes estimate
+          const size = Math.ceil((dataURL.length - 'data:image/png;base64,'.length) * 3/4);
+          bytes.textContent = `~${(size/1024).toFixed(1)} KB`;
+          meta.hidden = false;
+        } catch(_) {}
+      });
+    }
+
+    function downloadQRCode() {
+      if (!currentCanvas) return;
+      const link = document.createElement('a');
+      link.download = 'qr-code.png';
+      link.href = currentCanvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Wire up
+    document.getElementById('genBtn').addEventListener('click', generateQRCode);
+    document.getElementById('download-btn').addEventListener('click', downloadQRCode);
+    document.getElementById('qr-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') generateQRCode();
+    });
+
+    // First render
+    generateQRCode();
+  </script>
+
+  <!-- Partials injector (nav, discord, footer) -->
+  <script>
+  (async () => {
+    try {
+      async function loadPartial(url) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+        return tpl.content.firstElementChild || null;
+      }
+      const header = document.getElementById('site-header');
+      const navEl = await loadPartial('/partials/nav.html');
+      if (header && navEl) { header.innerHTML = ''; header.appendChild(navEl); initNav(header); }
+      const discordEl = await loadPartial('/partials/discord.html');
+      if (discordEl) document.body.appendChild(discordEl);
+      const footerEl = await loadPartial('/partials/footer.html');
+      if (footerEl) document.body.appendChild(footerEl);
+
+      function initNav(scope) {
+        const btn = scope.querySelector('.menu-toggle');
+        const panel = scope.querySelector('#nav-panel');
+        if (btn && panel) {
+          btn.addEventListener('click', () => {
+            const open = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+        }
+        const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+        scope.querySelectorAll('.nav-link').forEach(a => {
+          let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+          if (href === '/blog/') href = '/blog';
+          if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
+          if (here.startsWith('/projects')) a.setAttribute('aria-current', 'page');
+        });
+      }
+    } catch (e) { console.warn('Partial load failed:', e); }
+  })();
+  </script>
+</body>
+</html>

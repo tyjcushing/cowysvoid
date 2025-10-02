@@ -78,6 +78,11 @@
   </style>
 </head>
 <body>
+  <!-- Background video container (kept behind via z-index:0 so it isn't hidden by the body background) -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
   <header id="site-header" aria-label="Primary"></header>
 
   <main class="container">
@@ -469,6 +474,37 @@
       applyFilters(); 
     });
   });
+  </script>
+
+  <!-- Connection-aware background video loader -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) {
+        wrap.style.display = 'none';
+        return;
+      }
+
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+
+      const onReady = () => {
+        wrap.classList.add('ready');
+        const p = vid.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      };
+
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
   </script>
 
   <!-- === Partials injector (nav, discord, footer) === -->
