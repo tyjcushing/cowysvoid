@@ -328,3 +328,80 @@ header.page p{ margin:0 }
 @media (min-width: 720px){
   .toolbar-wide .input{ flex: 1 1 0%; }
 }
+
+/* ===== Projects page: layout & spacing ===== */
+.card.project-card{
+  display:grid;
+  grid-template-columns:180px 1fr;
+  gap:16px; align-items:start;
+}
+@media (max-width:640px){
+  .card.project-card{ grid-template-columns:1fr }
+}
+
+/* Title spacing tweaks */
+.project-title{ margin:0; font-size:18px; line-height:1.15; }
+.project-title-row{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+}
+.project-title .subtitle{
+  display:block; font-weight:600; color:var(--muted);
+  font-size:12px; margin-top:4px;
+}
+
+/* Meta & tags spacing */
+.project-meta, .project-tags{
+  display:flex; flex-wrap:wrap; gap:10px;
+}
+.meta .meta-item{ color:var(--muted); font-size:12px }
+
+/* ===== Thumbs: 16:9 by default ===== */
+.thumbwrap{ position:relative; border:1px solid rgba(255,255,255,.08); border-radius:14px;
+  overflow:hidden; background:linear-gradient(135deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  box-shadow:0 6px 18px rgba(0,0,0,.25);
+}
+.thumbwrap-169{ aspect-ratio:16/9; }
+.thumb{ width:100%; height:100%; object-fit:cover; display:block; }
+.thumb.fallback{
+  display:flex; align-items:center; justify-content:center;
+  font-weight:900; font-size:42px; letter-spacing:-.02em; color:var(--muted);
+}
+
+/* Icon/logo fit: auto-switch to contain & pad the image; give the frame a solidish surface */
+.thumbwrap.iconish{
+  background: var(--card);
+  border-color: rgba(255,255,255,.12);
+}
+.thumb.icon{
+  object-fit:contain; padding:12px; width:100%; height:100%;
+}
+
+/* ===== Solid surfaces for header/search (shared with MTG) ===== */
+.solid-surface{
+  background: var(--card) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: var(--shadow-md);
+}
+.input-solid{
+  background: var(--card) !important;
+  border-color: rgba(255,255,255,.16) !important;
+}
+.page-panel .btn.ghost,
+.solid-ghost-btn.btn.ghost{
+  background: var(--card) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  color: var(--text) !important;
+}
+.page-panel .chip,
+.solid-chip{
+  background: var(--card) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: var(--text) !important;
+}
+
+/* Toolbar stretch (if not already present) */
+.toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:stretch; }
+.toolbar-wide .input{ flex: 1 1 100%; }
+@media (min-width: 720px){
+  .toolbar-wide .input{ flex: 1 1 0%; }
+}

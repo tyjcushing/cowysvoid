@@ -24,22 +24,25 @@
     <header id="site-header" aria-label="Primary"></header>
 
     <main class="container">
-      <header class="page">
-        <h1>Projects</h1>
-        <p class="sub">Searchable gallery of things I built. Click a card to open the project.</p>
-      </header>
+      <!-- SOLID panel for title + search + filters -->
+      <section class="panel page-panel solid-surface">
+        <header class="page">
+          <h1>Projects</h1>
+          <p class="sub">Searchable gallery of things I built. Click a card to open the project.</p>
+        </header>
 
-      <div class="toolbar" role="search">
-        <label class="input" aria-label="Search projects">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <input id="q" placeholder="Search by title, tags, tech, etc." />
-        </label>
-        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
-      </div>
+        <div class="toolbar toolbar-wide" role="search">
+          <label class="input input-solid solid-input" aria-label="Search projects">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <input id="q" placeholder="Search by title, tags, tech, etc." />
+          </label>
+          <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
+        </div>
 
-      <div class="filters" id="tagFilters" aria-label="Tag filters"></div>
+        <div class="filters" id="tagFilters" aria-label="Tag filters"></div>
+      </section>
 
       <div class="section"><h2>All Projects</h2></div>
       <section id="projGrid" class="grid" aria-live="polite"></section>
@@ -80,24 +83,30 @@
     const updated = p.updated ? new Date(p.updated).toLocaleDateString() : '';
 
     const img = esc(p.image||'');
+    // Heuristic: treat logos/icons as "contain"
+    const seemsIcon = /\.svg$/i.test(img) || /(?:icon|logo)/i.test(img);
     const thumb = img
-      ? `<div class="thumbwrap"><img class="thumb" src="${img}" alt="${title} preview"></div>`
-      : `<div class="thumbwrap"><div class="thumb fallback">${title.charAt(0).toUpperCase()}</div></div>`;
+      ? `<div class="thumbwrap thumbwrap-169${seemsIcon ? ' iconish' : ''}">
+           <img class="thumb${seemsIcon ? ' icon' : ''}" src="${img}" alt="${title} preview" />
+         </div>`
+      : `<div class="thumbwrap thumbwrap-169">
+           <div class="thumb fallback">${title.charAt(0).toUpperCase()}</div>
+         </div>`;
 
-    const meta = [];
-    if (tech.length) meta.push(`<span>${tech.join(' • ')}</span>`);
-    if (updated) meta.push(`<span>Updated: ${updated}</span>`);
+    const metaBits = [];
+    if (tech.length) metaBits.push(`<span class="meta-item">${tech.join(' • ')}</span>`);
+    if (updated) metaBits.push(`<span class="meta-item">Updated: ${updated}</span>`);
 
     return `
       <article class="card project-card" data-url="${url}" tabindex="0" role="button" aria-label="Open ${title}">
         ${thumb}
         <div class="body">
-          <div class="title-row">
-            <h3>${title}${p.subtitle?`<span class="subtitle">${esc(p.subtitle)}</span>`:''}</h3>
+          <div class="title-row project-title-row">
+            <h3 class="project-title">${title}${p.subtitle?`<span class="subtitle">${esc(p.subtitle)}</span>`:''}</h3>
           </div>
           ${blurb?`<div class="blurb">${blurb}</div>`:''}
-          ${meta.length?`<div class="meta">${meta.join('')}</div>`:''}
-          ${tags.length?`<div class="meta">${tags.map(t=>`<span class="pill">${t}</span>`).join('')}</div>`:''}
+          ${metaBits.length?`<div class="meta project-meta">${metaBits.join('')}</div>`:''}
+          ${tags.length?`<div class="meta project-tags">${tags.map(t=>`<span class="pill">${t}</span>`).join('')}</div>`:''}
         </div>
       </article>`;
   }
@@ -117,6 +126,22 @@
       el.addEventListener('click', ()=>{ const u = el.getAttribute('data-url'); if(u) location.href = u; });
       el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); const u = el.getAttribute('data-url'); if(u) location.href = u; } });
     });
+
+    // Refine "icon" detection based on image aspect ratio after load
+    grid.querySelectorAll('.thumbwrap img.thumb').forEach(img=>{
+      if (img.complete) markIconByRatio(img);
+      else img.addEventListener('load', ()=>markIconByRatio(img), {once:true});
+    });
+
+    function markIconByRatio(img){
+      const nw = img.naturalWidth || 0, nh = img.naturalHeight || 0;
+      if (!nw || !nh) return;
+      const r = nw/nh;
+      if (r > 0.8 && r < 1.25) { // roughly square => likely an app icon/logo
+        img.classList.add('icon');
+        img.closest('.thumbwrap')?.classList.add('iconish');
+      }
+    }
   }
 
   function buildTagChips(){
@@ -127,7 +152,7 @@
     [...allTags].sort().forEach(tag => {
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'chip';
+      chip.className = 'chip solid-chip';
       chip.textContent = tag;
       chip.addEventListener('click', () => {
         if(state.activeTags.has(tag)) state.activeTags.delete(tag); else state.activeTags.add(tag);
@@ -189,19 +214,10 @@
       const vid  = document.getElementById('bgVideoEl');
       if (!wrap || !vid) return;
 
-      if (!allowVideo) {
-        wrap.style.display = 'none';
-        return;
-      }
-
+      if (!allowVideo) { wrap.style.display = 'none'; return; }
       vid.src = '/assets/Blackhole_Animtation.mp4';
 
-      const onReady = () => {
-        wrap.classList.add('ready');
-        const p = vid.play();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      };
-
+      const onReady = () => { wrap.classList.add('ready'); const p = vid.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); };
       vid.addEventListener('canplay', onReady, { once: true });
       vid.addEventListener('loadeddata', onReady, { once: true });
       vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
