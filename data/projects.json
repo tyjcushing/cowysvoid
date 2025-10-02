@@ -20,5 +20,25 @@
     "tech": ["JS", "D3"],
     "image": "/assets/projects/deck-stats-thumb.jpg",
     "updated": "2025-08-12"
+  },
+  {
+  "title": "Character Counter",
+  "subtitle": "Searchable text analyzer",
+  "blurb": "Counts characters (including spaces), highlights search hits, and shows per-character frequency.",
+  "tags": ["utility", "text"],
+  "tech": ["JavaScript", "Intl.Segmenter"],
+  "image": "/assets/projects/word-count.png",
+  "url": "/projects/character-counter.html",
+  "updated": "2025-10-02"
+  },
+  {
+    "title": "Photo Converter",
+    "subtitle": "Drag & drop image converter",
+    "blurb": "Convert images to PNG, JPG, WebP, or AVIF in-browser. Supports quality, background flattening, and optional resize.",
+    "tags": ["utility", "images", "converter"],
+    "tech": ["JavaScript", "Canvas", "createImageBitmap"],
+    "image": "/assets/projects/convert-file-type.png",
+    "url": "/projects/photo-converter.html",
+    "updated": "2025-10-02"
   }
 ]

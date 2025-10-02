@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Photo Converter — Cowy’s Void</title>
+  <meta name="description" content="Drag in an image and convert it to PNG, JPG, WebP or AVIF right in the browser." />
+
+  <!-- Icons -->
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+
+  <!-- Unified styles -->
+  <link rel="stylesheet" href="/assets/css/void.css">
+
+  <style>
+    /* Page-local tweaks */
+    .panel.page-panel.solid-surface{ padding-top:18px; padding-bottom:18px; }
+    .drop {
+      border: 2px dashed rgba(255,255,255,.18);
+      background: rgba(255,255,255,.03);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+    .drop.dragover {
+      border-color: var(--ring);
+      box-shadow: 0 0 0 4px var(--ring);
+      background: rgba(255,255,255,.05);
+    }
+    .drop .btn { margin-top: 10px; }
+    .thumbwrap {
+      position:relative; width:100%; aspect-ratio: 1/1; border-radius: 14px; overflow:hidden;
+      border:1px solid rgba(255,255,255,.10); background:linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      display:flex; align-items:center; justify-content:center;
+    }
+    .thumbwrap img, .thumbwrap canvas { max-width:100%; max-height:100%; display:block; }
+    .kv { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .kv .pill { gap:6px; }
+    .grid-12 { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
+    .span-6 { grid-column:span 6; } .span-12 { grid-column:span 12; }
+    @media (max-width:900px){ .span-6{ grid-column:span 12; } }
+    .format-bar { display:flex; flex-wrap:wrap; gap:8px; }
+    .format-bar .chip { user-select:none; }
+    .chip input { margin-right:6px; }
+    .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+
+    .control { display:flex; align-items:center; gap:8px; }
+    .control label { font-size:12px; color:var(--muted); }
+    .number { width:120px; }
+    .range { width:220px; }
+
+    .result { display:flex; flex-direction:column; gap:10px; }
+    .result .thumbwrap { aspect-ratio: 1/1; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+  <!-- Background video (behind everything) -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
+  <!-- Content above the video -->
+  <div class="app-layer">
+    <header id="site-header" aria-label="Primary"></header>
+
+    <main class="container">
+      <section class="panel page-panel solid-surface">
+        <header class="page">
+          <h1>Photo Converter</h1>
+          <p class="sub">Drop an image or pick a file, then export to PNG, JPG, WebP, or AVIF. Everything runs locally in your browser.</p>
+        </header>
+
+        <!-- Dropzone / picker -->
+        <div id="drop" class="drop" role="region" aria-label="Drop image here">
+          <p>Drag & drop an image here, or</p>
+          <input id="file" type="file" accept="image/*" hidden />
+          <button id="pickBtn" class="btn" type="button">Choose file</button>
+        </div>
+
+        <!-- Input preview + info -->
+        <div id="inputWrap" class="grid-12" style="margin-top:16px; display:none">
+          <article class="card span-6">
+            <h3>Original</h3>
+            <div class="thumbwrap"><canvas id="inCanvas"></canvas></div>
+            <div class="kv" style="margin-top:10px">
+              <span class="pill"><strong id="inType">—</strong></span>
+              <span class="pill"><span>Size</span><strong id="inSize" class="mono">—</strong></span>
+              <span class="pill"><span>Dimensions</span><strong id="inDims" class="mono">—</strong></span>
+              <span class="pill"><span>Name</span><strong id="inName" class="mono">—</strong></span>
+            </div>
+          </article>
+
+          <!-- Controls -->
+          <article class="card span-6">
+            <h3>Convert</h3>
+            <div class="section">
+              <div class="section"><strong>Format</strong></div>
+              <div id="formatBar" class="format-bar" role="radiogroup" aria-label="Output format"></div>
+              <div id="formatNote" class="inline-hint" style="margin-top:6px; color:var(--muted)"></div>
+            </div>
+
+            <div class="section">
+              <div class="section"><strong>Quality</strong> <span class="inline-hint">(lossy formats)</span></div>
+              <div class="control">
+                <input id="quality" type="range" min="1" max="100" value="85" class="range">
+                <span class="pill"><strong id="qVal">85</strong></span>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section"><strong>Background</strong> <span class="inline-hint">(used when target format has no transparency)</span></div>
+              <div class="control">
+                <input id="bgColor" type="color" value="#0b0f17" />
+                <label for="bgColor">Flatten alpha to this color when needed (e.g., JPG)</label>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section"><strong>Resize (optional)</strong></div>
+              <div class="row">
+                <div class="control">
+                  <label for="maxW">Max width</label>
+                  <input id="maxW" type="number" class="number" inputmode="numeric" min="1" placeholder="px" />
+                </div>
+                <div class="control">
+                  <label for="maxH">Max height</label>
+                  <input id="maxH" type="number" class="number" inputmode="numeric" min="1" placeholder="px" />
+                </div>
+                <label class="chip"><input id="onlyDown" type="checkbox" checked /> Only scale down</label>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:12px">
+              <button id="convertBtn" class="btn" type="button">Convert & Download</button>
+              <button id="resetBtn" class="btn ghost solid-ghost-btn" type="button">Reset</button>
+            </div>
+
+            <p class="inline-hint" style="margin-top:8px">
+              Note: browser conversions don’t keep EXIF/metadata. If you need metadata preserved, you’ll want a server-side tool later.
+            </p>
+          </article>
+        </div>
+
+        <!-- Output preview -->
+        <div id="outputWrap" class="grid-12" style="margin-top:16px; display:none">
+          <article class="card span-6">
+            <h3>Result</h3>
+            <div class="thumbwrap"><canvas id="outCanvas"></canvas></div>
+            <div class="kv" style="margin-top:10px">
+              <span class="pill"><strong id="outType">—</strong></span>
+              <span class="pill"><span>Size</span><strong id="outSize" class="mono">—</strong></span>
+              <span class="pill"><span>Dimensions</span><strong id="outDims" class="mono">—</strong></span>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div><!-- /.app-layer -->
+
+  <!-- Logic -->
+  <script>
+  // ---------- helpers ----------
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const fmtBytes = b => {
+    if (!Number.isFinite(b)) return '–';
+    const u = ['B','KB','MB','GB']; let i = 0; let n = b;
+    while (n >= 1024 && i < u.length - 1){ n /= 1024; i++; }
+    return n.toFixed(n >= 10 || i === 0 ? 0 : 1) + ' ' + u[i];
+  };
+
+  async function supportsType(mime){
+    // tiny 1x1 canvas check
+    const c = document.createElement('canvas');
+    c.width = c.height = 1;
+    const d = c.toDataURL(mime);
+    return d.startsWith('data:' + mime);
+  }
+
+  function extForMime(m){ return ({
+    'image/png':'png', 'image/jpeg':'jpg', 'image/webp':'webp', 'image/avif':'avif'
+  })[m] || 'img'; }
+
+  function mimeForExt(ext){
+    const e = ext.toLowerCase();
+    if (e === 'png') return 'image/png';
+    if (e === 'jpg' || e === 'jpeg') return 'image/jpeg';
+    if (e === 'webp') return 'image/webp';
+    if (e === 'avif') return 'image/avif';
+    return '';
+  }
+
+  function fileNameWithExt(name, ext){
+    const ix = name.lastIndexOf('.');
+    const base = ix >= 0 ? name.slice(0, ix) : name;
+    return base + '.' + ext;
+  }
+
+  async function loadToBitmap(file){
+    if ('createImageBitmap' in window){
+      try {
+        const bmp = await createImageBitmap(file, { imageOrientation: 'from-image', colorSpaceConversion:'default', premultiplyAlpha:'default' });
+        return { bmp, width: bmp.width, height: bmp.height };
+      } catch {}
+    }
+    // fallback via <img>
+    const url = URL.createObjectURL(file);
+    try{
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = url;
+      await img.decode();
+      return { img, width: img.naturalWidth, height: img.naturalHeight };
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  function drawSourceToCanvas(src, w, h, bgHex){
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    if (bgHex){ ctx.save(); ctx.fillStyle = bgHex; ctx.fillRect(0,0,w,h); ctx.restore(); }
+    if (src instanceof ImageBitmap) ctx.drawImage(src, 0, 0, w, h);
+    else if (src instanceof HTMLImageElement) ctx.drawImage(src, 0, 0, w, h);
+    else console.warn('Unknown source', src);
+    return c;
+  }
+
+  function fitWithin(w, h, maxW, maxH, onlyDown=true){
+    let W = w, H = h;
+    if (!maxW && !maxH) return { W, H, scale:1 };
+    const r = w / h;
+    let tW = maxW || (maxH ? Math.round(maxH * r) : w);
+    let tH = maxH || (maxW ? Math.round(maxW / r) : h);
+    // keep aspect by fitting inside the box
+    if (tW / tH > r) tW = Math.round(tH * r); else tH = Math.round(tW / r);
+    if (onlyDown && (tW >= w || tH >= h)) return { W:w, H:h, scale:1 };
+    return { W:tW, H:tH, scale: tW / w };
+  }
+
+  // ---------- state ----------
+  const FORMATS = [
+    { mime:'image/png',  label:'PNG'  },
+    { mime:'image/jpeg', label:'JPG'  },
+    { mime:'image/webp', label:'WebP' },
+    { mime:'image/avif', label:'AVIF' },
+  ];
+  const state = {
+    file:null, src:null, width:0, height:0, name:'', type:'', size:0,
+    targetMime:'image/png', quality:0.85, bg:'#0b0f17',
+    maxW:null, maxH:null, onlyDown:true,
+    support: {}
+  };
+
+  // ---------- UI wiring ----------
+  async function init(){
+    // Detect supported output formats
+    for (const f of FORMATS){
+      state.support[f.mime] = await supportsType(f.mime);
+    }
+    buildFormatBar();
+
+    // Drop zone
+    const drop = $('#drop');
+    const file = $('#file');
+    const pickBtn = $('#pickBtn');
+
+    ['dragenter','dragover'].forEach(evt=>{
+      drop.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); drop.classList.add('dragover'); });
+    });
+    ;['dragleave','drop'].forEach(evt=>{
+      drop.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); drop.classList.remove('dragover'); });
+    });
+    drop.addEventListener('drop', e => {
+      const f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) loadFile(f);
+    });
+
+    pickBtn.addEventListener('click', ()=> file.click());
+    file.addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      if (f) loadFile(f);
+      file.value = ''; // allow re-pick same file
+    });
+
+    // Controls
+    const q = $('#quality');
+    const qVal = $('#qVal');
+    q.addEventListener('input', ()=> { state.quality = (+q.value)/100; qVal.textContent = q.value; });
+
+    $('#bgColor').addEventListener('input', e => state.bg = e.target.value);
+    $('#maxW').addEventListener('input', e => state.maxW = e.target.value ? Math.max(1, Math.floor(+e.target.value)) : null);
+    $('#maxH').addEventListener('input', e => state.maxH = e.target.value ? Math.max(1, Math.floor(+e.target.value)) : null);
+    $('#onlyDown').addEventListener('change', e => state.onlyDown = !!e.target.checked);
+
+    $('#convertBtn').addEventListener('click', convert);
+    $('#resetBtn').addEventListener('click', resetUI);
+  }
+
+  function buildFormatBar(){
+    const bar = $('#formatBar');
+    bar.innerHTML = '';
+    for (const f of FORMATS){
+      const id = 'fmt_' + f.label.toLowerCase();
+      const supported = !!state.support[f.mime];
+      const chip = document.createElement('label');
+      chip.className = 'chip';
+      chip.title = supported ? '' : 'Not supported by this browser';
+      chip.innerHTML = `<input type="radio" name="fmt" id="${id}" ${supported ? '' : 'disabled'} ${f.mime===state.targetMime?'checked':''}> ${f.label}`;
+      chip.querySelector('input').addEventListener('change', ()=>{
+        state.targetMime = f.mime;
+        updateFormatNote();
+        toggleControlsForFormat();
+      });
+      bar.appendChild(chip);
+    }
+    // Default: prefer WebP/AVIF/JPG/PNG in that order if supported
+    const pref = ['image/webp','image/avif','image/jpeg','image/png'];
+    for (const m of pref){
+      if (state.support[m]){ state.targetMime = m; break; }
+    }
+    const input = bar.querySelector(`input[id="fmt_${extForMime(state.targetMime)}"]`);
+    if (input) input.checked = true;
+    updateFormatNote();
+    toggleControlsForFormat();
+  }
+
+  function updateFormatNote(){
+    const note = $('#formatNote');
+    const ext = extForMime(state.targetMime).toUpperCase();
+    const alphaOK = (state.targetMime !== 'image/jpeg');
+    note.textContent = alphaOK ? `${ext} supports transparency.` : `${ext} does not support transparency; transparent pixels will be flattened to your background color.`;
+  }
+
+  function toggleControlsForFormat(){
+    const lossy = (state.targetMime === 'image/jpeg' || state.targetMime === 'image/webp' || state.targetMime === 'image/avif');
+    $('#quality').disabled = !lossy;
+  }
+
+  async function loadFile(file){
+    if (!file || !/^image\//i.test(file.type)) return;
+
+    state.file = file;
+    state.name = file.name;
+    state.type = file.type;
+    state.size = file.size;
+
+    const { bmp, img, width, height } = await loadToBitmap(file);
+    state.src = bmp || img;
+    state.width = width;
+    state.height = height;
+
+    // Draw to input canvas
+    const inC = $('#inCanvas');
+    inC.width = width; inC.height = height;
+    const ictx = inC.getContext('2d');
+    ictx.clearRect(0,0,width,height);
+    if (state.src instanceof ImageBitmap) ictx.drawImage(state.src,0,0,width,height);
+    else ictx.drawImage(state.src,0,0,width,height);
+
+    // Fill info
+    $('#inType').textContent = (file.type || 'Unknown').replace('image/','').toUpperCase();
+    $('#inSize').textContent = fmtBytes(file.size);
+    $('#inDims').textContent = `${width} × ${height}`;
+    $('#inName').textContent = state.name;
+
+    // Reveal panels
+    $('#inputWrap').style.display = '';
+    $('#outputWrap').style.display = 'none';
+    $('#drop').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  async function convert(){
+    if (!state.src) return;
+
+    // Compute target dims
+    const fit = fitWithin(state.width, state.height, state.maxW, state.maxH, state.onlyDown);
+    const needsBG = (state.targetMime === 'image/jpeg');
+    const c = drawSourceToCanvas(state.src, fit.W, fit.H, needsBG ? state.bg : null);
+
+    // Render to blob
+    const blob = await new Promise((res)=> c.toBlob(res, state.targetMime, state.quality));
+    if (!blob){ alert('This format is not available in your browser.'); return; }
+
+    // Show output preview & info
+    const outC = $('#outCanvas');
+    outC.width = fit.W; outC.height = fit.H;
+    const octx = outC.getContext('2d');
+    const imgURL = URL.createObjectURL(blob);
+    try {
+      const img = new Image(); img.src = imgURL; await img.decode();
+      octx.clearRect(0,0,fit.W,fit.H); octx.drawImage(img,0,0,fit.W,fit.H);
+    } finally { URL.revokeObjectURL(imgURL); }
+
+    $('#outType').textContent = extForMime(state.targetMime).toUpperCase();
+    $('#outSize').textContent = fmtBytes(blob.size);
+    $('#outDims').textContent = `${fit.W} × ${fit.H}`;
+    $('#outputWrap').style.display = '';
+
+    // Download
+    const name = fileNameWithExt(state.name || 'image', extForMime(state.targetMime));
+    const a = document.createElement('a');
+    a.download = name;
+    a.href = URL.createObjectURL(blob);
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  function resetUI(){
+    state.file = null; state.src = null;
+    $('#file').value = '';
+    $('#inputWrap').style.display = 'none';
+    $('#outputWrap').style.display = 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+
+  <!-- Background video loader -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) { wrap.style.display = 'none'; return; }
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+
+      const onReady = () => { wrap.classList.add('ready'); const p = vid.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); };
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
+  </script>
+
+  <!-- Partials injector -->
+  <script>
+  (async () => {
+    try {
+      async function loadPartial(url) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+        return tpl.content.firstElementChild || null;
+      }
+      const header = document.getElementById('site-header');
+      const navEl = await loadPartial('/partials/nav.html');
+      if (header && navEl) { header.innerHTML = ''; header.appendChild(navEl); initNav(header); }
+      const discordEl = await loadPartial('/partials/discord.html');
+      if (discordEl) document.body.appendChild(discordEl);
+      const footerEl = await loadPartial('/partials/footer.html');
+      if (footerEl) document.body.appendChild(footerEl);
+
+      function initNav(scope) {
+        const btn = scope.querySelector('.menu-toggle');
+        const panel = scope.querySelector('#nav-panel');
+        if (btn && panel) {
+          btn.addEventListener('click', () => {
+            const open = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+        }
+        const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+        scope.querySelectorAll('.nav-link').forEach(a => {
+          let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+          if (href === '/blog/') href = '/blog';
+          if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
+          if (here.includes('/projects')) a.setAttribute('aria-current', 'page');
+          if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+        });
+      }
+    } catch (e) { console.warn('Partial load failed:', e); }
+  })();
+  </script>
+</body>
+</html>

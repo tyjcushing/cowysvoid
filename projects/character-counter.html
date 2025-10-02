@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Character Counter — Cowy’s Void</title>
+  <meta name="description" content="Paste text, get character statistics (including spaces), searchable highlights, and frequency tables." />
+
+  <!-- Icons -->
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+
+  <!-- Unified styles -->
+  <link rel="stylesheet" href="/assets/css/void.css">
+
+  <style>
+    /* Page-local tweaks */
+    .textarea { width:100%; min-height:220px; resize:vertical; }
+    .inline-hint{ font-size:12px; color:var(--muted); }
+    .panel.page-panel.solid-surface{ padding-top:18px; padding-bottom:18px; }
+
+    .grid-12{ display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
+    .span-6{ grid-column:span 6; } .span-12{ grid-column:span 12; }
+    @media (max-width:900px){ .span-6{ grid-column:span 12; } }
+
+    .mono-pre{ white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .preview{ border:1px solid rgba(255,255,255,.10); border-radius:12px; padding:12px; background:rgba(255,255,255,.03); max-height:340px; overflow:auto; }
+    .preview mark{ background:rgba(255, 235, 59, .45); color:inherit; padding:0 .12em; border-radius:.2em; }
+
+    .freq-tools{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:8px; }
+    .freq-table{ width:100%; border-collapse:separate; border-spacing:0 6px; }
+    .freq-table th{ text-align:left; font-size:12px; color:var(--muted); font-weight:600; padding:0 10px 4px; }
+    .freq-table td{ background:var(--card); border:1px solid rgba(255,255,255,.08); padding:8px 10px; }
+    .freq-table tr td:first-child{ border-radius:10px 0 0 10px; }
+    .freq-table tr td:last-child{ border-radius:0 10px 10px 0; }
+    .chip.kv{ gap:6px; }
+
+    .bar{ position:relative; height:8px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden; }
+    .bar > i{ position:absolute; inset:0 0 0 0; width:0%; display:block; background:linear-gradient(90deg,var(--accent),var(--accent-2)); }
+
+    .toolbar-wide .input{ flex:1 1 100%; }
+    @media (min-width:900px){ .toolbar-wide .input{ flex:1 1 0%; } }
+  </style>
+</head>
+<body>
+  <!-- Background video (behind everything) -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
+  <!-- Content above the video -->
+  <div class="app-layer">
+    <header id="site-header" aria-label="Primary"></header>
+
+    <main class="container">
+      <!-- Input panel -->
+      <section class="panel page-panel solid-surface">
+        <header class="page">
+          <h1>Character Counter</h1>
+          <p class="sub">Paste text, then search and explore counts & frequencies. (Character totals <em>include spaces</em>.)</p>
+        </header>
+
+        <div class="toolbar toolbar-wide" role="region" aria-label="Text input">
+          <label class="input input-solid solid-input" style="align-items:start">
+            <textarea id="textInput" class="textarea" placeholder="Paste text here…"></textarea>
+          </label>
+          <div class="row">
+            <button id="analyzeBtn" class="btn">Analyze</button>
+            <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
+          </div>
+        </div>
+        <div class="inline-hint">Tip: the frequency table and search update live after you Analyze.</div>
+      </section>
+
+      <!-- Summary -->
+      <section class="panel solid-surface">
+        <h2>Summary</h2>
+        <div id="summary" class="row" style="margin-top:6px"></div>
+      </section>
+
+      <section class="grid-12">
+        <!-- Search -->
+        <article class="card span-6">
+          <h3>Search</h3>
+          <div class="toolbar" role="search">
+            <label class="input input-solid solid-input" aria-label="Search within text">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <input id="q" placeholder="Find… (supports regex)" />
+            </label>
+            <label class="chip"><input id="optCase" type="checkbox"> Case sensitive</label>
+            <label class="chip"><input id="optRegex" type="checkbox" checked> Regex</label>
+          </div>
+          <div class="row">
+            <span class="pill"><strong id="matchCount">0</strong> matches</span>
+          </div>
+          <div id="preview" class="preview mono-pre" aria-live="polite"></div>
+        </article>
+
+        <!-- Frequencies -->
+        <article class="card span-6">
+          <h3>Character Frequency</h3>
+          <div class="freq-tools">
+            <label class="input input-solid solid-input" aria-label="Filter frequency table">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <input id="freqFilter" placeholder="Filter (e.g. space, a, :) — regex ok" />
+            </label>
+            <span class="chip kv"><span>Total uniques</span><strong id="uniqCount">0</strong></span>
+          </div>
+          <table class="freq-table" aria-live="polite">
+            <thead>
+              <tr>
+                <th style="width:120px">Character</th>
+                <th style="width:110px">Code</th>
+                <th style="width:120px">Category</th>
+                <th style="width:90px">Count</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="freqBody"></tbody>
+          </table>
+        </article>
+
+        <!-- Breakdown -->
+        <article class="card span-6">
+          <h3>Breakdown</h3>
+          <ul class="list" id="breakdownList"></ul>
+        </article>
+
+        <!-- Top words (optional, nice extra) -->
+        <article class="card span-6">
+          <h3>Top Words</h3>
+          <ul class="list" id="wordsList"></ul>
+        </article>
+      </section>
+    </main>
+  </div><!-- /.app-layer -->
+
+  <!-- Logic -->
+  <script>
+  const DEBUG = false;
+  const dlog = (...a)=> DEBUG && console.log('[Counter]', ...a);
+
+  // Grapheme segmentation (handles emoji + combining marks)
+  function graphemes(str){
+    if (typeof Intl !== 'undefined' && Intl.Segmenter){
+      const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+      return Array.from(seg.segment(str), s => s.segment);
+    }
+    return Array.from(str); // fallback (code points)
+  }
+  const esc = s => (s||'').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+  // Categories
+  function categorize(ch){
+    if (ch === ' ') return 'space';
+    if (ch === '\n') return 'newline';
+    if (ch === '\t') return 'tab';
+    if (/^\r$/.test(ch)) return 'carriage';
+    if (/^\s$/.test(ch)) return 'whitespace';
+    if (/\p{L}/u.test(ch)) return 'letter';
+    if (/\p{N}/u.test(ch)) return 'number';
+    if (/\p{P}/u.test(ch)) return 'punct';
+    if (/\p{S}/u.test(ch)) return 'symbol';
+    return 'other';
+  }
+  const codeOf = ch => {
+    const cp = ch.codePointAt(0);
+    return 'U+' + cp.toString(16).toUpperCase().padStart(4,'0');
+  };
+
+  function analyzeText(text){
+    const gs = graphemes(text);
+    const totalChars = gs.length;
+
+    const freq = new Map();
+    for (const g of gs){ freq.set(g, (freq.get(g)||0) + 1); }
+    const unique = freq.size;
+
+    // space-included vs excluded
+    const spaces = (text.match(/ /g) || []).length;
+    const tabs = (text.match(/\t/g) || []).length;
+    const newlines = (text.match(/\n/g) || []).length;
+    const carriage = (text.match(/\r/g) || []).length;
+    const nonSpaceChars = totalChars - spaces;
+
+    // words + lines
+    const lineCount = text.length ? (text.split(/\n/).length) : 0;
+    const wordMatches = text.toLowerCase().match(/[\p{L}\p{N}']+/gu) || [];
+    const words = wordMatches.length;
+
+    // word frequency (lowercased)
+    const wordFreq = new Map();
+    for (const w of wordMatches){ wordFreq.set(w, (wordFreq.get(w)||0)+1); }
+
+    // categories
+    const catCounts = { space:0, tab:0, newline:0, carriage:0, whitespace:0, letter:0, number:0, punct:0, symbol:0, other:0 };
+    for (const [ch, n] of freq){
+      catCounts[categorize(ch)] += n;
+    }
+
+    return {
+      text, gs, totalChars, unique, freq, spaces, tabs, newlines, carriage, nonSpaceChars,
+      lineCount, words, wordFreq, catCounts
+    };
+  }
+
+  function renderSummary(a){
+    const wrap = document.getElementById('summary');
+    wrap.innerHTML = `
+      <span class="pill"><strong>${a.totalChars}</strong> chars (incl. spaces)</span>
+      <span class="pill"><strong>${a.nonSpaceChars}</strong> chars (no spaces)</span>
+      <span class="pill"><strong>${a.words}</strong> words</span>
+      <span class="pill"><strong>${a.lineCount}</strong> lines</span>
+      <span class="pill"><strong>${a.unique}</strong> unique chars</span>
+      <span class="pill">Spaces: <strong>${a.spaces}</strong></span>
+      <span class="pill">Tabs: <strong>${a.tabs}</strong></span>
+      <span class="pill">Newlines: <strong>${a.newlines}</strong></span>
+    `;
+  }
+
+  function renderBreakdown(a){
+    const L = document.getElementById('breakdownList');
+    const items = [
+      ['Letters', a.catCounts.letter],
+      ['Digits', a.catCounts.number],
+      ['Punctuation', a.catCounts.punct],
+      ['Symbols', a.catCounts.symbol],
+      ['Space', a.catCounts.space],
+      ['Tab', a.catCounts.tab],
+      ['Newline', a.catCounts.newline],
+      ['Other whitespace', a.catCounts.whitespace - a.catCounts.space - a.catCounts.tab - a.catCounts.newline - a.catCounts.carriage],
+      ['Other', a.catCounts.other],
+    ];
+    L.innerHTML = items.map(([k,v]) => `
+      <li>
+        <span>${k}</span>
+        <span class="count">${v}</span>
+      </li>
+    `).join('');
+  }
+
+  function renderTopWords(a){
+    const L = document.getElementById('wordsList');
+    const top = [...a.wordFreq.entries()].sort((a,b)=> b[1]-a[1]).slice(0,20);
+    if (!top.length){ L.innerHTML = `<li><span>No words detected.</span></li>`; return; }
+    L.innerHTML = top.map(([w,c]) => `
+      <li>
+        <span>${esc(w)}</span>
+        <span class="count">${c}</span>
+      </li>
+    `).join('');
+  }
+
+  function renderFreqTable(a, filterValue){
+    const body = document.getElementById('freqBody');
+    const total = a.totalChars || 1;
+
+    let re = null;
+    let raw = (filterValue||'').trim();
+    if (raw){
+      // allow aliases
+      if (/^space$/i.test(raw)) raw = ' ';
+      if (/^tab$/i.test(raw)) raw = '\\t';
+      if (/^newline$/i.test(raw)) raw = '\\n';
+      // if plain text, escape for regex
+      try {
+        // treat it as regex if it looks like one or contains escapes
+        const isRegex = /[\\[\]().?*+^$|]/.test(raw);
+        re = new RegExp(isRegex ? raw : raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u');
+      } catch { re = null; }
+    }
+
+    const rows = [...a.freq.entries()]
+      .filter(([ch]) => re ? re.test(ch) : true)
+      .sort((a,b)=> b[1]-a[1]);
+
+    document.getElementById('uniqCount').textContent = rows.length;
+
+    const renderChar = ch => {
+      if (ch === ' ') return '␠ space';
+      if (ch === '\t') return '⟶ tab';
+      if (ch === '\n') return '⤶ newline';
+      if (ch === '\r') return '␍ carriage';
+      return ch;
+    };
+
+    body.innerHTML = rows.slice(0,400).map(([ch, count]) => {
+      const pct = (count/total*100);
+      return `
+        <tr>
+          <td>${esc(renderChar(ch))}</td>
+          <td><code>${codeOf(ch)}</code></td>
+          <td>${categorize(ch)}</td>
+          <td>${count}</td>
+          <td>
+            <div class="bar" aria-label="${pct.toFixed(1)}%">
+              <i style="width:${pct}%;"></i>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function safeRegex(pattern, flags){
+    try { return new RegExp(pattern, flags); } catch { return null; }
+  }
+
+  function highlightMatches(text, q, { regex=true, caseSens=false } = {}){
+    if (!q) return esc(text);
+    let r = null;
+    if (regex){
+      r = safeRegex(q, caseSens ? 'g' : 'gi');
+    } else {
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      r = safeRegex(escaped, caseSens ? 'g' : 'gi');
+    }
+    if (!r) return esc(text);
+
+    // Build highlighted HTML
+    const out = [];
+    let last = 0;
+    let m;
+    while ((m = r.exec(text)) !== null){
+      const start = m.index;
+      const end = r.lastIndex;
+      out.push(esc(text.slice(last, start)));
+      out.push('<mark>' + esc(text.slice(start, end)) + '</mark>');
+      if (start === end) { r.lastIndex++; } // avoid zero-width loops
+      last = end;
+    }
+    out.push(esc(text.slice(last)));
+    return out.join('');
+  }
+
+  // Wire up
+  let ANALYSIS = null;
+
+  function run(){
+    const text = document.getElementById('textInput').value || '';
+    ANALYSIS = analyzeText(text);
+    renderSummary(ANALYSIS);
+    renderBreakdown(ANALYSIS);
+    renderTopWords(ANALYSIS);
+    renderFreqTable(ANALYSIS, document.getElementById('freqFilter').value);
+    // initial preview without search
+    document.getElementById('preview').innerHTML = esc(text);
+    document.getElementById('matchCount').textContent = '0';
+  }
+
+  function applySearch(){
+    if (!ANALYSIS) return;
+    const text = ANALYSIS.text;
+    const q = document.getElementById('q').value;
+    const caseSens = document.getElementById('optCase').checked;
+    const regex = document.getElementById('optRegex').checked;
+
+    // Count matches
+    let count = 0;
+    if (q){
+      const r = regex
+        ? safeRegex(q, caseSens ? 'g' : 'gi')
+        : safeRegex(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), caseSens ? 'g' : 'gi');
+      if (r){
+        const matches = text.match(r);
+        count = matches ? matches.length : 0;
+      }
+    }
+    document.getElementById('matchCount').textContent = count;
+
+    // Highlight in preview
+    document.getElementById('preview').innerHTML = highlightMatches(text, q, { regex, caseSens });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('analyzeBtn').addEventListener('click', run);
+    document.getElementById('clearBtn').addEventListener('click', ()=>{
+      document.getElementById('textInput').value='';
+      ANALYSIS=null;
+      document.getElementById('summary').innerHTML='';
+      document.getElementById('preview').innerHTML='';
+      document.getElementById('matchCount').textContent='0';
+      document.getElementById('freqBody').innerHTML='';
+      document.getElementById('uniqCount').textContent='0';
+      document.getElementById('breakdownList').innerHTML='';
+      document.getElementById('wordsList').innerHTML='';
+      document.getElementById('q').value='';
+      document.getElementById('freqFilter').value='';
+    });
+
+    document.getElementById('q').addEventListener('input', applySearch);
+    document.getElementById('optCase').addEventListener('change', applySearch);
+    document.getElementById('optRegex').addEventListener('change', applySearch);
+    document.getElementById('freqFilter').addEventListener('input', ()=> {
+      if (ANALYSIS) renderFreqTable(ANALYSIS, document.getElementById('freqFilter').value);
+    });
+  });
+  </script>
+
+  <!-- Background video loader -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) { wrap.style.display = 'none'; return; }
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+
+      const onReady = () => { wrap.classList.add('ready'); const p = vid.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); };
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
+  </script>
+
+  <!-- Partials injector -->
+  <script>
+  (async () => {
+    try {
+      async function loadPartial(url) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+        return tpl.content.firstElementChild || null;
+      }
+      const header = document.getElementById('site-header');
+      const navEl = await loadPartial('/partials/nav.html');
+      if (header && navEl) { header.innerHTML = ''; header.appendChild(navEl); initNav(header); }
+      const discordEl = await loadPartial('/partials/discord.html');
+      if (discordEl) document.body.appendChild(discordEl);
+      const footerEl = await loadPartial('/partials/footer.html');
+      if (footerEl) document.body.appendChild(footerEl);
+
+      function initNav(scope) {
+        const btn = scope.querySelector('.menu-toggle');
+        const panel = scope.querySelector('#nav-panel');
+        if (btn && panel) {
+          btn.addEventListener('click', () => {
+            const open = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+        }
+        const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+        scope.querySelectorAll('.nav-link').forEach(a => {
+          let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+          if (href === '/blog/') href = '/blog';
+          if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
+          if (here.includes('/projects')) a.setAttribute('aria-current', 'page'); // highlight projects
+          if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+        });
+      }
+    } catch (e) { console.warn('Partial load failed:', e); }
+  })();
+  </script>
+</body>
+</html>
