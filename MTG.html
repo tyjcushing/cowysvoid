@@ -32,6 +32,12 @@
     .section h2{margin:0 0 6px;font-size:18px;color:var(--text)}
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:12px}
 
+    /* === Background video layer (behind everything) === */
+    .bg-video { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .bg-video video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s ease; }
+    .bg-video.ready video { opacity: 0.35; }
+    .bg-video::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 120% at 50% 35%, rgba(0,0,0,.2), rgba(0,0,0,.55)); pointer-events: none; }
+
     /* Card layout */
     .card{
       grid-column:span 6;
