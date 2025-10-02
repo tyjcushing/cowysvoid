@@ -405,3 +405,45 @@ header.page p{ margin:0 }
 @media (min-width: 720px){
   .toolbar-wide .input{ flex: 1 1 0%; }
 }
+
+/* Sticky footer layout */
+html, body { height: 100%; }
+
+body {
+  /* Fill viewport; dvh fixes mobile address-bar jump */
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Your content wrapper already used on all pages */
+.app-layer {
+  flex: 1 0 auto;          /* take remaining height */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;            /* prevent overflow issues */
+}
+
+/* Let the main content stretch (optional but nice) */
+.app-layer > main {
+  flex: 1 0 auto;
+}
+
+/* Footer sits at the end of the column and stays above bg video */
+body > footer {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;         /* push footer to bottom if short page */
+  background: var(--card);
+  border-top: 1px solid rgba(255,255,255,.12);
+  color: var(--muted);
+  padding: 16px 0;
+}
+
+/* Optional: make footer text align with your container width */
+body > footer .container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
