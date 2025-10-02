@@ -15,7 +15,7 @@
     "title": "Deck Stats Visualizer",
     "subtitle": "Mana curve & color pie for MTG decks",
     "url": "/projects/deck-stats.html",
-    "blurb": "Drag-and-drop a decklist, get instant charts for curve, colors, and types.",
+    "blurb": "Paste in a decklist, get instant charts for curve, colors, and types.",
     "tags": ["MTG", "Data Viz"],
     "tech": ["JS", "D3"],
     "image": "/assets/projects/deck-stats-thumb.jpg",

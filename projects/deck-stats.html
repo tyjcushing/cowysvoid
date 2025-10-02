@@ -43,6 +43,30 @@
     .panel.page-panel.solid-surface { padding-top: 18px; padding-bottom: 18px; }
     .toolbar-wide .input{ flex: 1 1 100%; }
     @media (min-width: 900px){ .toolbar-wide .input{ flex: 1 1 0%; } }
+
+    /* Controls under textarea (buttons + sim settings) */
+    .controls-row{ display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; align-items:center; }
+    .controls-row .btn{ margin-right:6px; }
+    .control{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .control select, .control input[type="checkbox"]{ accent-color: var(--accent); }
+
+    /* Spinner */
+    .spinner{ display:inline-flex; align-items:center; gap:10px; }
+    .spinner[hidden]{ display:none; }
+    .spin-dot{ width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,.35); border-top-color: transparent; animation:spin 0.8s linear infinite; }
+    @keyframes spin{ to{ transform:rotate(360deg) } }
+
+    /* Probability grid */
+    .prob-grid{ display:grid; grid-template-columns:repeat(12,1fr); gap:10px; }
+    .prob{ grid-column: span 6; display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); }
+    .prob.big{ grid-column: span 12; }
+    .prob .label{ display:flex; align-items:center; gap:8px; }
+    .prob .value{ display:flex; align-items:baseline; gap:8px; }
+
+    /* Extra spacing below the color-access title */
+    .an-card h3.mb-tight{ margin-bottom: 10px; }
+
+    /* Slightly larger bottom for type chart labels + wrap on 2 lines handled in JS */
   </style>
 </head>
 <body>
@@ -76,11 +100,33 @@ Arcane Signet
 Alela, Artful Provocateur
 ..."></textarea>
           </label>
-          <div class="flex-row">
-            <button id="analyzeBtn" class="btn">Analyze</button>
-            <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
-          </div>
         </div>
+
+        <!-- New row: buttons + sim options + spinner -->
+        <div class="controls-row">
+          <button id="analyzeBtn" class="btn">Analyze</button>
+          <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
+
+          <span class="control">
+            <label for="simTrials"><strong>Monte-Carlo trials</strong></label>
+            <select id="simTrials">
+              <option value="100">100</option>
+              <option value="1000" selected>1,000</option>
+              <option value="5000">5,000</option>
+            </select>
+          </span>
+
+          <label class="control" title="Counts rocks/dorks/etc. as color access even though they require tempo to deploy.">
+            <input id="includeNonlands" type="checkbox" checked>
+            Count nonland producers
+          </label>
+
+          <span id="spinner" class="spinner" hidden>
+            <span class="spin-dot" aria-hidden="true"></span>
+            <span class="inline-hint">Analyzing…</span>
+          </span>
+        </div>
+
         <div class="inline-hint">Understands: <code>1 Name</code>, <code>3x Name</code>, section headers (<code>Commander</code>, <code>Companion</code>, <code>Deck</code>, <code>Sideboard</code>, <code>Maybeboard</code>), and plain names. Comments with <code>#</code> or <code>//</code> are ignored.</div>
       </section>
 
@@ -138,6 +184,13 @@ Alela, Artful Provocateur
           <div class="inline-hint">Counts permanent sources. “Any” = can make any color. Dual/choice producers count for each color they can make.</div>
         </article>
 
+        <!-- New: Average Color Access (Monte-Carlo) -->
+        <article class="card an-card">
+          <h3 class="mb-tight">Average Color Access in Top 10 Cards</h3>
+          <div id="colorAccessGrid" class="prob-grid"></div>
+          <div id="colorAccessAssump" class="inline-hint" style="margin-top:6px"></div>
+        </article>
+
         <article class="card an-card">
           <h3>Heuristics</h3>
           <ul class="list" id="listHeur"></ul>
@@ -154,6 +207,7 @@ Alela, Artful Provocateur
   </div>
 
   <script>
+  /* ====================== Constants & helpers (single definitions) ====================== */
   const DEBUG = false;
   const dlog = (...a)=> DEBUG && console.log('[Analyzer]', ...a);
 
@@ -166,7 +220,9 @@ Alela, Artful Provocateur
   const SINGLETON_EXCEPTIONS = new Set(['Relentless Rats','Persistent Petitioners','Dragon\'s Approach','Shadowborn Apostle','Rat Colony','Seven Dwarves']);
 
   function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[m])) }
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
+  /* ====================== Parsing & Scryfall ====================== */
   function parseDeckText(text){
     const lines = (text||'').replace(/\r\n?/g,'\n').split('\n');
     const items = []; let section = 'Deck';
@@ -223,6 +279,7 @@ Alela, Artful Provocateur
   function hasPartnerAbility(card){ const t = (card?.oracle_text||'').toLowerCase(); return /partner( with)?/i.test(t) || /friends forever/i.test(t); }
   function hasChooseBackground(card){ return /choose a background/i.test((card?.oracle_text||'').toLowerCase()); }
   function isBackground(card){ return /Background/i.test(card?.type_line||''); }
+
   function manaPipsFromCost(card){
     const cost = (card?.mana_cost||'');
     const counts = {W:0,U:0,B:0,R:0,G:0};
@@ -231,16 +288,17 @@ Alela, Artful Provocateur
     return counts;
   }
 
+  // Tighten producer detection: only mark OMNI if it actually *adds* any color
   function detectProducers(card){
     const out = { W:false,U:false,B:false,R:false,G:false,C:false,OMNI:false, isProducer:false };
     if (!card) return out;
 
     const name = card.name || '';
-    const text = (card.oracle_text || '').toLowerCase();
-    const typeL = card.type_line || '';
+    const text = card.oracle_text || '';
+    const tl   = card.type_line || '';
 
-    const BASIC = BASIC_LANDS;
-    if (BASIC.has(name)){
+    // Basic lands
+    if (BASIC_LANDS.has(name)){
       if (/Plains/i.test(name)) out.W = true;
       else if (/Island/i.test(name)) out.U = true;
       else if (/Swamp/i.test(name)) out.B = true;
@@ -251,12 +309,15 @@ Alela, Artful Provocateur
       return out;
     }
 
-    if (/any color/.test(text) || /choose a color/.test(text) || /color of your choice/.test(text)){
-      out.OMNI = true; out.isProducer = true;
+    // Any-color *only if tied to "add"*
+    if (/\badd\b[^.]*\b(one mana of )?(any color)\b/i.test(text)){
+      out.OMNI = true;
+      out.isProducer = true;
     }
 
-    const symMatches = (card.oracle_text || '').match(/\{[WUBRGC]\}/g) || [];
-    const hasAdd = /(^|[^A-Za-z])add\b/i.test(card.oracle_text || '');
+    // Explicit mana symbols with an "add"
+    const symMatches = text.match(/\{[WUBRGC]\}/g) || [];
+    const hasAdd = /\badd\b/i.test(text);
     if (hasAdd && symMatches.length){
       const set = new Set(symMatches.map(s => s.replace(/[{}]/g,'').toUpperCase()));
       if (set.has('W')) out.W = true;
@@ -268,10 +329,13 @@ Alela, Artful Provocateur
       out.isProducer = true;
     }
 
-    if (/Land/.test(typeL) && (out.W||out.U||out.B||out.R||out.G||out.C||out.OMNI)) out.isProducer = true;
-    if (/(Artifact|Creature|Enchantment|Planeswalker)/.test(typeL) && (out.W||out.U||out.B||out.R||out.G||out.C||out.OMNI)) out.isProducer = true;
+    // Lands that truly have a mana ability already covered above.
+    if (/Land/.test(tl) && (out.W||out.U||out.B||out.R||out.G||out.C||out.OMNI)) out.isProducer = true;
+    if (/(Artifact|Creature|Enchantment|Planeswalker)/.test(tl) && (out.W||out.U||out.B||out.R||out.G||out.OMNI)) out.isProducer = true;
+
     return out;
   }
+
 
   function countMap(items){
     const map = new Map();
@@ -332,14 +396,14 @@ Alela, Artful Provocateur
     return [best.name];
   }
 
+  /* ====================== Analysis ====================== */
   function analyze(items, nameToCard, commanderNames){
     const deckItems = items.filter(it => it.section!=='Sideboard' && it.section!=='Maybeboard');
     const counts = countMap(deckItems);
     const total = [...counts.values()].reduce((s,n)=>s+n,0);
 
     const id = commanderNames.length
-      ? ([...new Set(commanderNames.flatMap(n => cardColors(nameToCard.get(n) || {})))])
-          .sort((a,b)=> COLOR_ORDER.indexOf(a)-COLOR_ORDER.indexOf(b))
+      ? ([...new Set(commanderNames.flatMap(n => cardColors(nameToCard.get(n) || {})))]).sort((a,b)=> COLOR_ORDER.indexOf(a)-COLOR_ORDER.indexOf(b))
       : [];
 
     let land=0, spells=0;
@@ -353,6 +417,7 @@ Alela, Artful Provocateur
     const offColor = [];
     const banned = [];
 
+    // Heuristics counters
     const heur = { ramp:0, draw:0, removal:0 };
 
     const producers = { W:0,U:0,B:0,R:0,G:0,C:0, OMNI:0 };
@@ -395,6 +460,7 @@ Alela, Artful Provocateur
         banned.push(`${qty}× ${name}`);
       }
 
+      // ----- producers -----
       if (isPermanent(card) && !isCmdr){
         const prod = detectProducers(card);
         if (prod.isProducer){
@@ -414,6 +480,20 @@ Alela, Artful Provocateur
           if (prod.OMNI) producers.OMNI += qty;
         }
       }
+
+      // ----- heuristics -----
+      // ramp
+      if (/(add\s*\{[wubrgc]\})|(search your library for (a|up to \d+)? land)|treasure token|lotus|signet|talisman|sapphire medallion|ruby medallion|jet medallion|pearl medallion|emerald medallion|doubles.*mana|untap (target )?land/i.test(text)){
+        heur.ramp += qty;
+      }
+      // draw
+      if (/draw (a|one|\d+)\s+card|investigate|connive|learn|lesson/i.test(text)){
+        heur.draw += qty;
+      }
+      // removal / interaction
+      if (/destroy target|exile target|counter target|fight target|return target .* to its owner|-x\/-x until end of turn|stifle|deflecting swat|terminate|path to exile|swords to plowshares/i.test(text)){
+        heur.removal += qty;
+      }
     }
 
     const avgMV = total ? (sumMV/Math.max(1, (total - land))) : 0;
@@ -424,8 +504,9 @@ Alela, Artful Provocateur
     };
   }
 
+  /* ====================== Charts & UI ====================== */
   function renderBarChart(svg, labels, values, opts={}){
-    const W=600,H=240,left=56,right=10,top=(opts.top ?? 28),bottom=(opts.bottom ?? 34);
+    const W=600,H=240,left=56,right=10,top=(opts.top ?? 32),bottom=(opts.bottom ?? 36);
     while(svg.firstChild) svg.removeChild(svg.firstChild);
     const vmax = Math.max(1, ...values);
     const cw = (W-left-right)/values.length;
@@ -450,20 +531,18 @@ Alela, Artful Provocateur
 
       const val = document.createElementNS('http://www.w3.org/2000/svg','text');
       val.setAttribute('x', x+w/2);
-      // keep a little padding from the top so numbers never clip
       val.setAttribute('y', Math.max(top+12, y-4));
       val.setAttribute('fill','var(--text)'); val.setAttribute('font-size','11'); val.setAttribute('text-anchor','middle');
       val.textContent = v;
       svg.appendChild(val);
 
-      // label (optionally two-line wrap)
       const lab = document.createElementNS('http://www.w3.org/2000/svg','text');
       lab.setAttribute('fill','var(--muted)');
       lab.setAttribute('font-size', String(opts.fontSize ?? 11));
       lab.setAttribute('text-anchor','middle');
       lab.setAttribute('x', x+w/2);
-
       const yBase = H-bottom+16;
+
       if (opts.wrap === '2line' && /\s/.test(labels[i])) {
         const [first, ...rest] = labels[i].split(' ');
         const t1 = document.createElementNS('http://www.w3.org/2000/svg','tspan');
@@ -541,7 +620,6 @@ Alela, Artful Provocateur
     const entries = [...res.typeHist.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
     const labels = entries.map(e=>e[0]);
     const values = entries.map(e=>e[1]);
-    // extra bottom + wrap two lines
     renderBarChart(document.getElementById('chartTypes'), labels, values, { bottom: 58, fontSize: 10, top: 32, wrap: '2line' });
   }
 
@@ -554,7 +632,6 @@ Alela, Artful Provocateur
   }
 
   function renderProducers(res){
-    // label “Any” instead of Omni
     const labels = ['W','U','B','R','G','C','Any'];
     const values  = [
       res.producers.W||0,
@@ -605,35 +682,193 @@ Alela, Artful Provocateur
     document.getElementById('issues').textContent = out.join('\n') || 'No issues detected.';
   }
 
+  /* ====================== Monte-Carlo Color Access ====================== */
+  const BIT = { W:1<<0, U:1<<1, B:1<<2, R:1<<3, G:1<<4 };
+  function identityMaskFrom(arr){ return (arr||[]).reduce((m,c)=> m | (BIT[c]||0), 0); }
+
+  // Build deck array with *separate* per-color mask and omni flags
+  function buildDeckMaskArray(items, nameToCard, includeNonlands){
+    const masks = [];
+    const omni  = [];
+
+    for (const it of items){
+      if (/(Sideboard|Maybeboard|Commander|Companion)/i.test(it.section)) continue;
+
+      const card = nameToCard.get(it.name);
+      const qty  = it.qty || 1;
+      const isL  = /Land/.test(card?.type_line || '');
+      const prod = (!includeNonlands && !isL) ? { isProducer:false } : detectProducers(card);
+
+      let maskBits = 0;
+      if (prod.isProducer){
+        if (prod.W) maskBits |= BIT.W;
+        if (prod.U) maskBits |= BIT.U;
+        if (prod.B) maskBits |= BIT.B;
+        if (prod.R) maskBits |= BIT.R;
+        if (prod.G) maskBits |= BIT.G;
+        // NOTE: do NOT expand OMNI into five bits here
+      }
+
+      for (let i=0;i<qty;i++){
+        masks.push(maskBits);
+        omni.push(!!prod.OMNI);
+      }
+    }
+    return { masks, omni };
+  }
+
+
+  // Use wildcards for "Any color" sources instead of granting all 5 colors at once
+  function simulateColorAccess(deck, idMask, draws, trials){
+    const n = deck.masks.length;
+    const idxBase = Array.from({length:n}, (_,i)=>i);
+
+    const perColorHits = {W:0,U:0,B:0,R:0,G:0};
+    let allColorsHits = 0;
+    let twoPlusHits   = 0;
+
+    for (let t=0; t<trials; t++){
+      // fresh partial Fisher–Yates each trial
+      const idx = idxBase.slice();
+      for (let i=0;i<draws;i++){
+        const j = i + Math.floor(Math.random() * (n - i));
+        [idx[i], idx[j]] = [idx[j], idx[i]];
+      }
+
+      // accumulate colors & omni in the top `draws`
+      let mask = 0;
+      let wild = 0;
+      for (let k=0;k<draws;k++){
+        const m = deck.masks[idx[k]];
+        mask |= m;
+        if (deck.omni[idx[k]]) wild++;
+      }
+
+      // Per-color presence: OMNI satisfies any single color presence
+      if ((mask & BIT.W) || wild>0) perColorHits.W++;
+      if ((mask & BIT.U) || wild>0) perColorHits.U++;
+      if ((mask & BIT.B) || wild>0) perColorHits.B++;
+      if ((mask & BIT.R) || wild>0) perColorHits.R++;
+      if ((mask & BIT.G) || wild>0) perColorHits.G++;
+
+      // All identity colors simultaneously: use wildcards to cover missing colors
+      const missingMask = idMask & ~mask;
+      const missingCount =
+        ((missingMask & BIT.W)?1:0) + ((missingMask & BIT.U)?1:0) +
+        ((missingMask & BIT.B)?1:0) + ((missingMask & BIT.R)?1:0) +
+        ((missingMask & BIT.G)?1:0);
+      if (wild >= missingCount) allColorsHits++;
+
+      // At least two colors online: distinct colors from mask plus wildcards
+      const distinctFromMask =
+        ((mask & BIT.W)?1:0) + ((mask & BIT.U)?1:0) +
+        ((mask & BIT.B)?1:0) + ((mask & BIT.R)?1:0) +
+        ((mask & BIT.G)?1:0);
+      const distinctTotal = Math.min(5, distinctFromMask + wild);
+      if (distinctTotal >= 2) twoPlusHits++;
+    }
+
+    const perColorPct = Object.fromEntries(['W','U','B','R','G'].map(k => [k, perColorHits[k] * 100 / trials]));
+    return {
+      perColor: perColorPct,
+      allColors: allColorsHits * 100 / trials,
+      twoPlus: twoPlusHits * 100 / trials
+    };
+  }
+
+
+  // Exact hypergeometric sanity check for single colors
+  const logFact = (() => {
+    const cache=[0];
+    return n => { for (let i=cache.length;i<=n;i++) cache[i]=cache[i-1]+Math.log(i); return cache[n]; };
+  })();
+  const logComb = (n,k) => (k<0||k>n) ? -Infinity : (logFact(n)-logFact(k)-logFact(n-k));
+  function exactAtLeastOne(N, K, n){
+    if (K<=0) return 0;
+    if (n>N) n=N;
+    const logP0 = logComb(N-K, n) - logComb(N, n);
+    return 1 - Math.exp(logP0);
+  }
+
+  function renderColorAccess(res, items, nameToCard){
+    const includeNonlands = document.getElementById('includeNonlands')?.checked ?? true;
+    const trials = parseInt(document.getElementById('simTrials')?.value, 10) || 1000; // 100/1000/5000
+    const draws = 10;
+
+    const deckMasks = buildDeckMaskArray(items, nameToCard, includeNonlands);
+    const idMask = identityMaskFrom(res.id);
+
+    const sim = simulateColorAccess(deckMasks, idMask, draws, trials);
+
+    // exact per-color sanity values
+    const N = deckMasks.length;
+    const countColor = k => deckMasks.reduce((s,m)=> s + ((m & BIT[k]) ? 1 : 0), 0);
+    const exact = {
+      W: exactAtLeastOne(N, countColor('W'), draws)*100,
+      U: exactAtLeastOne(N, countColor('U'), draws)*100,
+      B: exactAtLeastOne(N, countColor('B'), draws)*100,
+      R: exactAtLeastOne(N, countColor('R'), draws)*100,
+      G: exactAtLeastOne(N, countColor('G'), draws)*100
+    };
+
+    const grid = document.getElementById('colorAccessGrid');
+    const showColors = res.id.length ? res.id : ['W','U','B','R','G'];
+    grid.innerHTML = showColors.map(k => `
+      <div class="prob">
+        <div class="label">${pipHTML(k)}${k}</div>
+        <div class="value">
+          <strong>${sim.perColor[k].toFixed(1)}%</strong>
+          <span class="inline-hint" title="Exact hypergeometric">${exact[k].toFixed(1)}% exact</span>
+        </div>
+      </div>`).join('') + `
+      <div class="prob big"><div class="label">All identity colors online</div><div class="value"><strong>${sim.allColors.toFixed(1)}%</strong></div></div>
+      <div class="prob big"><div class="label">At least two colors online</div><div class="value"><strong>${sim.twoPlus.toFixed(1)}%</strong></div></div>
+    `;
+
+    const asum = document.getElementById('colorAccessAssump');
+    if (asum){
+      asum.innerHTML = `Assumptions: “Any” sources count as all colors; we check presence in top 10, not castability. Trials: ${trials.toLocaleString()}.`;
+    }
+  }
+
+  /* ====================== Orchestration ====================== */
   let LAST_ITEMS = [];
   let LAST_NAME_TO_CARD = new Map();
   let LAST_COMMANDERS = [];
 
   async function runAnalysis(){
-    const text = document.getElementById('deckInput').value;
-    const items = parseDeckText(text);
-    LAST_ITEMS = items;
-    document.getElementById('empty').hidden = items.length>0;
-    if (!items.length) return;
+    const spinner = document.getElementById('spinner');
+    spinner.hidden = false;
 
-    const names = [...new Set(items.map(it=>it.name))];
-    const nameToCard = await fetchCollectionByNames(names);
-    LAST_NAME_TO_CARD = nameToCard;
+    try{
+      const text = document.getElementById('deckInput').value;
+      const items = parseDeckText(text);
+      LAST_ITEMS = items;
+      document.getElementById('empty').hidden = items.length>0;
+      if (!items.length) { spinner.hidden = true; return; }
 
-    const deckID = unionDeckColors(items, nameToCard);
-    const defaults = chooseDefaultCommanders(items, nameToCard);
-    LAST_COMMANDERS = defaults.slice();
+      const names = [...new Set(items.map(it=>it.name))];
+      const nameToCard = await fetchCollectionByNames(names);
+      LAST_NAME_TO_CARD = nameToCard;
 
-    renderCommanderEditor(items, nameToCard, deckID, defaults);
+      const deckID = unionDeckColors(items, nameToCard);
+      const defaults = chooseDefaultCommanders(items, nameToCard);
+      LAST_COMMANDERS = defaults.slice();
 
-    const res = analyze(items, nameToCard, defaults);
-    renderSummary(res);
-    renderCurve(res);
-    renderTypes(res);
-    renderColors(res);
-    renderProducers(res);
-    renderHeur(res);
-    renderIssues(res);
+      renderCommanderEditor(items, nameToCard, deckID, defaults);
+
+      const res = analyze(items, nameToCard, defaults);
+      renderSummary(res);
+      renderCurve(res);
+      renderTypes(res);
+      renderColors(res);
+      renderProducers(res);
+      renderHeur(res);
+      renderIssues(res);
+      renderColorAccess(res, items, nameToCard);
+    } finally {
+      spinner.hidden = true;
+    }
   }
 
   function collectCommanderSelection(){
@@ -650,7 +885,9 @@ Alela, Artful Provocateur
     renderSummary(res);
     renderColors(res);
     renderProducers(res);
+    renderHeur(res);
     renderIssues(res);
+    renderColorAccess(res, LAST_ITEMS, LAST_NAME_TO_CARD);
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
@@ -664,15 +901,35 @@ Alela, Artful Provocateur
       document.getElementById('producerTypes').innerHTML='';
       document.getElementById('listHeur').innerHTML='';
       document.getElementById('issues').textContent='';
+      document.getElementById('colorAccessGrid').innerHTML='';
+      document.getElementById('colorAccessAssump').innerHTML='';
       ['cmdrSingles','cmdrPartners','cmdrChooseBg','cmdrBackgrounds'].forEach(id => document.getElementById(id).innerHTML='');
       document.getElementById('empty').hidden=false;
     });
-    document.querySelector('.cmdr-sections').addEventListener('change', e=>{
-      if (e.target.matches('input[type="checkbox"]')) reAnalyzeWithSelection();
+
+    // Re-run color access if sim settings change
+    document.getElementById('simTrials').addEventListener('change', ()=>{
+      if (LAST_ITEMS.length) {
+        const res = analyze(LAST_ITEMS, LAST_NAME_TO_CARD, LAST_COMMANDERS);
+        renderColorAccess(res, LAST_ITEMS, LAST_NAME_TO_CARD);
+      }
+    });
+    document.getElementById('includeNonlands').addEventListener('change', ()=>{
+      if (LAST_ITEMS.length) {
+        const res = analyze(LAST_ITEMS, LAST_NAME_TO_CARD, LAST_COMMANDERS);
+        renderColorAccess(res, LAST_ITEMS, LAST_NAME_TO_CARD);
+      }
+    });
+
+    document.addEventListener('change', e=>{
+      if (e.target.closest('.cmdr-sections') && e.target.matches('input[type="checkbox"]')) {
+        reAnalyzeWithSelection();
+      }
     });
   });
   </script>
 
+  <!-- Background video loader -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -694,6 +951,7 @@ Alela, Artful Provocateur
     });
   </script>
 
+  <!-- Partials injector -->
   <script>
   (async () => {
     try {
