@@ -1,0 +1,12 @@
+[
+  {
+    "slug": "hosting-on-the-cheap",
+    "title": "Hosting a Custom Website on the Cheap",
+    "excerpt": "How I wired up Cloudflare Pages + GitHub + VS Code for a fast, free stack.",
+    "tags": ["webdev","cloudflare","github","vs code"],
+    "date": "2025-10-08",
+    "read": 6,
+    "image": "/assets/blog/hosting-thumb.png",
+    "url": "/blog/hosting-on-the-cheap.html"
+    }
+]

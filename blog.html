@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blog — Cowy’s Void</title>
+  <meta name="description" content="Cosmic transmissions — posts on dev, MTG, and D&D from Cowy’s Void." />
+
+  <!-- Icons -->
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+
+  <!-- Unified styles -->
+  <link rel="stylesheet" href="/assets/css/void.css">
+</head>
+<body>
+  <!-- Background video (behind everything) -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
+  <!-- Content above the video -->
+  <div class="app-layer">
+    <header id="site-header" aria-label="Primary"></header>
+
+    <main class="container">
+      <!-- SOLID panel for title + search + filters (match projects.html) -->
+      <section class="panel page-panel solid-surface">
+        <header class="page">
+          <h1>Blog</h1>
+          <p class="sub">Cosmic transmissions — dev notes, MTG experiments, and D&D worldbuilding.</p>
+        </header>
+
+        <div class="toolbar toolbar-wide" role="search">
+          <label class="input input-solid solid-input" aria-label="Search posts">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <input id="q" placeholder="Search by title, tags, text…" />
+          </label>
+          <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
+        </div>
+
+        <div class="filters" id="tagFilters" aria-label="Tag filters"></div>
+      </section>
+
+      <div class="section"><h2>All Posts</h2></div>
+      <section id="postGrid" class="grid" aria-live="polite"></section>
+      <div id="empty" class="empty" hidden>No posts match your search.</div>
+    </main>
+  </div><!-- /.app-layer -->
+
+  <!-- Data + UI (mirrors projects page patterns) -->
+  <script>
+  const blog = { all: [], filtered: [], activeTags: new Set() };
+  function esc(s){return (s||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;","&gt":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+
+  async function loadPosts(){
+    const res = await fetch('/data/blog.json', { cache: 'no-store' });
+    if(!res.ok) throw new Error('Failed to load blog.json');
+    blog.all = (await res.json()) || [];
+
+    // normalize + sort
+    blog.all.forEach((p,i)=>{ p._idx=i; p.dateVal = +new Date(p.date||p.updated||0) || 0; });
+    blog.all.sort((a,b)=> b.dateVal - a.dateVal || (a.title||'').localeCompare(b.title||''));
+    blog.filtered = blog.all.slice();
+
+    buildTagChips();
+    render();
+  }
+
+  function templateCard(p){
+    const title = esc(p.title||'Untitled');
+    const url   = esc(p.url || (`/blog/${(p.slug||'post').replace(/[^a-z0-9-_]/gi,'-').toLowerCase()}.html`));
+    const excerpt = esc(p.excerpt||'');
+    const tags  = Array.isArray(p.tags) ? p.tags.map(esc) : [];
+    const updated = p.date ? new Date(p.date).toLocaleDateString() : (p.updated? new Date(p.updated).toLocaleDateString(): '');
+    const read  = p.read ? `${p.read} min read` : '';
+    const img = esc(p.image||'');
+
+    const seemsIcon = /\.svg$/i.test(img) || /(?:icon|logo)/i.test(img);
+    const thumb = img
+      ? `<div class="thumbwrap thumbwrap-169${seemsIcon ? ' iconish' : ''}">
+           <img class="thumb${seemsIcon ? ' icon' : ''}" src="${img}" alt="${title} thumbnail" />
+         </div>`
+      : `<div class="thumbwrap thumbwrap-169"><div class="thumb fallback">${title.charAt(0).toUpperCase()}</div></div>`;
+
+    const metaBits = [];
+    if (updated) metaBits.push(`<span class="meta-item">${updated}</span>`);
+    if (read) metaBits.push(`<span class="meta-item">${read}</span>`);
+
+    return `
+      <article class="card project-card post-card" data-url="${url}" tabindex="0" role="button" aria-label="Open ${title}">
+        <div class="thumbcol">${thumb}</div>
+        <div class="body">
+          <div class="title-row project-title-row">
+            <h3 class="project-title">${title}${p.subtitle?`<span class="subtitle">${esc(p.subtitle)}</span>`:''}</h3>
+          </div>
+          ${excerpt?`<div class="blurb">${excerpt}</div>`:''}
+          ${metaBits.length?`<div class="meta project-meta">${metaBits.join('')}</div>`:''}
+          ${tags.length?`<div class="meta project-tags">${tags.map(t=>`<span class="pill">${t}</span>`).join('')}</div>`:''}
+        </div>
+      </article>`;
+  }
+
+  function render(){
+    const grid = document.getElementById('postGrid');
+    if(!blog.filtered.length){
+      grid.innerHTML = '';
+      document.getElementById('empty').hidden = false;
+      return;
+    }
+    document.getElementById('empty').hidden = true;
+    grid.innerHTML = blog.filtered.map(templateCard).join('');
+
+    // Click + keyboard open
+    grid.querySelectorAll('.card').forEach(el=>{
+      el.addEventListener('click', ()=>{ const u = el.getAttribute('data-url'); if(u) location.href = u; });
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); const u = el.getAttribute('data-url'); if(u) location.href = u; } });
+    });
+
+    // Refine icon detection after image load
+    grid.querySelectorAll('.thumbwrap img.thumb').forEach(img=>{
+      if (img.complete) markIconByRatio(img);
+      else img.addEventListener('load', ()=>markIconByRatio(img), {once:true});
+    });
+
+    function markIconByRatio(img){
+      const nw = img.naturalWidth || 0, nh = img.naturalHeight || 0;
+      if (!nw || !nh) return;
+      const r = nw/nh;
+      if (r > 0.8 && r < 1.25) { // square-ish => icon
+        img.classList.add('icon');
+        img.closest('.thumbwrap')?.classList.add('iconish');
+      }
+    }
+  }
+
+  function buildTagChips(){
+    const allTags = new Set();
+    blog.all.forEach(p => (p.tags||[]).forEach(t => allTags.add(t)));
+    const list = document.getElementById('tagFilters');
+    list.innerHTML = '';
+    [...allTags].sort().forEach(tag => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip solid-chip';
+      chip.textContent = tag;
+      chip.addEventListener('click', () => {
+        if(blog.activeTags.has(tag)) blog.activeTags.delete(tag); else blog.activeTags.add(tag);
+        chip.classList.toggle('active');
+        applyFilters();
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  function applyFilters(){
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    const tags = blog.activeTags;
+    blog.filtered = blog.all.filter(p => {
+      const ptags = new Set(p.tags||[]);
+      if (tags.size && ![...tags].every(t => ptags.has(t))) return false;
+      if (!q) return true;
+      const hay = [p.title, p.subtitle, p.excerpt, (p.tags||[]).join(' '), (p.bodyText||'')].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+
+    if (q){
+      blog.filtered.sort((a,b)=> (a.title||'').localeCompare(b.title||'') || (a._idx-b._idx));
+    } else {
+      blog.filtered.sort((a,b)=> b.dateVal - a.dateVal || (a.title||'').localeCompare(b.title||''));
+    }
+
+    render();
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    try{ await loadPosts(); }catch(e){ console.warn(e); }
+    const q = document.getElementById('q');
+    const clearBtn = document.getElementById('clearBtn');
+    q.addEventListener('input', applyFilters);
+    clearBtn.addEventListener('click', ()=>{ 
+      q.value=''; blog.activeTags.clear(); 
+      document.querySelectorAll('.chip.active').forEach(c=>c.classList.remove('active')); 
+      applyFilters(); 
+    });
+  });
+  </script>
+
+  <!-- Background video loader (same heuristic as other pages) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+      if (!allowVideo) { wrap.style.display = 'none'; return; }
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+      const onReady = () => { wrap.classList.add('ready'); const p = vid.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); };
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
+  </script>
+
+  <!-- Partials injector (same pattern as your other pages) -->
+  <script>
+  (async () => {
+    try {
+      async function loadPartial(url) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+        return tpl.content.firstElementChild || null;
+      }
+      const header = document.getElementById('site-header');
+      const navEl = await loadPartial('/partials/nav.html');
+      if (header && navEl) { header.innerHTML = ''; header.appendChild(navEl); initNav(header); }
+      const discordEl = await loadPartial('/partials/discord.html');
+      if (discordEl) document.body.appendChild(discordEl);
+      const footerEl = await loadPartial('/partials/footer.html');
+      if (footerEl) document.body.appendChild(footerEl);
+
+      function initNav(scope) {
+        const btn = scope.querySelector('.menu-toggle');
+        const panel = scope.querySelector('#nav-panel');
+        if (btn && panel) {
+          btn.addEventListener('click', () => {
+            const open = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+        }
+        const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+        scope.querySelectorAll('.nav-link').forEach(a => {
+          let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+          if (href === '/blog/') href = '/blog';
+          if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
+          if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+        });
+      }
+    } catch (e) { console.warn('Partial load failed:', e); }
+  })();
+  </script>
+</body>
+</html>

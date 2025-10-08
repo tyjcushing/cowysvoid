@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hosting a Custom Website on the Cheap — Cowy’s Void</title>
+  <meta name="description" content="How I built Cowy’s Void with Cloudflare Pages, GitHub, and VS Code — fast, reliable, and basically free." />
+
+  <!-- Icons -->
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/assets/css/void.css">
+</head>
+<body>
+  <!-- Background video -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
+  <div class="app-layer">
+    <header id="site-header" aria-label="Primary"></header>
+
+    <main class="container">
+      <!-- Page header panel -->
+      <section class="panel page-panel solid-surface">
+        <header class="page">
+          <a class="btn ghost solid-ghost-btn" href="/blog" aria-label="Back to Blog">← Back to Blog</a>
+          <h1 style="margin-top:12px">Hosting a Custom Website on the Cheap</h1>
+          <p class="sub">How I built Cowy’s Void with Cloudflare Pages, GitHub, and VS Code.</p>
+          <div class="meta" style="margin-top:8px">
+            <span class="pill">webdev</span>
+            <span class="pill">cloudflare</span>
+            <span class="pill">github</span>
+            <span class="pill">vs code</span>
+            <span class="pill">6 min read</span>
+            <span class="pill">Oct 8, 2025</span>
+          </div>
+        </header>
+      </section>
+
+      <!-- Post content -->
+      <section class="section">
+        <article class="card blog-post">
+          <div class="body">
+            <!-- Optional cover -->
+            <!--
+            <div class="thumbwrap thumbwrap-169">
+              <img class="thumb" src="/assets/blog/hosting-thumb.jpg" alt="Illustration of a cosmic website orbiting a Cloudflare logo" />
+            </div>
+            -->
+
+            <div class="blurb" style="margin-top:8px">
+              One of my favorite things about the modern web is that you don’t need a huge budget or enterprise tools to launch your own site.
+              <strong>Cowy’s Void</strong> runs almost entirely for free using <em>Cloudflare Pages</em>, <em>GitHub</em>, and <em>VS Code</em>. Here’s exactly how I set it up and the small tricks that made it smooth.
+            </div>
+
+            <h2 class="section" style="margin-top:16px"><span>Why this stack?</span></h2>
+            <ul class="list">
+              <li><span>💸 Free static hosting</span> <span class="count">Cloudflare Pages</span></li>
+              <li><span>⚡ Auto deploys</span> <span class="count">push to <code>main</code> → live</span></li>
+              <li><span>🔒 Secure by default</span> <span class="count">SSL/CDN/caching handled</span></li>
+              <li><span>🛠️ Dev-friendly</span> <span class="count">VS Code + GitHub workflow</span></li>
+            </ul>
+
+            <h2 class="section"><span>Step 1 — Authoring in VS Code</span></h2>
+            <p class="notes">
+              I write the site in plain HTML/CSS/JS inside VS Code. No framework, just full control over the design: dark cosmic palette, rounded cards, and small interactive toys (like my MTG tools).
+              Helpful extensions: Prettier (formatting), Live Server (quick preview), and the built-in Git panel.
+            </p>
+
+            <h2 class="section"><span>Step 2 — Version control with GitHub</span></h2>
+            <p class="notes">
+              I created a repo (e.g. <code>cowys-void</code>) and keep <code>main</code> clean. Experiments live on feature branches so prod never breaks.
+            </p>
+<pre class="pill mono" style="display:block; white-space:pre-wrap; padding:10px; margin-top:8px;">
+git init
+git remote add origin git@github.com:&lt;you&gt;/cowys-void.git
+git add .
+git commit -m "Initial site"
+git push -u origin main
+</pre>
+
+            <h2 class="section"><span>Step 3 — Hosting with Cloudflare Pages</span></h2>
+            <ol class="list" style="margin-top:8px">
+              <li>In Cloudflare Pages → <strong>Create Project</strong>.</li>
+              <li>Connect your GitHub repo and choose the deploy branch (<code>main</code> for me).</li>
+              <li>Build settings: for a plain static site, no build command needed; output directory is the repo root.</li>
+              <li>Click Deploy — you’ll get a Cloudflare URL immediately.</li>
+            </ol>
+            <p class="notes">
+              Every push to <code>main</code> redeploys the site. PRs get preview URLs, which is great for testing.
+            </p>
+
+            <h2 class="section"><span>Step 4 — Custom domain + SSL</span></h2>
+            <p class="notes">
+              I registered a domain with Cloudflare (you can also bring your own). In Pages → Custom domains, I mapped it to the project. SSL is automatic, and DNS is handled for me.
+            </p>
+
+            <h2 class="section"><span>Step 5 — Partials & background video (my polish)</span></h2>
+            <p class="notes">
+              To keep pages small and consistent, I load <code>/partials/nav.html</code>, <code>/partials/footer.html</code>, and a Discord widget at runtime.
+              I also conditionally load a background video only for fast connections. You’ll see the same script across my pages.
+            </p>
+
+            <h2 class="section"><span>Folder structure</span></h2>
+<pre class="pill mono" style="display:block; white-space:pre-wrap; padding:10px;">
+/
+├─ index.html
+├─ blog/
+│  ├─ index.html
+│  └─ hosting-on-the-cheap.html   ← this page
+├─ projects.html
+├─ data/
+│  ├─ projects.json
+│  └─ blog.json
+├─ partials/
+│  ├─ nav.html
+│  └─ footer.html
+└─ assets/
+   ├─ css/void.css
+   ├─ blog/hosting-thumb.jpg
+   └─ Blackhole_Animation.mp4
+</pre>
+
+            <h2 class="section"><span>Gotchas I hit (so you don’t)</span></h2>
+            <ul class="list">
+              <li><strong>Cache vs. updates:</strong> add <code>{ cache: 'no-store' }</code> to <code>fetch</code> for partials/data so content updates show up immediately.</li>
+              <li><strong>Relative paths:</strong> keep asset and partial paths absolute (e.g. <code>/partials/nav.html</code>) to avoid subfolder surprises.</li>
+              <li><strong>Preview vs prod:</strong> Cloudflare preview URLs are a different origin; avoid hard-coding the prod domain in scripts.</li>
+            </ul>
+
+            <h2 class="section"><span>What’s next</span></h2>
+            <p class="notes">
+              I’m expanding with a D&D name generator, a Commander “Salt Index” calculator, and more dev writeups. The pipeline stays the same:
+              write code → push → Cloudflare deploys.
+            </p>
+
+            <div class="blog-footer-nav">
+              <a class="btn" href="/blog">← Back to Blog</a>
+              <a class="btn primary" href="/projects.html">See Projects</a>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <!-- Background video loader -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) { wrap.style.display = 'none'; return; }
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+
+      const onReady = () => { wrap.classList.add('ready'); const p = vid.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); };
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
+  </script>
+
+  <!-- Partials injector -->
+  <script>
+  (async () => {
+    try {
+      async function loadPartial(url) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+        return tpl.content.firstElementChild || null;
+      }
+      const header = document.getElementById('site-header');
+      const navEl = await loadPartial('/partials/nav.html');
+      if (header && navEl) { header.innerHTML = ''; header.appendChild(navEl); initNav(header); }
+      const footerEl = await loadPartial('/partials/footer.html');
+      if (footerEl) document.body.appendChild(footerEl);
+
+      function initNav(scope) {
+        const btn = scope.querySelector('.menu-toggle');
+        thePanel = scope.querySelector('#nav-panel');
+        if (btn && thePanel) {
+          btn.addEventListener('click', () => {
+            const open = thePanel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+        }
+        const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+        scope.querySelectorAll('.nav-link').forEach(a => {
+          let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+          if (href === '/blog/') href = '/blog';
+          if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
+          if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+        });
+      }
+    } catch (e) { console.warn('Partial load failed:', e); }
+  })();
+  </script>
+</body>
+</html>

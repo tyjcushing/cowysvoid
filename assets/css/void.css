@@ -511,3 +511,50 @@ body > footer .container {
     /* Extra spacing below the color-access title */
     .an-card h3.mb-tight{ margin-bottom: 10px; }
     /** END: Deck Stats Page styles: **/
+
+    /* ===== Blog Post Styles ===== */
+
+    /* ===== Blog Post: full-width article card ===== */
+    .card.blog-post{
+      /* override the default .card span */
+      grid-column: 1 / -1 !important;
+      display: block !important;
+      width: 100%;
+      padding: 28px;
+      border-radius: var(--radius-md);
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: var(--shadow-md);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    /* If you accidentally leave the post inside a .grid, make sure it spans fully */
+    .grid > .card.blog-post{ grid-column: 1 / -1 !important; }
+
+    /* Guardrail: if a post still has project-card on it, neutralize its two-column grid */
+    .card.blog-post.project-card{
+      display: block !important;
+      grid-template-columns: none !important;
+    }
+
+    /* Post content */
+    .blog-post .body{ max-width: none; }
+
+    /* Headings/paragraphs/images/code spacing in posts */
+    .blog-post h2{ font-size: 20px; margin: 28px 0 12px; font-weight: 700; }
+    .blog-post p{ margin: 0 0 18px; }
+    .blog-post .notes{ color: var(--muted); font-size: 15px; margin-bottom: 18px; }
+    .blog-post img{ max-width: 100%; border-radius: var(--radius-sm); margin: 18px 0; box-shadow: var(--shadow-sm); }
+    .blog-post pre{
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: var(--radius-sm);
+      padding: 14px; font-size: 14px; overflow-x: auto; margin: 18px 0;
+    }
+    .blog-post code{ background: rgba(255,255,255,.08); padding: 2px 5px; border-radius: 4px; font-size: 14px; }
+    .blog-post ul, .blog-post ol{ padding-left: 24px; margin: 0 0 18px; }
+    .blog-post li{ margin-bottom: 6px; }
+    .blog-footer-nav{ display: flex; gap: 12px; margin-top: 30px; }
+
+    /* ===== Blog Post Styles End ===== */
