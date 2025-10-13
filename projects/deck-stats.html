@@ -183,6 +183,21 @@ const SINGLETON_EXCEPTIONS = new Set(['Relentless Rats','Persistent Petitioners'
 function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[m])) }
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
+// NEW: Strip anything AFTER the card name if it starts with [], {}, (), or ^^
+function stripNameAnnotations(s=''){
+  s = s.trim();
+  const cuts = [
+    s.indexOf('['),
+    s.indexOf('{'),
+    s.indexOf('('),
+    s.indexOf('^^')
+  ].filter(i => i >= 0);
+  if (!cuts.length) return s;
+  const cut = Math.min(...cuts);
+  return s.slice(0, cut).trim();
+}
+
+
 /* ====================== Parsing & Scryfall ====================== */
 function parseDeckText(text){
   const lines = (text||'').replace(/\r\n?/g,'\n').split('\n');
@@ -198,17 +213,18 @@ function parseDeckText(text){
     if (/^maybeboard:?$/i.test(line)){ section = 'Maybeboard'; continue; }
 
     let m = line.match(/^commander:\s*(.+)$/i);
-    if (m){ items.push({qty:1, name:m[1].trim(), section:'Commander'}); continue; }
+    if (m){ items.push({qty:1, name:stripNameAnnotations(m[1]), section:'Commander'}); continue; }
     m = line.match(/^companion:\s*(.+)$/i);
-    if (m){ items.push({qty:1, name:m[1].trim(), section:'Companion'}); continue; }
+    if (m){ items.push({qty:1, name:stripNameAnnotations(m[1]), section:'Companion'}); continue; }
 
     m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
-    if (m){ items.push({qty:parseInt(m[1],10), name:m[2].trim(), section}); continue; }
+    if (m){ items.push({qty:parseInt(m[1],10), name:stripNameAnnotations(m[2]), section}); continue; }
 
-    items.push({qty:1, name:line, section});
+    items.push({qty:1, name:stripNameAnnotations(line), section});
   }
   return items;
 }
+
 
 async function fetchCollectionByNames(names){
   const CHUNK = 70;
@@ -417,7 +433,7 @@ function analyze(items, nameToCard, commanderNames){
     typeHist.set(types, (typeHist.get(types)||0) + qty);
     sumMV += cmc * qty;
     const bin = cmc<=1?0 : cmc===2?1 : cmc===3?2 : cmc===4?3 : cmc===5?4 : 5;
-    curve[bin] += qty;
+    if (!isL) curve[bin] += qty;
 
     new Set(cID).forEach(k=>{ if(colorPresence[k]!=null) colorPresence[k]+=qty; });
     const pips = manaPipsFromCost(card);
@@ -1128,6 +1144,8 @@ async function runAnalysis(){
     renderProducers(res);
     renderHeur(res);
     renderIssues(res);
+
+    // (These were missing)
     renderTableExperience(res.extras);
     renderMulligansAndTempo(res, LAST_ITEMS, LAST_NAME_TO_CARD);
     renderColorAccess(res, items, nameToCard);
@@ -1135,6 +1153,7 @@ async function runAnalysis(){
     spinner.hidden = true;
   }
 }
+
 
 function collectCommanderSelection(){
   const boxes = document.querySelectorAll('.cmdr-sections input[type="checkbox"]');
