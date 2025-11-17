@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checklists — Cowy’s Void</title>
+  <meta name="description" content="Ready-to-go checklists with persistent progress (saved to cookies). Add your own via JSON." />
+
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+  <link rel="stylesheet" href="/assets/css/void.css">
+
+  <style>
+    /* Page-local tweaks that sit on top of your global styles */
+    .panel.page-panel.solid-surface{ padding-top:18px; padding-bottom:18px; }
+
+    /* Index grid cards */
+    .cl-card .thumbwrap{ aspect-ratio: 16/9; overflow:hidden; border-radius:12px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .cl-card img.thumb{ width:100%; height:100%; object-fit:cover; display:block; }
+    .cl-card .title-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+
+    /* Detail panel header bits */
+    .cl-progress{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .cl-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+    /* Detail checklist grid: up to 10 columns (controlled via inline CSS variable) */
+    #detailListWrap{
+      --cols: 3;
+      display:grid;
+      grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+      gap:12px;
+    }
+    @media (max-width: 900px){
+      #detailListWrap{ --cols: 1 !important; }
+    }
+
+    /* Individual checklist items */
+    .cl-item{
+      display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center;
+      padding:12px; border-radius:12px;
+      background:var(--card); border:1px solid rgba(255,255,255,.10);
+      transition: background .2s ease, border-color .2s ease;
+    }
+    .cl-item:hover{ border-color: rgba(255,255,255,.18); }
+
+    /* Big friendly checkbox on far left; clicking left label toggles it */
+    .cl-left{ display:flex; align-items:center; gap:12px; min-width:44px; }
+    .cl-check{ width:26px; height:26px; min-width:26px; min-height:26px; accent-color: var(--accent); cursor:pointer; }
+    .cl-left-label{ cursor:pointer; display:flex; align-items:center; gap:12px; }
+
+    .cl-text{ display:flex; flex-direction:column; gap:4px; }
+    .cl-text .title{ font-weight:700; }
+    .cl-text .note{ font-size:12px; color:var(--muted); }
+
+    .cl-img{
+      width:72px; height:72px; border-radius:10px; overflow:hidden;
+      background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+    }
+    .cl-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+    /* Small range control */
+    .cols-ctl{ display:flex; align-items:center; gap:10px; padding:6px 10px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(255,255,255,.04); }
+    .cols-ctl input[type="range"]{ width:180px; }
+  </style>
+</head>
+<body>
+  <!-- Background video -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
+  <div class="app-layer">
+    <header id="site-header" aria-label="Primary"></header>
+
+    <main class="container">
+      <!-- ===== Index (list of lists) ===== -->
+      <section id="indexPanel" class="panel page-panel solid-surface" hidden>
+        <header class="page">
+          <h1>Checklists</h1>
+          <p class="sub">Curated, cookie-saved checklists. Add new lists via <code>/data/checklists/index.json</code> (or per-list JSON files).</p>
+        </header>
+
+        <div class="toolbar toolbar-wide" role="search">
+          <label class="input input-solid solid-input" aria-label="Search lists">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M21 21l-4.35-4.35m1.35-5.65A7 7 0 1 1 5 5a7 7 0 0 1 13 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <input id="q" placeholder="Search by title, tags, or description…" />
+          </label>
+          <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
+        </div>
+
+        <div class="filters" id="tagFilters" aria-label="Tag filters"></div>
+      </section>
+
+      <div id="indexHeader" class="section" hidden><h2>All Lists</h2></div>
+      <section id="listGrid" class="grid" aria-live="polite"></section>
+      <div id="empty" class="empty" hidden>No lists match your search.</div>
+
+      <!-- ===== Detail (single checklist) ===== -->
+      <section id="detailPanel" class="panel page-panel solid-surface" hidden>
+        <header class="page">
+          <a id="backLink" class="btn ghost solid-ghost-btn" href="?">← Back to all</a>
+          <h1 id="clTitle">Checklist</h1>
+          <p id="clSub" class="sub"></p>
+          <div id="clTags" class="chips"></div>
+        </header>
+
+        <div class="row cl-progress" style="margin-bottom:8px">
+          <span id="clCount" class="pill">0 / 0 complete</span>
+          <span id="clNote" class="pill" hidden></span>
+          <div class="cl-actions">
+            <span class="cols-ctl">
+              <label for="colsRange">Columns</label>
+              <input id="colsRange" type="range" min="1" max="10" step="1" value="3" />
+              <span id="colsVal" class="pill">3</span>
+            </span>
+            <button id="resetListBtn" class="btn danger" type="button" title="Clear this list’s cookie">Reset progress</button>
+          </div>
+        </div>
+
+        <div id="heroWrap" class="thumbwrap" style="margin-top:10px; display:none;">
+          <img id="heroImg" class="thumb" alt="">
+        </div>
+      </section>
+
+      <section id="detailListWrap" aria-live="polite" hidden></section>
+    </main>
+  </div>
+
+  <!-- ===== App logic ===== -->
+  <script>
+  const DEBUG = false;
+  const dlog = (...a)=> DEBUG && console.log('[Checklists]', ...a);
+
+  const state = {
+    all: [],            // all list metadata
+    filtered: [],       // filtered for index
+    activeTags: new Set(),
+    current: null,      // active list object
+    currentItems: [],   // items in active list
+  };
+
+  // -------- Cookies --------
+  function setCookie(name, value, days=3650){
+    const d = new Date(); d.setTime(d.getTime() + (days*24*60*60*1000));
+    document.cookie = encodeURIComponent(name)+'='+encodeURIComponent(value)+';expires='+d.toUTCString()+';path=/;SameSite=Lax';
+  }
+  function getCookie(name){
+    const key = encodeURIComponent(name)+'=';
+    return document.cookie.split(';').map(s=>s.trim()).find(x=>x.startsWith(key))?.slice(key.length) ? decodeURIComponent(document.cookie.split(';').map(s=>s.trim()).find(x=>x.startsWith(key)).slice(key.length)) : null;
+  }
+  function delCookie(name){
+    document.cookie = encodeURIComponent(name)+'=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';
+  }
+
+  const esc = s => (s??'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;"}[m]));
+
+  // -------- Data loading --------
+  async function tryFetchJson(url){
+    try{ const r = await fetch(url, { cache:'no-store' }); if(!r.ok) return null; return await r.json(); }
+    catch { return null; }
+  }
+
+  async function loadIndex(){
+    // Prefer /data/checklists/index.json, fall back to /data/checklists.json
+    let j = await tryFetchJson('/data/checklists/index.json');
+    if (!j) j = await tryFetchJson('/data/checklists.json');
+    state.all = Array.isArray(j) ? j.map((x,i)=>({ ...x, _idx:i })) : [];
+
+    // normalize
+    state.all.forEach(l => {
+      l.id = String(l.id||'').trim();
+      l.title = l.title || ('Checklist '+(l.id||'')); 
+      if (!Array.isArray(l.tags)) l.tags = [];
+      // allow inline items OR a src pointing to a per-list json file
+      if (!Array.isArray(l.items)) l.items = [];
+      if (typeof l.columns !== 'number') l.columns = undefined;
+    });
+  }
+
+  async function loadListItems(list){
+    if (list.src){
+      const j = await tryFetchJson(list.src);
+      list.items = Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : []);
+    }
+    // normalize items and ensure stable ids
+    list.items = (list.items||[]).map((it, i) => {
+      let id = String(it.id ?? '').trim();
+      if (!id){
+        id = (String(it.text||'item')+'_'+i).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+      }
+      return { id, text: it.text ?? '', note: it.note ?? '', img: it.img ?? '' };
+    });
+    state.currentItems = list.items;
+  }
+
+  // -------- Index rendering --------
+  function buildTagChips(){
+    const allTags = new Set();
+    state.all.forEach(l => (l.tags||[]).forEach(t => allTags.add(t)));
+    const wrap = document.getElementById('tagFilters');
+    wrap.innerHTML = '';
+    [...allTags].sort().forEach(tag => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip solid-chip';
+      chip.textContent = tag;
+      chip.addEventListener('click', () => {
+        if(state.activeTags.has(tag)) state.activeTags.delete(tag); else state.activeTags.add(tag);
+        chip.classList.toggle('active');
+        applyFilters();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function templateListCard(l){
+    const count = Array.isArray(l.items) ? l.items.length : 0;
+    const img = l.image ? `<div class="thumbwrap"><img class="thumb" src="${esc(l.image)}" alt=""></div>` : `<div class="thumbwrap thumbwrap-169"><div class="thumb fallback">CL</div></div>`;
+    const tags = (l.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join('');
+    return `
+      <article class="card cl-card" style="grid-column: span 6;">
+        ${img}
+        <div class="body">
+          <div class="title-row">
+            <h3>${esc(l.title)}</h3>
+            ${count ? `<span class="pill">${count} item${count===1?'':'s'}</span>` : ''}
+          </div>
+          ${l.sub ? `<div class="notes">${esc(l.sub)}</div>` : ''}
+          ${tags ? `<div class="chips">${tags}</div>` : ''}
+          <div class="row" style="margin-top:10px;">
+            <a class="btn primary" href="?id=${encodeURIComponent(l.id)}">Open</a>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function applyFilters(){
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    const tags = state.activeTags;
+
+    let results = state.all.filter(l => {
+      if (tags.size){
+        const lt = new Set(l.tags||[]);
+        for (const t of tags) if (!lt.has(t)) return false;
+      }
+      if (!q) return true;
+      const hay = [l.title, l.sub, (l.tags||[]).join(' ')].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+
+    results.sort((a,b)=> (a.title||'').localeCompare(b.title||'') || (a._idx - b._idx));
+    state.filtered = results;
+    renderIndex();
+  }
+
+  function renderIndex(){
+    const indexPanel = document.getElementById('indexPanel');
+    const indexHeader = document.getElementById('indexHeader');
+    const grid = document.getElementById('listGrid');
+    const empty = document.getElementById('empty');
+
+    indexPanel.hidden = false;
+    indexHeader.hidden = false;
+
+    if (!state.filtered.length){
+      grid.innerHTML = '';
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+    grid.innerHTML = state.filtered.map(templateListCard).join('');
+  }
+
+  // -------- Detail rendering --------
+  function cookieKeyFor(id){ return 'cl_' + id; }
+  function cookieKeyCols(id){ return 'cl_' + id + '_cols'; }
+
+  function getCheckedSet(listId){
+    const raw = getCookie(cookieKeyFor(listId));
+    if (!raw) return new Set();
+    try { const arr = JSON.parse(raw); return new Set(Array.isArray(arr)?arr:[]); } catch { return new Set(); }
+  }
+  function saveCheckedSet(listId, set){
+    try { setCookie(cookieKeyFor(listId), JSON.stringify([...set])); } catch {}
+  }
+
+  function updateCount(listId, total, checkedSet){
+    const countEl = document.getElementById('clCount');
+    countEl.textContent = `${checkedSet.size} / ${total} complete`;
+  }
+
+  function renderDetail(list){
+    const panel = document.getElementById('detailPanel');
+    const wrap  = document.getElementById('detailListWrap');
+    const indexPanel = document.getElementById('indexPanel');
+    const indexHeader = document.getElementById('indexHeader');
+    const grid = document.getElementById('listGrid');
+    const empty = document.getElementById('empty');
+
+    // Hide index
+    indexPanel.hidden = true; indexHeader.hidden = true; grid.innerHTML=''; empty.hidden=true;
+
+    panel.hidden = false; wrap.hidden = false;
+
+    document.getElementById('clTitle').textContent = list.title || '';
+    document.getElementById('clSub').textContent   = list.sub   || '';
+    document.getElementById('clTags').innerHTML    = (list.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join('');
+
+    // Hero image
+    const heroWrap = document.getElementById('heroWrap');
+    const heroImg  = document.getElementById('heroImg');
+    if (list.image){ heroImg.src = list.image; heroImg.alt = list.title || ''; heroWrap.style.display='block'; }
+    else { heroWrap.style.display='none'; }
+
+    // Columns slider (default from list.columns, else cookie, else 3)
+    const colsRange = document.getElementById('colsRange');
+    const colsVal   = document.getElementById('colsVal');
+    const savedCols = Number(getCookie(cookieKeyCols(list.id))) || Number(list.columns) || 3;
+    const clampCols = (n)=> Math.max(1, Math.min(10, n|0));
+    const applyCols = (n)=> { const v = clampCols(n); wrap.style.setProperty('--cols', v); colsRange.value = String(v); colsVal.textContent = String(v); setCookie(cookieKeyCols(list.id), String(v)); };
+
+    applyCols(savedCols);
+    colsRange.addEventListener('input', (e)=> applyCols(Number(e.target.value)));
+
+    const checked = getCheckedSet(list.id);
+
+    wrap.innerHTML = ''; // rebuild
+    for (const it of list.items){
+      const cid = `${list.id}__${it.id}`;
+      const checkedNow = checked.has(it.id);
+      const itemEl = document.createElement('div');
+      itemEl.className = 'cl-item';
+
+      // left (checkbox + label area)
+      const leftId = 'cb_'+cid;
+      itemEl.innerHTML = `
+        <div class="cl-left">
+          <input id="${leftId}" class="cl-check" type="checkbox" ${checkedNow?'checked':''} />
+          <label for="${leftId}" class="cl-left-label sr-only">Toggle ${esc(it.text)}</label>
+        </div>
+        <div class="cl-text">
+          <div class="title">${esc(it.text)}</div>
+          ${it.note ? `<div class="note">${esc(it.note)}</div>` : ''}
+        </div>
+        <div class="cl-img">${it.img ? `<img src="${esc(it.img)}" alt="">` : ''}</div>
+      `;
+      const cb = itemEl.querySelector('input[type=checkbox]');
+      cb.addEventListener('change', () => {
+        if (cb.checked) checked.add(it.id); else checked.delete(it.id);
+        saveCheckedSet(list.id, checked);
+        updateCount(list.id, list.items.length, checked);
+      });
+      // Make left area click toggle too (already via label; keeping area simple + accessible)
+
+      wrap.appendChild(itemEl);
+    }
+
+    // Count + reset
+    updateCount(list.id, list.items.length, checked);
+    document.getElementById('resetListBtn').onclick = () => {
+      delCookie(cookieKeyFor(list.id));
+      const boxes = wrap.querySelectorAll('input[type=checkbox]');
+      boxes.forEach(b => b.checked = false);
+      checked.clear();
+      updateCount(list.id, list.items.length, checked);
+    };
+
+    // Overflow note not needed now (unlimited items), but leave hook if you want rules later
+    document.getElementById('clNote').hidden = true;
+  }
+
+  // -------- Router --------
+  async function start(){
+    await loadIndex();
+
+    // Build index UI
+    buildTagChips();
+    state.filtered = state.all.slice();
+    renderIndex();
+
+    // Wire search
+    const q = document.getElementById('q');
+    const clearBtn = document.getElementById('clearBtn');
+    q.addEventListener('input', applyFilters);
+    clearBtn.addEventListener('click', ()=>{ 
+      q.value=''; state.activeTags.clear(); 
+      document.querySelectorAll('.chip.active').forEach(c=>c.classList.remove('active')); 
+      applyFilters(); 
+    });
+
+    // Route: ?id=<listId>
+    const params = new URLSearchParams(location.search);
+    const listId = params.get('id');
+    if (listId){
+      const list = state.all.find(x => x.id === listId);
+      if (!list){
+        // show a friendly “not found”
+        document.getElementById('detailPanel').hidden = false;
+        document.getElementById('detailListWrap').hidden = true;
+        document.getElementById('clTitle').textContent = 'Checklist not found';
+        return;
+      }
+      state.current = list;
+      await loadListItems(list);
+      renderDetail(list);
+    } else {
+      // show index
+      document.getElementById('indexPanel').hidden = false;
+      document.getElementById('indexHeader').hidden = false;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', start);
+  </script>
+
+  <!-- Background video loader (matches your pattern) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) { wrap.style.display = 'none'; return; }
+      vid.src = '/assets/Blackhole_Animtation.mp4'; /* keep your existing filename */
+
+      const onReady = () => { wrap.classList.add('ready'); const p = vid.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); };
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
+  </script>
+
+  <!-- Partials injector (nav/discord/footer) -->
+  <script>
+  (async () => {
+    try {
+      async function loadPartial(url) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+        return tpl.content.firstElementChild || null;
+      }
+      const header = document.getElementById('site-header');
+      const navEl = await loadPartial('/partials/nav.html');
+      if (header && navEl) { header.innerHTML = ''; header.appendChild(navEl); initNav(header); }
+      const discordEl = await loadPartial('/partials/discord.html');
+      if (discordEl) document.body.appendChild(discordEl);
+      const footerEl = await loadPartial('/partials/footer.html');
+      if (footerEl) document.body.appendChild(footerEl);
+
+      function initNav(scope) {
+        const btn = scope.querySelector('.menu-toggle');
+        const panel = scope.querySelector('#nav-panel');
+        if (btn && panel) {
+          btn.addEventListener('click', () => {
+            const open = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+        }
+        const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+        scope.querySelectorAll('.nav-link').forEach(a => {
+          let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+          if (href === '/blog/') href = '/blog';
+          if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
+          if (here.includes('/projects')) a.setAttribute('aria-current', 'page'); // highlight Projects
+          if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+        });
+      }
+    } catch (e) { console.warn('Partial load failed:', e); }
+  })();
+  </script>
+</body>
+</html>

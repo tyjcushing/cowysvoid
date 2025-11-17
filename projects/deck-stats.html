@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="/assets/css/void.css">
 </head>
 <body>
-  <!-- Background video -->
   <div id="bgVideo" class="bg-video" aria-hidden="true">
     <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
   </div>
@@ -19,7 +18,6 @@
     <header id="site-header" aria-label="Primary"></header>
 
     <main class="container">
-      <!-- Input -->
       <section class="panel page-panel solid-surface">
         <header class="page">
           <h1>Deck Analyzer</h1>
@@ -34,7 +32,7 @@
 3x Arcane Signet
 Commander: Alela, Artful Provocateur
 
-— or raw names —
+— or raw names — 
 Sol Ring
 Arcane Signet
 Alela, Artful Provocateur
@@ -42,7 +40,6 @@ Alela, Artful Provocateur
           </label>
         </div>
 
-        <!-- New row: buttons + sim options + spinner -->
         <div class="controls-row">
           <button id="analyzeBtn" class="btn">Analyze</button>
           <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
@@ -70,7 +67,6 @@ Alela, Artful Provocateur
         <div class="inline-hint">Understands: <code>1 Name</code>, <code>3x Name</code>, section headers (<code>Commander</code>, <code>Companion</code>, <code>Deck</code>, <code>Sideboard</code>, <code>Maybeboard</code>), and plain names. Comments with <code>#</code> or <code>//</code> are ignored.</div>
       </section>
 
-      <!-- Summary -->
       <section class="panel solid-surface">
         <h2>Summary</h2>
         <div id="summary" class="flex-row" style="margin-top:8px"></div>
@@ -98,7 +94,6 @@ Alela, Artful Provocateur
         </details>
       </section>
 
-      <!-- Charts & lists -->
       <section class="analyzer-grid" style="margin-top:6px">
         <article class="card an-card">
           <h3>Mana Curve</h3>
@@ -124,7 +119,6 @@ Alela, Artful Provocateur
           <div class="inline-hint">Counts permanent sources. “Any” = can make any color. Dual/choice producers count for each color they can make.</div>
         </article>
 
-        <!-- New: Average Color Access (Monte-Carlo) -->
         <article class="card an-card">
           <h3 class="mb-tight">Average Color Access in Top 10 Cards</h3>
           <div id="colorAccessGrid" class="prob-grid"></div>
@@ -136,23 +130,46 @@ Alela, Artful Provocateur
           <ul class="list" id="listHeur"></ul>
         </article>
 
-        <!-- Table Experience -->
         <article class="card an-card">
           <h3>Table Experience</h3>
-          <ul class="list" id="listSalt">
-            <li><span>Salt Index <code style="color:red; font-size: small;">Not functional for the time being</code></span><span class="count" id="saltIndex">—</span></li>
+          <ul class="list">
             <li><span>Board Wipes</span><span class="count" id="wipeCount">—</span></li>
           </ul>
           <div class="inline-hint" id="saltNotes"></div>
         </article>
 
-        <!-- Mulligans & Tempo -->
+        <!-- META + TEMPO + BRACKET -->
         <article class="card an-card">
-          <h3>Mulligans & Tempo</h3>
+          <h3>Meta & Tempo</h3>
           <div class="prob-grid">
-            <div class="prob"><div class="label">Keepable hand (7)</div><div class="value"><strong id="keep7">—</strong></div></div>
-            <div class="prob"><div class="label">Keepable after London to 6</div><div class="value"><strong id="keep6">—</strong></div></div>
-            <div class="prob big"><div class="label">Tempo Score</div><div class="value"><strong id="tempoScore">0</strong></div></div>
+            <div class="prob">
+              <div class="label">Card Meta Score</div>
+              <div class="value"><strong id="avgPopularity">—</strong></div>
+            </div>
+            <div class="prob">
+              <div class="label">Tempo Score</div>
+              <div class="value"><strong id="tempoScore">—</strong></div>
+            </div>
+            <div class="prob big">
+              <div class="label">Cowy Deck Score (1-5)</div>
+              <div class="value"><strong id="bracketEst">—</strong></div>
+            </div>
+          </div>
+          <div class="inline-hint" id="metaNotes"></div>
+        </article>
+
+        <!-- MULLIGANS ONLY -->
+        <article class="card an-card">
+          <h3>Mulligans</h3>
+          <div class="prob-grid">
+            <div class="prob">
+              <div class="label">Keepable hand (7)</div>
+              <div class="value"><strong id="keep7">—</strong></div>
+            </div>
+            <div class="prob">
+              <div class="label">Keepable after London to 6</div>
+              <div class="value"><strong id="keep6">—</strong></div>
+            </div>
           </div>
           <div class="inline-hint" id="tempoNotes"></div>
         </article>
@@ -168,23 +185,33 @@ Alela, Artful Provocateur
   </div>
 
 <script>
-/* ====================== Constants & helpers (single definitions) ====================== */
-const DEBUG = false;
-const dlog = (...a)=> DEBUG && console.log('[Analyzer]', ...a);
-
 const MANA_SVG = l => `https://svgs.scryfall.io/card-symbols/${String(l).toUpperCase()}.svg`;
 const COLOR_ORDER = ['W','U','B','R','G'];
-function pipHTML(letter, size=18, alt=letter){ return `<img class="ms" src="${MANA_SVG(letter)}" alt="${alt}" width="${size}" height="${size}">`; }
-function pipsHTML(arr){ return arr.map(k => pipHTML(k)).join(''); }
 
-const BASIC_LANDS = new Set(['Plains','Island','Swamp','Mountain','Forest','Wastes','Snow-Covered Plains','Snow-Covered Island','Snow-Covered Swamp','Snow-Covered Mountain','Snow-Covered Forest']);
-const SINGLETON_EXCEPTIONS = new Set(['Relentless Rats','Persistent Petitioners','Dragon\'s Approach','Shadowborn Apostle','Rat Colony','Seven Dwarves']);
+function pipHTML(letter, size = 18, alt = letter) {
+  return `<img class="ms" src="${MANA_SVG(letter)}" alt="${alt}" width="${size}" height="${size}">`;
+}
+function pipsHTML(arr) {
+  return arr.map(k => pipHTML(k)).join('');
+}
 
-function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[m])) }
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const BASIC_LANDS = new Set([
+  'Plains','Island','Swamp','Mountain','Forest','Wastes',
+  'Snow-Covered Plains','Snow-Covered Island','Snow-Covered Swamp',
+  'Snow-Covered Mountain','Snow-Covered Forest'
+]);
+const SINGLETON_EXCEPTIONS = new Set([
+  'Relentless Rats','Persistent Petitioners','Dragon\'s Approach',
+  'Shadowborn Apostle','Rat Colony','Seven Dwarves'
+]);
 
-// NEW: Strip anything AFTER the card name if it starts with [], {}, (), or ^^
-function stripNameAnnotations(s=''){
+function esc(s) {
+  return (s || '').replace(/[&<>\"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+function stripNameAnnotations(s = '') {
   s = s.trim();
   const cuts = [
     s.indexOf('['),
@@ -197,88 +224,126 @@ function stripNameAnnotations(s=''){
   return s.slice(0, cut).trim();
 }
 
+function parseDeckText(text) {
+  const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
+  const items = [];
+  let section = 'Deck';
 
-/* ====================== Parsing & Scryfall ====================== */
-function parseDeckText(text){
-  const lines = (text||'').replace(/\r\n?/g,'\n').split('\n');
-  const items = []; let section = 'Deck';
-  for (let raw of lines){
-    let line = raw.trim(); if (!line) continue;
-    line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim(); if (!line) continue;
+  for (let raw of lines) {
+    let line = raw.trim();
+    if (!line) continue;
+    line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
+    if (!line) continue;
 
-    if (/^commander:?$/i.test(line)) { section = 'Commander'; continue; }
-    if (/^companion:?$/i.test(line)) { section = 'Companion'; continue; }
-    if (/^deck:?$/i.test(line))      { section = 'Deck'; continue; }
-    if (/^sideboard:?$/i.test(line)) { section = 'Sideboard'; continue; }
-    if (/^maybeboard:?$/i.test(line)){ section = 'Maybeboard'; continue; }
+    if (/^commander:?$/i.test(line))   { section = 'Commander'; continue; }
+    if (/^companion:?$/i.test(line))   { section = 'Companion'; continue; }
+    if (/^deck:?$/i.test(line))        { section = 'Deck';      continue; }
+    if (/^sideboard:?$/i.test(line))   { section = 'Sideboard'; continue; }
+    if (/^maybeboard:?$/i.test(line))  { section = 'Maybeboard';continue; }
 
     let m = line.match(/^commander:\s*(.+)$/i);
-    if (m){ items.push({qty:1, name:stripNameAnnotations(m[1]), section:'Commander'}); continue; }
+    if (m) {
+      items.push({ qty: 1, name: stripNameAnnotations(m[1]), section: 'Commander' });
+      continue;
+    }
     m = line.match(/^companion:\s*(.+)$/i);
-    if (m){ items.push({qty:1, name:stripNameAnnotations(m[1]), section:'Companion'}); continue; }
+    if (m) {
+      items.push({ qty: 1, name: stripNameAnnotations(m[1]), section: 'Companion' });
+      continue;
+    }
 
     m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
-    if (m){ items.push({qty:parseInt(m[1],10), name:stripNameAnnotations(m[2]), section}); continue; }
+    if (m) {
+      items.push({ qty: parseInt(m[1], 10), name: stripNameAnnotations(m[2]), section });
+      continue;
+    }
 
-    items.push({qty:1, name:stripNameAnnotations(line), section});
+    items.push({ qty: 1, name: stripNameAnnotations(line), section });
   }
   return items;
 }
 
-
-async function fetchCollectionByNames(names){
+async function fetchCollectionByNames(names) {
   const CHUNK = 70;
   const uniq = [...new Set(names.filter(Boolean))];
   const out = new Map();
-  for (let i=0; i<uniq.length; i+=CHUNK){
-    const slice = uniq.slice(i, i+CHUNK);
-    const body = { identifiers: slice.map(n=>({ name: n })) };
+
+  for (let i = 0; i < uniq.length; i += CHUNK) {
+    const slice = uniq.slice(i, i + CHUNK);
+    const body = { identifiers: slice.map(n => ({ name: n })) };
     const r = await fetch('https://api.scryfall.com/cards/collection', {
-      method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body)
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     });
-    if (!r.ok){ console.warn('Scryfall collection error', r.status); continue; }
+    if (!r.ok) {
+      console.warn('Scryfall collection error', r.status);
+      continue;
+    }
     const j = await r.json();
-    for (const card of (j.data||[])){ out.set(card.name, card); }
+    for (const card of (j.data || [])) {
+      out.set(card.name, card);
+    }
   }
   return out;
 }
 
-function cardColors(card){ return Array.isArray(card?.color_identity) ? card.color_identity.map(c=>String(c).toUpperCase()) : []; }
-function cardTypes(card){ return (card?.type_line||'').split('—')[0].trim(); }
-function isLand(card){ return /Land/.test(card?.type_line||''); }
-function isPermanent(card){ return !/Instant|Sorcery/.test(card?.type_line||''); }
-function mv(card){ return Number(card?.cmc||0); }
-function hasCommanderPermission(card){
+function cardColors(card) {
+  return Array.isArray(card?.color_identity)
+    ? card.color_identity.map(c => String(c).toUpperCase())
+    : [];
+}
+function cardTypes(card) {
+  return (card?.type_line || '').split('—')[0].trim();
+}
+function isLand(card) {
+  return /Land/.test(card?.type_line || '');
+}
+function isPermanent(card) {
+  return !/Instant|Sorcery/.test(card?.type_line || '');
+}
+function mv(card) {
+  return Number(card?.cmc || 0);
+}
+function hasCommanderPermission(card) {
   const tl = card?.type_line || '';
   const text = (card?.oracle_text || '').toLowerCase();
   return /Legendary Creature/i.test(tl) || /can be your commander/.test(text);
 }
-function hasPartnerAbility(card){ const t = (card?.oracle_text||'').toLowerCase(); return /partner( with)?/i.test(t) || /friends forever/i.test(t); }
-function hasChooseBackground(card){ return /choose a background/i.test((card?.oracle_text||'').toLowerCase()); }
-function isBackground(card){ return /Background/i.test(card?.type_line||''); }
+function hasPartnerAbility(card) {
+  const t = (card?.oracle_text || '').toLowerCase();
+  return /partner( with)?/i.test(t) || /friends forever/i.test(t);
+}
+function hasChooseBackground(card) {
+  return /choose a background/i.test((card?.oracle_text || '').toLowerCase());
+}
+function isBackground(card) {
+  return /Background/i.test(card?.type_line || '');
+}
 
-function manaPipsFromCost(card){
-  const cost = (card?.mana_cost||'');
-  const counts = {W:0,U:0,B:0,R:0,G:0};
+function manaPipsFromCost(card) {
+  const cost = (card?.mana_cost || '');
+  const counts = { W:0,U:0,B:0,R:0,G:0 };
   const m = cost.match(/\{([WUBRG])\}/g) || [];
-  m.forEach(tok => { const k = tok.replace(/[{}]/g,''); if (counts[k]!=null) counts[k]++; });
+  m.forEach(tok => {
+    const k = tok.replace(/[{}]/g,'');
+    if (counts[k] != null) counts[k]++;
+  });
   return counts;
 }
 
-// Producer detection (OMNI only if it actually "adds any color")
-function detectProducers(card){
-  const out = { W:false,U:false,B:false,R:false,G:false,C:false,OMNI:false, isProducer:false };
+function detectProducers(card) {
+  const out = { W:false,U:false,B:false,R:false,G:false,C:false,OMNI:false,isProducer:false };
   if (!card) return out;
 
   const name = card.name || '';
   const text = card.oracle_text || '';
   const tl   = card.type_line || '';
 
-  // Basic lands
-  if (BASIC_LANDS.has(name)){
-    if (/Plains/i.test(name)) out.W = true;
+  if (BASIC_LANDS.has(name)) {
+    if (/Plains/i.test(name))      out.W = true;
     else if (/Island/i.test(name)) out.U = true;
-    else if (/Swamp/i.test(name)) out.B = true;
+    else if (/Swamp/i.test(name))  out.B = true;
     else if (/Mountain/i.test(name)) out.R = true;
     else if (/Forest/i.test(name)) out.G = true;
     else out.C = true;
@@ -286,16 +351,14 @@ function detectProducers(card){
     return out;
   }
 
-  // Any-color only if tied to an "add"
-  if (/\badd\b[^.]*\b(one mana of )?(any color)\b/i.test(text)){
+  if (/\badd\b[^.]*\b(one mana of )?(any color)\b/i.test(text)) {
     out.OMNI = true;
     out.isProducer = true;
   }
 
-  // Explicit symbols with "add"
   const symMatches = text.match(/\{[WUBRGC]\}/g) || [];
   const hasAdd = /\badd\b/i.test(text);
-  if (hasAdd && symMatches.length){
+  if (hasAdd && symMatches.length) {
     const set = new Set(symMatches.map(s => s.replace(/[{}]/g,'').toUpperCase()));
     if (set.has('W')) out.W = true;
     if (set.has('U')) out.U = true;
@@ -312,48 +375,56 @@ function detectProducers(card){
   return out;
 }
 
-function countMap(items){
+function countMap(items) {
   const map = new Map();
-  items.forEach(it=>{ map.set(it.name, (map.get(it.name)||0) + (it.qty||1)); });
+  items.forEach(it => {
+    map.set(it.name, (map.get(it.name) || 0) + (it.qty || 1));
+  });
   return map;
 }
 
-function unionDeckColors(items, nameToCard){
+function unionDeckColors(items, nameToCard) {
   const set = new Set();
-  for (const it of items){
-    if (it.section==='Sideboard' || it.section==='Maybeboard') continue;
+  for (const it of items) {
+    if (it.section === 'Sideboard' || it.section === 'Maybeboard') continue;
     const c = nameToCard.get(it.name);
-    (cardColors(c)||[]).forEach(x=> set.add(x));
+    (cardColors(c) || []).forEach(x => set.add(x));
   }
-  return [...set].sort((a,b)=> COLOR_ORDER.indexOf(a)-COLOR_ORDER.indexOf(b));
+  return [...set].sort((a,b) => COLOR_ORDER.indexOf(a) - COLOR_ORDER.indexOf(b));
 }
 
-function coversIdentity(commanderIdArr, deckIdArr){
+function coversIdentity(commanderIdArr, deckIdArr) {
   const s = new Set(commanderIdArr);
   return deckIdArr.every(x => s.has(x));
 }
 
-function chooseDefaultCommanders(items, nameToCard){
+function chooseDefaultCommanders(items, nameToCard) {
   const deckID = unionDeckColors(items, nameToCard);
-  const allNames = [...new Set(items.filter(it=>it.section!=='Sideboard' && it.section!=='Maybeboard').map(it=>it.name))];
+  const allNames = [...new Set(
+    items
+      .filter(it => it.section !== 'Sideboard' && it.section !== 'Maybeboard')
+      .map(it => it.name)
+  )];
   const cards = allNames.map(n => nameToCard.get(n)).filter(Boolean);
 
   const singles = cards.filter(c => hasCommanderPermission(c) && coversIdentity(cardColors(c), deckID));
-  if ( singles.length ) return [singles.sort((a,b)=> (a.name||'').localeCompare(b.name||''))[0].name];
+  if (singles.length) {
+    return [singles.sort((a,b) => (a.name || '').localeCompare(b.name || ''))[0].name];
+  }
 
   const partners = cards.filter(c => hasCommanderPermission(c) && hasPartnerAbility(c));
-  for (let i=0;i<partners.length;i++){
-    for (let j=i+1;j<partners.length;j++){
+  for (let i = 0; i < partners.length; i++) {
+    for (let j = i + 1; j < partners.length; j++) {
       const id = [...new Set([...cardColors(partners[i]), ...cardColors(partners[j])])];
       if (coversIdentity(id, deckID)) return [partners[i].name, partners[j].name];
     }
   }
 
   const chooseBg = cards.filter(c => hasCommanderPermission(c) && hasChooseBackground(c));
-  const bgs     = cards.filter(c => isBackground(c));
-  if (chooseBg.length && bgs.length){
-    for (const a of chooseBg){
-      for (const b of bgs){
+  const bgs      = cards.filter(c => isBackground(c));
+  if (chooseBg.length && bgs.length) {
+    for (const a of chooseBg) {
+      for (const b of bgs) {
         const id = [...new Set([...cardColors(a), ...cardColors(b)])];
         if (coversIdentity(id, deckID)) return [a.name, b.name];
       }
@@ -362,52 +433,64 @@ function chooseDefaultCommanders(items, nameToCard){
 
   const leg = cards.filter(c => hasCommanderPermission(c));
   if (!leg.length) return [];
+
   let best = { name: leg[0].name, score: -1 };
-  for (const c of leg){
+  for (const c of leg) {
     const s = new Set(cardColors(c));
-    let sc = 0; deckID.forEach(x => { if (s.has(x)) sc++; });
+    let sc = 0;
+    deckID.forEach(x => { if (s.has(x)) sc++; });
     if (sc > best.score) best = { name: c.name, score: sc };
   }
   return [best.name];
 }
 
-/* ====================== Analysis ====================== */
-function analyze(items, nameToCard, commanderNames){
-  const deckItems = items.filter(it => it.section!=='Sideboard' && it.section!=='Maybeboard');
+// 1–100 popularity score; lower rank = higher score, rank > MAX or missing = 1
+function cardPopularityScore(card, MAX_RANK = 20000) {
+  const r = card?.edhrec_rank;
+  if (typeof r !== 'number' || !isFinite(r) || r <= 0) return 1;
+  if (r > MAX_RANK) return 1;
+  const score = 100 * (MAX_RANK - r + 1) / MAX_RANK;
+  return Math.max(1, Math.min(100, +score.toFixed(2)));
+}
+
+function analyze(items, nameToCard, commanderNames) {
+  const deckItems = items.filter(it => it.section !== 'Sideboard' && it.section !== 'Maybeboard');
   const counts = countMap(deckItems);
-  const total = [...counts.values()].reduce((s,n)=>s+n,0);
+  const total = [...counts.values()].reduce((s,n) => s + n, 0);
 
   const id = commanderNames.length
-    ? ([...new Set(commanderNames.flatMap(n => cardColors(nameToCard.get(n) || {})))]).sort((a,b)=> COLOR_ORDER.indexOf(a)-COLOR_ORDER.indexOf(b))
+    ? ([...new Set(
+        commanderNames.flatMap(n => cardColors(nameToCard.get(n) || {}))
+      )]).sort((a,b) => COLOR_ORDER.indexOf(a) - COLOR_ORDER.indexOf(b))
     : [];
 
-  let land=0, spells=0;
+  let land = 0, spells = 0;
   const typeHist = new Map();
   const curve = [0,0,0,0,0,0];
-  const colorPresence = {W:0,U:0,B:0,R:0,G:0};
-  const pipTotals = {W:0,U:0,B:0,R:0,G:0};
-  let sumMV=0;
+  const colorPresence = { W:0,U:0,B:0,R:0,G:0 };
+  const pipTotals = { W:0,U:0,B:0,R:0,G:0 };
+  let sumMV = 0;
 
   const badSingleton = [];
   const offColor = [];
   const banned = [];
 
-  // Heuristics counters
   const heur = { ramp:0, draw:0, removal:0 };
 
-  const producers = { W:0,U:0,B:0,R:0,G:0,C:0, OMNI:0 };
+  const producers = { W:0,U:0,B:0,R:0,G:0,C:0,OMNI:0 };
   const producerTypes = { Land:0, Artifact:0, Creature:0, Enchantment:0, Planeswalker:0, Other:0 };
 
   const extras = {
-    saltScore: 0,
-    saltReasonMap: new Map(),
     wipeCount: 0,
     softWipeCount: 0
   };
 
+  let popSum = 0;
+  let popCount = 0;
+
   const cmdrSet = new Set(commanderNames);
 
-  for (const [name, qty] of counts){
+  for (const [name, qty] of counts) {
     const card = nameToCard.get(name);
     if (!card) continue;
 
@@ -416,154 +499,183 @@ function analyze(items, nameToCard, commanderNames){
     const types = cardTypes(card);
     const isL = isLand(card);
     const cmc = mv(card);
-    const text = (card.oracle_text||'').toLowerCase();
+    const text = (card.oracle_text || '').toLowerCase();
 
-    // --- salt & wipes ---
-    const salt = saltFeatures(card);
-    if (salt.score > 0) {
-      extras.saltScore += salt.score * qty;
-      salt.reasons.forEach(r => extras.saltReasonMap.set(r, (extras.saltReasonMap.get(r)||0)+qty));
-    }
     const wipe = classifyBoardWipe(card);
     if (wipe.hard) extras.wipeCount += qty;
     if (wipe.soft) extras.softWipeCount += qty;
 
+    const rating = cardPopularityScore(card);
+    popSum += rating * qty;
+    popCount += qty;
 
-    isL ? land+=qty : spells+=qty;
-    typeHist.set(types, (typeHist.get(types)||0) + qty);
+    if (isL) land += qty;
+    else     spells += qty;
+
+    typeHist.set(types, (typeHist.get(types) || 0) + qty);
     sumMV += cmc * qty;
-    const bin = cmc<=1?0 : cmc===2?1 : cmc===3?2 : cmc===4?3 : cmc===5?4 : 5;
+    const bin = cmc <= 1 ? 0 : cmc === 2 ? 1 : cmc === 3 ? 2 : cmc === 4 ? 3 : cmc === 5 ? 4 : 5;
     if (!isL) curve[bin] += qty;
 
-    new Set(cID).forEach(k=>{ if(colorPresence[k]!=null) colorPresence[k]+=qty; });
-    const pips = manaPipsFromCost(card);
-    for (const k of COLOR_ORDER){ pipTotals[k]+= (pips[k]||0)*qty; }
+    new Set(cID).forEach(k => {
+      if (colorPresence[k] != null) colorPresence[k] += qty;
+    });
 
-    if (!isCmdr && !BASIC_LANDS.has(name) && !SINGLETON_EXCEPTIONS.has(name) && qty>1){
+    const pips = manaPipsFromCost(card);
+    for (const k of COLOR_ORDER) {
+      pipTotals[k] += (pips[k] || 0) * qty;
+    }
+
+    if (!isCmdr && !BASIC_LANDS.has(name) && !SINGLETON_EXCEPTIONS.has(name) && qty > 1) {
       const tl = card?.type_line || '';
       if (!/Basic Land/i.test(tl)) badSingleton.push(`${qty}× ${name}`);
     }
 
-    if (id.length){
+    if (id.length) {
       const sub = cID.every(x => id.includes(x));
-      if (!sub) offColor.push(`${qty}× ${name} [${cID.join('')||'C'}]`);
+      if (!sub) offColor.push(`${qty}× ${name} [${cID.join('') || 'C'}]`);
     }
 
-    if ((card.legalities?.commander||'legal') === 'banned'){
+    if ((card.legalities?.commander || 'legal') === 'banned') {
       banned.push(`${qty}× ${name}`);
     }
 
-    // ----- producers -----
-    if (isPermanent(card) && !isCmdr){
+    if (isPermanent(card) && !isCmdr) {
       const prod = detectProducers(card);
-      if (prod.isProducer){
-        const mainType = /Land/.test(types) ? 'Land'
-                      : /Artifact/.test(types) ? 'Artifact'
-                      : /Creature/.test(types) ? 'Creature'
-                      : /Enchantment/.test(types) ? 'Enchantment'
-                      : /Planeswalker/.test(types) ? 'Planeswalker'
-                      : 'Other';
+      if (prod.isProducer) {
+        const mainType =
+          /Land/.test(types)        ? 'Land' :
+          /Artifact/.test(types)    ? 'Artifact' :
+          /Creature/.test(types)    ? 'Creature' :
+          /Enchantment/.test(types) ? 'Enchantment' :
+          /Planeswalker/.test(types)? 'Planeswalker' :
+                                      'Other';
         producerTypes[mainType] += qty;
-        if (prod.W) producers.W += qty;
-        if (prod.U) producers.U += qty;
-        if (prod.B) producers.B += qty;
-        if (prod.R) producers.R += qty;
-        if (prod.G) producers.G += qty;
-        if (prod.C) producers.C += qty;
+        if (prod.W)    producers.W    += qty;
+        if (prod.U)    producers.U    += qty;
+        if (prod.B)    producers.B    += qty;
+        if (prod.R)    producers.R    += qty;
+        if (prod.G)    producers.G    += qty;
+        if (prod.C)    producers.C    += qty;
         if (prod.OMNI) producers.OMNI += qty;
       }
     }
 
-    // ----- heuristics (refined ramp) -----
     {
       const isLandCard       = isL;
-      const isPermanentMana  = isPermanent(card) && !isLandCard && detectProducers(card).isProducer; // rocks/dorks/enchantments/walkers that add mana
+      const isPermanentMana  = isPermanent(card) && !isLandCard && detectProducers(card).isProducer;
       const isLandTutor      = /\bsearch your library for (?:a|up to \d+)? (?:basic )?land\b/i.test(text);
       const isTreasureMaker  = /\bcreate (?:a|one|two|\d+)? treasure token\b/i.test(text);
       const isCostReducer    = /\b(sapphire|ruby|jet|pearl|emerald) medallion\b/i.test(text);
       const isBigManaRock    = /\b(sol ring|mana crypt|mana vault|thran dynamo|gilded lotus|jeweled lotus)\b/i.test(text);
-
       const isRitual         = /\badd\b[^.]*\b(?:\{[WUBRGC]\}|[0-9X]+ mana)\b[^.]*\buntil end of turn\b/i.test(text);
       const isUntapLandSpell = /\buntap (?:target )?land\b/i.test(text);
 
-      if ((isPermanentMana || isLandTutor || isTreasureMaker || isCostReducer || isBigManaRock)
-          && !isRitual && !isLandCard && !isUntapLandSpell){
+      if ((isPermanentMana || isLandTutor || isTreasureMaker || isCostReducer || isBigManaRock) &&
+          !isRitual && !isLandCard && !isUntapLandSpell) {
         heur.ramp += qty;
       }
 
-      // draw
-      if (/draw (a|one|\d+)\s+card|investigate|connive|learn|lesson/i.test(text)){
+      if (/draw (a|one|\d+)\s+card|investigate|connive|learn|lesson/i.test(text)) {
         heur.draw += qty;
       }
-      // removal / interaction
-      if (/destroy target|exile target|counter target|fight target|return target .* to its owner|-x\/-x until end of turn|stifle|deflecting swat|terminate|path to exile|swords to plowshares/i.test(text)){
+      if (/destroy target|exile target|counter target|fight target|return target .* to its owner|-x\/-x until end of turn|stifle|deflecting swat|terminate|path to exile|swords to plowshares/i.test(text)) {
         heur.removal += qty;
       }
     }
   }
 
-  const avgMV = total ? (sumMV/Math.max(1, (total - land))) : 0;
-  const saltReasons = [...extras.saltReasonMap.keys()];
-  const saltIndex = Math.min(10, extras.saltScore / Math.max(1, total));
+  const avgMV = total ? (sumMV / Math.max(1, (total - land))) : 0;
+  const avgPopularity = popCount ? (popSum / popCount) : 0;
 
   return {
-    total, commanders: commanderNames, id, land, spells, avgMV, curve, typeHist,
-    colorPresence, pipTotals, heur, badSingleton, offColor, banned,
-    counts, producers, producerTypes,
-    extras: { saltIndex, wipeCount: extras.wipeCount, saltReasons, softWipeCount: extras.softWipeCount }
+    total,
+    commanders: commanderNames,
+    id,
+    land,
+    spells,
+    avgMV,
+    curve,
+    typeHist,
+    colorPresence,
+    pipTotals,
+    heur,
+    badSingleton,
+    offColor,
+    banned,
+    counts,
+    producers,
+    producerTypes,
+    extras,
+    popularity: { total: popSum, avg: avgPopularity, count: popCount }
   };
-
 }
 
-/* ====================== Charts & UI ====================== */
-function renderBarChart(svg, labels, values, opts={}){
-  const W=600,H=240,left=56,right=10,top=(opts.top ?? 32),bottom=(opts.bottom ?? 36);
-  while(svg.firstChild) svg.removeChild(svg.firstChild);
+function renderBarChart(svg, labels, values, opts = {}) {
+  const W = 600, H = 240;
+  const left = 56, right = 10;
+  const top = (opts.top ?? 32);
+  const bottom = (opts.bottom ?? 36);
+
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
   const vmax = Math.max(1, ...values);
-  const cw = (W-left-right)/values.length;
-  const gh = (H-top-bottom);
+  const cw = (W - left - right) / values.length;
+  const gh = (H - top - bottom);
 
   const axis = document.createElementNS('http://www.w3.org/2000/svg','line');
-  axis.setAttribute('x1', left); axis.setAttribute('y1', H-bottom);
-  axis.setAttribute('x2', W-right); axis.setAttribute('y2', H-bottom);
+  axis.setAttribute('x1', left);
+  axis.setAttribute('y1', H - bottom);
+  axis.setAttribute('x2', W - right);
+  axis.setAttribute('y2', H - bottom);
   axis.setAttribute('stroke', 'rgba(255,255,255,.25)');
   svg.appendChild(axis);
 
-  values.forEach((v,i)=>{
-    const x = left + i*cw + cw*0.18, w=cw*0.64;
-    const h = (v/vmax)*gh;
-    const y = (H-bottom) - h;
+  values.forEach((v, i) => {
+    const x = left + i * cw + cw * 0.18;
+    const w = cw * 0.64;
+    const h = (v / vmax) * gh;
+    const y = (H - bottom) - h;
 
     const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    r.setAttribute('x',x); r.setAttribute('y',y);
-    r.setAttribute('width',w); r.setAttribute('height',Math.max(0,h));
-    r.setAttribute('rx',4); r.setAttribute('fill','url(#grad)'); r.setAttribute('opacity','0.95');
+    r.setAttribute('x', x);
+    r.setAttribute('y', y);
+    r.setAttribute('width', w);
+    r.setAttribute('height', Math.max(0, h));
+    r.setAttribute('rx', 4);
+    r.setAttribute('fill', 'url(#grad)');
+    r.setAttribute('opacity', '0.95');
     svg.appendChild(r);
 
     const val = document.createElementNS('http://www.w3.org/2000/svg','text');
-    val.setAttribute('x', x+w/2);
-    val.setAttribute('y', Math.max(top+12, y-4));
-    val.setAttribute('fill','var(--text)'); val.setAttribute('font-size','11'); val.setAttribute('text-anchor','middle');
+    val.setAttribute('x', x + w / 2);
+    val.setAttribute('y', Math.max(top + 12, y - 4));
+    val.setAttribute('fill', 'var(--text)');
+    val.setAttribute('font-size', '11');
+    val.setAttribute('text-anchor', 'middle');
     val.textContent = v;
     svg.appendChild(val);
 
     const lab = document.createElementNS('http://www.w3.org/2000/svg','text');
-    lab.setAttribute('fill','var(--muted)');
+    lab.setAttribute('fill', 'var(--muted)');
     lab.setAttribute('font-size', String(opts.fontSize ?? 11));
-    lab.setAttribute('text-anchor','middle');
-    lab.setAttribute('x', x+w/2);
-    const yBase = H-bottom+16;
+    lab.setAttribute('text-anchor', 'middle');
+    lab.setAttribute('x', x + w / 2);
+    const yBase = H - bottom + 16;
 
     if (opts.wrap === '2line' && /\s/.test(labels[i])) {
       const [first, ...rest] = labels[i].split(' ');
       const t1 = document.createElementNS('http://www.w3.org/2000/svg','tspan');
-      t1.setAttribute('x', x+w/2); t1.setAttribute('y', yBase);
+      t1.setAttribute('x', x + w / 2);
+      t1.setAttribute('y', yBase);
       t1.textContent = first;
 
       const t2 = document.createElementNS('http://www.w3.org/2000/svg','tspan');
-      t2.setAttribute('x', x+w/2); t2.setAttribute('dy', 12);
+      t2.setAttribute('x', x + w / 2);
+      t2.setAttribute('dy', 12);
       t2.textContent = rest.join(' ') || '';
-      lab.appendChild(t1); lab.appendChild(t2);
+      lab.appendChild(t1);
+      lab.appendChild(t2);
     } else {
       lab.setAttribute('y', yBase);
       lab.textContent = labels[i];
@@ -571,106 +683,150 @@ function renderBarChart(svg, labels, values, opts={}){
     svg.appendChild(lab);
   });
 
-  if (!svg.querySelector('#grad')){
+  if (!svg.querySelector('#grad')) {
     const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
     const lg = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
-    lg.setAttribute('id','grad'); lg.setAttribute('x1','0'); lg.setAttribute('x2','1'); lg.setAttribute('y1','0'); lg.setAttribute('y2','1');
-    const s1=document.createElementNS('http://www.w3.org/2000/svg','stop'); s1.setAttribute('offset','0%'); s1.setAttribute('stop-color','var(--accent)');
-    const s2=document.createElementNS('http://www.w3.org/2000/svg','stop'); s2.setAttribute('offset','100%'); s2.setAttribute('stop-color','var(--accent-2)');
-    lg.appendChild(s1); lg.appendChild(s2); defs.appendChild(lg); svg.insertBefore(defs, svg.firstChild);
+    lg.setAttribute('id','grad');
+    lg.setAttribute('x1','0');
+    lg.setAttribute('x2','1');
+    lg.setAttribute('y1','0');
+    lg.setAttribute('y2','1');
+    const s1 = document.createElementNS('http://www.w3.org/2000/svg','stop');
+    s1.setAttribute('offset','0%');
+    s1.setAttribute('stop-color','var(--accent)');
+    const s2 = document.createElementNS('http://www.w3.org/2000/svg','stop');
+    s2.setAttribute('offset','100%');
+    s2.setAttribute('stop-color','var(--accent-2)');
+    lg.appendChild(s1);
+    lg.appendChild(s2);
+    defs.appendChild(lg);
+    svg.insertBefore(defs, svg.firstChild);
   }
 }
 
-function renderSummary(res){
+function renderSummary(res) {
   const wrap = document.getElementById('summary');
   const missing = 100 - res.total;
   const ci = res.id.length ? pipsHTML(res.id) : 'C';
   wrap.innerHTML = `
-    <span class="pill">Cards: <strong>${res.total}</strong>${missing!==0?` <span class="${missing>0?'warn':'good'}">(${missing>0?missing+' short':Math.abs(missing)+' over'})</span>`:''}</span>
+    <span class="pill">Cards: <strong>${res.total}</strong>${
+      missing !== 0
+        ? ` <span class="${missing > 0 ? 'warn' : 'good'}">(${
+            missing > 0 ? missing + ' short' : Math.abs(missing) + ' over'
+          })</span>`
+        : ''
+    }</span>
     <span class="pill">Lands: <strong>${res.land}</strong></span>
     <span class="pill">Nonlands: <strong>${res.spells}</strong></span>
     <span class="pill">Avg MV (nonlands): <strong>${res.avgMV.toFixed(2)}</strong></span>
     <span class="pill">Identity: <strong>${ci}</strong></span>
-    <span class="pill">Commander(s): <strong>${esc(res.commanders.join(' / ')||'—')}</strong></span>
+    <span class="pill">Commander(s): <strong>${esc(res.commanders.join(' / ') || '—')}</strong></span>
   `;
 }
 
-function renderCommanderEditor(items, nameToCard, deckID, selected){
-  const names = [...new Set(items
-    .filter(it=>it.section!=='Sideboard' && it.section!=='Maybeboard')
-    .map(it=>it.name))].sort();
+function renderCommanderEditor(items, nameToCard, deckID, selected) {
+  const names = [...new Set(
+    items
+      .filter(it => it.section !== 'Sideboard' && it.section !== 'Maybeboard')
+      .map(it => it.name)
+  )].sort();
 
   const cards = names.map(n => nameToCard.get(n)).filter(Boolean);
-  const singles   = cards.filter(c => hasCommanderPermission(c) && coversIdentity(cardColors(c), deckID));
-  const partners  = cards.filter(c => hasCommanderPermission(c) && hasPartnerAbility(c));
-  const chooseBg  = cards.filter(c => hasCommanderPermission(c) && hasChooseBackground(c));
-  const bgs       = cards.filter(c => isBackground(c));
+  const singles  = cards.filter(c => hasCommanderPermission(c) && coversIdentity(cardColors(c), deckID));
+  const partners = cards.filter(c => hasCommanderPermission(c) && hasPartnerAbility(c));
+  const chooseBg = cards.filter(c => hasCommanderPermission(c) && hasChooseBackground(c));
+  const bgs      = cards.filter(c => isBackground(c));
 
-  function row(c){
+  function row(c) {
     const checked = selected.includes(c.name);
     const ci = cardColors(c);
     return `<label class="cmdr-item">
-      <input type="checkbox" data-name="${esc(c.name)}" ${checked?'checked':''}>
+      <input type="checkbox" data-name="${esc(c.name)}" ${checked ? 'checked' : ''}>
       <span>${esc(c.name)}</span>
       <span class="ci">${pipsHTML(ci)}</span>
     </label>`;
   }
 
-  document.getElementById('cmdrSingles').innerHTML   = singles.map(row).join('') || `<div class="inline-hint">No single commander covers this deck's colors.</div>`;
-  document.getElementById('cmdrPartners').innerHTML  = partners.map(row).join('') || `<div class="inline-hint">No partner-able commanders detected.</div>`;
-  document.getElementById('cmdrChooseBg').innerHTML  = chooseBg.map(row).join('') || `<div class="inline-hint">No “Choose a Background” commanders detected.</div>`;
-  document.getElementById('cmdrBackgrounds').innerHTML = bgs.map(row).join('') || `<div class="inline-hint">No Backgrounds found in the list.</div>`;
+  document.getElementById('cmdrSingles').innerHTML =
+    singles.map(row).join('') ||
+    `<div class="inline-hint">No single commander covers this deck's colors.</div>`;
+
+  document.getElementById('cmdrPartners').innerHTML =
+    partners.map(row).join('') ||
+    `<div class="inline-hint">No partner-able commanders detected.</div>`;
+
+  document.getElementById('cmdrChooseBg').innerHTML =
+    chooseBg.map(row).join('') ||
+    `<div class="inline-hint">No “Choose a Background” commanders detected.</div>`;
+
+  document.getElementById('cmdrBackgrounds').innerHTML =
+    bgs.map(row).join('') ||
+    `<div class="inline-hint">No Backgrounds found in the list.</div>`;
 }
 
-function renderCurve(res){
+function renderCurve(res) {
   const labels = ['0–1','2','3','4','5','6+'];
   renderBarChart(document.getElementById('chartCurve'), labels, res.curve, { bottom: 36, top: 32 });
 }
 
-function renderTypes(res){
-  const entries = [...res.typeHist.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const labels = entries.map(e=>e[0]);
-  const values = entries.map(e=>e[1]);
-  renderBarChart(document.getElementById('chartTypes'), labels, values, { bottom: 58, fontSize: 10, top: 32, wrap: '2line' });
+function renderTypes(res) {
+  const entries = [...res.typeHist.entries()]
+    .sort((a,b) => b[1] - a[1])
+    .slice(0,10);
+  const labels = entries.map(e => e[0]);
+  const values = entries.map(e => e[1]);
+  renderBarChart(document.getElementById('chartTypes'), labels, values, {
+    bottom: 58,
+    fontSize: 10,
+    top: 32,
+    wrap: '2line'
+  });
 }
 
-function renderColors(res){
+function renderColors(res) {
   const labels = COLOR_ORDER;
-  const values = labels.map(k=> res.colorPresence[k]||0);
+  const values = labels.map(k => res.colorPresence[k] || 0);
   renderBarChart(document.getElementById('chartColors'), labels, values, { bottom: 36, top: 32 });
   document.getElementById('legendColors').innerHTML =
-    labels.map(k => `<span class="pip-label">${pipHTML(k)} ${res.colorPresence[k]||0}</span>`).join('');
+    labels.map(k => `<span class="pip-label">${pipHTML(k)} ${res.colorPresence[k] || 0}</span>`).join('');
 }
 
-function renderProducers(res){
+function renderProducers(res) {
   const labels = ['W','U','B','R','G','C','Any'];
-  const values  = [
-    res.producers.W||0,
-    res.producers.U||0,
-    res.producers.B||0,
-    res.producers.R||0,
-    res.producers.G||0,
-    res.producers.C||0,
-    res.producers.OMNI||0
+  const values = [
+    res.producers.W || 0,
+    res.producers.U || 0,
+    res.producers.B || 0,
+    res.producers.R || 0,
+    res.producers.G || 0,
+    res.producers.C || 0,
+    res.producers.OMNI || 0
   ];
   renderBarChart(document.getElementById('chartProducers'), labels, values, { bottom: 36, top: 32 });
+
   document.getElementById('legendProducers').innerHTML =
-    ['W','U','B','R','G','C'].map(k => `<span class="pip-label">${pipHTML(k)} ${res.producers[k]||0}</span>`).join('') +
-    ` <span class="pip-label">Any ${res.producers.OMNI||0}</span>`;
+    ['W','U','B','R','G','C'].map(k =>
+      `<span class="pip-label">${pipHTML(k)} ${res.producers[k] || 0}</span>`
+    ).join('') +
+    ` <span class="pip-label">Any ${res.producers.OMNI || 0}</span>`;
 
   const pt = res.producerTypes;
   const chips = [
-    ['Land', pt.Land||0],
-    ['Artifact', pt.Artifact||0],
-    ['Creature', pt.Creature||0],
-    ['Enchantment', pt.Enchantment||0],
-    ['Planeswalker', pt.Planeswalker||0],
-    ['Other', pt.Other||0],
-  ].filter(([,v])=>v>0).map(([k,v])=>`<span class="pill">${k}: <strong>${v}</strong></span>`).join(' ');
-  document.getElementById('producerTypes').innerHTML = chips || `<span class="inline-hint">No permanent mana producers detected.</span>`;
+    ['Land', pt.Land || 0],
+    ['Artifact', pt.Artifact || 0],
+    ['Creature', pt.Creature || 0],
+    ['Enchantment', pt.Enchantment || 0],
+    ['Planeswalker', pt.Planeswalker || 0],
+    ['Other', pt.Other || 0]
+  ]
+    .filter(([,v]) => v > 0)
+    .map(([k,v]) => `<span class="pill">${k}: <strong>${v}</strong></span>`)
+    .join(' ');
+  document.getElementById('producerTypes').innerHTML =
+    chips || `<span class="inline-hint">No permanent mana producers detected.</span>`;
 }
 
-function renderHeur(res){
+function renderHeur(res) {
   const ul = document.getElementById('listHeur');
   ul.innerHTML = `
     <li><span>Ramp (heuristic)</span><span class="count">${res.heur.ramp}</span></li>
@@ -679,23 +835,20 @@ function renderHeur(res){
   `;
 }
 
-function renderIssues(res){
+function renderIssues(res) {
   const out = [];
-  if (res.badSingleton.length){
+  if (res.badSingleton.length) {
     out.push('Duplicate non-singleton cards:\n  - ' + res.badSingleton.join('\n  - '));
   }
-  if (res.offColor.length){
+  if (res.offColor.length) {
     out.push('\nOff-color (outside identity):\n  - ' + res.offColor.join('\n  - '));
   }
-  if (res.banned.length){
+  if (res.banned.length) {
     out.push('\nBanned in Commander:\n  - ' + res.banned.join('\n  - '));
   }
   document.getElementById('issues').textContent = out.join('\n') || 'No issues detected.';
 }
 
-/* ====================== Salt, Wipes, Mulligans & Tempo ====================== */
-
-// Lightweight name list for edge cases where rules text is short
 const WIPE_NAME_SET = new Set([
   'Wrath of God','Day of Judgment','Damnation','Toxic Deluge','Farewell',
   'Blasphemous Act','Supreme Verdict','Cyclonic Rift','Austere Command',
@@ -704,117 +857,138 @@ const WIPE_NAME_SET = new Set([
   'Living Death','Crux of Fate','Extinction Event'
 ]);
 
-function detectBoardWipe(card){
-  const tl = card?.type_line || '';
-  const text = (card?.oracle_text || '').toLowerCase();
-  const name = card?.name || '';
-
-  if (!/Instant|Sorcery|Planeswalker|Enchantment/i.test(tl)) {
-    // most wipes are non-creature spells, but keep it permissive
-  }
-
-  // broad patterns
-  const patterns = [
-    /\bdestroy all (?:other )?creatures?\b/i,
-    /\bexile all (?:other )?creatures?\b/i,
-    /\breturn all creatures? to (?:their|its) owners' hands\b/i,
-    /\beach creature gets -\d+\/-\d+ until end of turn\b/i,
-    /\bdestroy all (?:artifacts|enchantments|planeswalkers|permanents)\b/i,
-    /\bexile all (?:artifacts|enchantments|planeswalkers|permanents)\b/i,
-    /\bfor each creature\b.*\bdestroy\b/i,
-    /\beach nonland permanent\b.*\bowner\b.*\b(hand|library|exile)\b/i
-  ];
-  if (patterns.some(rx => rx.test(text))) return true;
-  if (WIPE_NAME_SET.has(name)) return true;
-
-  // Cyclonic Rift overload & Vandalblast overload captured above, but just in case:
-  if (/overload/i.test(text) && /\breturn all\b|\bdestroy all\b/i.test(text)) return true;
-
-  return false;
-}
-
-function classifyBoardWipe(card){
-  const tl = card?.type_line || '';
+function classifyBoardWipe(card) {
   const text = (card?.oracle_text || '').toLowerCase();
   const name = (card?.name || '').toLowerCase();
 
-  // Hard: destroy/exile all, or -X/-X to all (kills indestructible), mass exile/return-to-library
   const hard =
     /\bdestroy all (?:other )?(creatures?|artifacts|enchantments|planeswalkers|permanents)\b/i.test(text) ||
     /\bexile all (?:other )?(creatures?|artifacts|enchantments|planeswalkers|permanents)\b/i.test(text) ||
-    /\beach creature gets -\d+\/-\d+ until end of turn\b/i.test(text) ||   // static -N/-N
-    /\bexile all\b/i.test(text) ||                                         // broad exile
+    /\beach creature gets -\d+\/-\d+ until end of turn\b/i.test(text) ||
+    /\bexile all\b/i.test(text) ||
     /\bfor each creature\b.*\bdestroy\b/i.test(text) ||
-    /\bmerciless eviction\b|\bfarewell\b|\bsupreme verdict\b|\bwrath of god\b|\bdamnation\b|\bvanquish the horde\b|\bterminus\b/i.test(name);
+    /\bmerciless eviction\b|\bfarewell\b|\bsupreme verdict\b|\bwrath of god\b|\bdamnation\b|\bvanquish the horde\b|\bterminus\b/i.test(name) ||
+    WIPE_NAME_SET.has(card?.name || '');
 
-  // Soft: damage to each creature / bounce-all / selective parity (often leaves bigs)
   const soft =
-    /\bdeals? \d+ damage to each creature\b/i.test(text) ||                // Hour of Devastation 5 dmg, etc.
-    /\bdeals? x damage to each creature\b/i.test(text) ||                  // Chain Reaction / Earthquake variants
+    /\bdeals? \d+ damage to each creature\b/i.test(text) ||
+    /\bdeals? x damage to each creature\b/i.test(text) ||
     /\breturn all (?:other )?creatures? to .* owners'? hands\b/i.test(text) ||
     /\bblasphemous act\b|\bchain reaction\b|\bhour of devastation\b|\banger of the gods\b|\bsweltering suns\b|\bmizzium mortars\b|\bstorm's wrath\b/i.test(name);
 
   return { hard, soft };
 }
 
+function renderTableExperience(extras) {
+  const wipeEl = document.getElementById('wipeCount');
+  const notes = document.getElementById('saltNotes');
+  if (!wipeEl || !notes) return;
 
-// Salt features with simple weights; cap at 10
-function saltFeatures(card){
-  const name = (card?.name || '').toLowerCase();
-  const text = (card?.oracle_text || '').toLowerCase();
-  const tl   = card?.type_line || '';
+  const hard = extras.wipeCount || 0;
+  const soft = extras.softWipeCount || 0;
 
-  let score = 0;
-  const reasons = [];
-
-  // Infinite/extra turns & extra combats
-  if (/\btake an extra turn\b/.test(text) || /time warp|temporal mastery|nexus of fate|time stretch|stitch in time/.test(name)){
-    score += 2; reasons.push('Extra turns');
-  }
-  if (/\badditional combat phase\b|\bextra combat\b/.test(text)){
-    score += 1; reasons.push('Extra combats');
+  if (!hard && !soft) {
+    wipeEl.textContent = '0';
+    notes.textContent = 'No board wipes detected.';
+    return;
   }
 
-  // Mass land destruction / heavy land hate
-  if (/\bdestroy all lands\b|\bsacrifice all lands\b|\barmageddon\b|\bruination\b/.test(text) || /armageddon|ravages of war|ruination|impending doom/.test(name)){
-    score += 3; reasons.push('Mass land destruction');
+  if (soft) {
+    wipeEl.textContent = `${hard} (soft ${soft})`;
+    notes.textContent = 'Hard wipes destroy/exile most creatures or permanents; soft wipes include damage- or bounce-based sweepers.';
+  } else {
+    wipeEl.textContent = String(hard);
+    notes.textContent = 'Hard wipes destroy or exile most creatures/permanents.';
   }
-  if (/\bplayers? can\'?t play lands\b|\bplay an additional land\b.*\bopponents can\'?t\b/.test(text)){
-    score += 1; reasons.push('Land denial');
-  }
-
-  // Hand attack / wheels / discard
-  if (/\beach (opponent|player) discards\b|\bdiscards (two|3|three) cards\b/.test(text)){
-    score += 1; reasons.push('Discard');
-  }
-  if (/\beach player discards (?:his|her|their) hand\b.*\bdraws\b/.test(text) || /wheel of fortune|windfall|dark deal|reforge the soul/.test(name)){
-    score += 1; reasons.push('Wheels');
-  }
-
-  // Hard locks / Rule of Law / Stasis-like
-  if (/\bplayers? can\'?t cast more than one spell each turn\b|\bstasis\b|\bwinter orb\b|\bstatic orb\b|\bback to basics\b|\bblood moon\b/.test(text+name)){
-    score += 2; reasons.push('Lock pieces');
-  }
-
-  // Tutors density nudges salt a bit (feel-bad repetition)
-  if (/\bsearch your library\b.*\bcard\b/i.test(text) && /Instant|Sorcery|Creature|Artifact|Enchantment/.test(tl)){
-    score += 0.5; reasons.push('Tutoring');
-  }
-
-  // Board wipes (counted separately) — nudge if it’s asymmetrical like Rift/Farewell
-  if (detectBoardWipe(card) && /you control|you choose|you own|opponents control/.test(text)){
-    score += 0.5; reasons.push('Asymmetric wipe');
-  }
-
-  // Clamp & unique reasons
-  score = Math.min(10, score);
-  return { score, reasons };
 }
 
-// Build model arrays for mulligan/tempo sims
-function buildMulliganModel(items, nameToCard){
+// ---------- META + BRACKET METRICS STATE ----------
+
+let LAST_ITEMS = [];
+let LAST_NAME_TO_CARD = new Map();
+let LAST_COMMANDERS = [];
+
+// store metrics used for bracket estimate
+let LAST_METRICS = {
+  metaAvg: null,          // Card Meta Score (1–100)
+  tempo: null,            // Tempo Score (1–10)
+  keep7: null,            // % keepable 7
+  allColorsOnline: null   // % all identity colors online in top 10
+};
+
+function computeBracketScore(metaAvg, tempoScore, keep7Pct, allColorsPct) {
+  // metaScaled: 0 at 40, 1 at 80+, clamp to [0,1]
+  let metaScaled = (metaAvg - 40) / 40;
+  metaScaled = Math.max(0, Math.min(1, metaScaled));
+
+  // tempoScaled: 0 at 3, 1 at 7+, clamp to [0,1]
+  let tempoScaled = (tempoScore - 3) / 4;
+  tempoScaled = Math.max(0, Math.min(1, tempoScaled));
+
+  // consistency: lean harder on "all colors online", keep7 is a smaller factor
+  const cons = 0.3 * (keep7Pct / 100) + 0.7 * (allColorsPct / 100);
+
+  // core power score (0–1)
+  const core =
+    0.6 * metaScaled +
+    0.3 * tempoScaled +
+    0.1 * cons;
+
+  // map core → bracket 1–5 with thresholds tuned for spread
+  let bracket;
+  if (core < 0.18)      bracket = 1;
+  else if (core < 0.32) bracket = 2;
+  else if (core < 0.50) bracket = 3;
+  else if (core < 0.75) bracket = 4;
+  else                  bracket = 5;
+
+  return { core, bracket };
+}
+
+function renderBracketEstimate() {
+  const el = document.getElementById('bracketEst');
+  if (!el) return;
+
+  const { metaAvg, tempo, keep7, allColorsOnline } = LAST_METRICS;
+  if (
+    metaAvg == null ||
+    tempo == null ||
+    keep7 == null ||
+    allColorsOnline == null
+  ) {
+    el.textContent = '—';
+    return;
+  }
+
+  const { bracket } = computeBracketScore(metaAvg, tempo, keep7, allColorsOnline);
+  el.textContent = String(bracket);
+}
+
+function renderMetaPopularity(res) {
+  const p = res.popularity || { total:0, avg:0, count:0 };
+  const metaEl = document.getElementById('avgPopularity');
+  const notesEl = document.getElementById('metaNotes');
+  if (!metaEl || !notesEl) return;
+
+  if (!p.count) {
+    metaEl.textContent = '—';
+    notesEl.textContent =
+      'Card Meta Score is derived from Scryfall’s EDHREC rank (1–100, where 100 = extremely popular/meta, 1 = fringe or no data). Bracket Estimation blends meta, tempo, and color consistency to approximate a 1–5 power level.';
+    LAST_METRICS.metaAvg = null;
+    renderBracketEstimate();
+    return;
+  }
+
+  metaEl.textContent = `${p.avg.toFixed(1)}`;
+  notesEl.textContent =
+    'Card Meta Score is the average 1–100 popularity rating from EDHREC rank via Scryfall (100 = most popular, ≥20,000 rank or missing = 1). Bracket Estimation combines this with Tempo Score and color access to estimate the 1–5 power bracket.';
+  LAST_METRICS.metaAvg = p.avg;
+  renderBracketEstimate();
+}
+
+function buildMulliganModel(items, nameToCard) {
   const deck = [];
-  for (const it of items){
+  for (const it of items) {
     if (/(Sideboard|Maybeboard|Commander|Companion)/i.test(it.section)) continue;
     const card = nameToCard.get(it.name);
     if (!card) continue;
@@ -826,7 +1000,6 @@ function buildMulliganModel(items, nameToCard){
     const text = (card?.oracle_text || '').toLowerCase();
     const prod = detectProducers(card);
 
-    // ramp definition: nonland permanents that add mana OR classical big rocks / land tutors / treasures / medallions
     const isPermanentMana = isPerm && !isL && prod.isProducer;
     const isLandTutor     = /\bsearch your library for (?:a|up to \d+)? (?:basic )?land\b/i.test(text);
     const isTreasure      = /\bcreate (?:a|one|two|\d+)? treasure token\b/i.test(text);
@@ -834,14 +1007,13 @@ function buildMulliganModel(items, nameToCard){
     const isBigManaRock   = /\b(sol ring|mana crypt|mana vault|thran dynamo|gilded lotus|jeweled lotus)\b/i.test(text);
     const isRitual        = /\badd\b[^.]*\b(?:\{[WUBRGC]\}|[0-9X]+ mana)\b[^.]*\buntil end of turn\b/i.test(text);
 
-    const isRamp = (isPermanentMana || isLandTutor || isTreasure || isCostReducer || isBigManaRock) && !isL && !isRitual;
+    const isRamp = (isPermanentMana || isLandTutor || isTreasure || isCostReducer || isBigManaRock) &&
+                   !isL && !isRitual;
 
-    // cheap nonland spell (early play)
     const isCheap = !isL && mv <= 2;
 
-    // color production mask & omni for color access in opening hands
     let mask = 0, wild = false;
-    if (prod.isProducer){
+    if (prod.isProducer) {
       if (prod.W) mask |= BIT.W;
       if (prod.U) mask |= BIT.U;
       if (prod.B) mask |= BIT.B;
@@ -850,101 +1022,88 @@ function buildMulliganModel(items, nameToCard){
       wild = !!prod.OMNI;
     }
 
-    for (let i=0;i<qty;i++){
+    for (let i = 0; i < qty; i++) {
       deck.push({ isLand: isL, isRamp, isCheap, mv, mask, wild });
     }
   }
   return deck;
 }
 
-// Keep rule: (lands 2–5) AND (color access ≥ 2 colors OR covers identity with wildcards) AND (has early play OR ramp)
-function isKeepable7(hand, idMask){
-  const lands = hand.filter(c=>c.isLand).length;
+function isKeepable7(hand, idMask) {
+  const lands = hand.filter(c => c.isLand).length;
   if (lands < 2 || lands > 5) return false;
 
   let mask = 0, wild = 0;
-  for (const c of hand){ mask |= c.mask; if (c.wild) wild++; }
+  for (const c of hand) {
+    mask |= c.mask;
+    if (c.wild) wild++;
+  }
 
   const colorsFromMask =
     ((mask & BIT.W)?1:0)+((mask & BIT.U)?1:0)+((mask & BIT.B)?1:0)+((mask & BIT.R)?1:0)+((mask & BIT.G)?1:0);
+
   let coversIdentity = false;
-  if (idMask){
+  if (idMask) {
     const missingMask = idMask & ~mask;
     const missingCount =
-      ((missingMask & BIT.W)?1:0)+((missingMask & BIT.U)?1:0)+((missingMask & BIT.B)?1:0)+((missingMask & BIT.R)?1:0)+((missingMask & BIT.G)?1:0);
+      ((missingMask & BIT.W)?1:0)+((missingMask & BIT.U)?1:0)+
+      ((missingMask & BIT.B)?1:0)+((missingMask & BIT.R)?1:0)+
+      ((missingMask & BIT.G)?1:0);
     coversIdentity = wild >= missingCount;
   }
 
   const early = hand.some(c => c.isCheap || c.isRamp);
-
   return (colorsFromMask >= 2 || coversIdentity) && early;
 }
 
-// Monte-Carlo for mulligans (London mull to 6: draw 7, bottom 1 worst)
-function simulateMulligans(deck, idMask, trials=1000){
+function simulateMulligans(deck, idMask, trials = 1000) {
   const n = deck.length;
   if (n < 7) return { keep7:0, keep6:0 };
-  let keep7=0, keep6=0;
+  let keep7 = 0, keep6 = 0;
 
-  const idx = Array.from({length:n}, (_,i)=>i);
+  const idx = Array.from({ length: n }, (_,i) => i);
 
-  for (let t=0;t<trials;t++){
-    // shuffle
-    for (let i=0;i<n;i++){ const j = i + Math.floor(Math.random()*(n-i)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+  for (let t = 0; t < trials; t++) {
+    for (let i = 0; i < n; i++) {
+      const j = i + Math.floor(Math.random() * (n - i));
+      [idx[i], idx[j]] = [idx[j], idx[i]];
+    }
 
-    const hand7 = idx.slice(0,7).map(i=>deck[i]);
+    const hand7 = idx.slice(0, 7).map(i => deck[i]);
     if (isKeepable7(hand7, idMask)) keep7++;
 
-    // London to 6: pick the card to bottom that least helps (simple heuristic: highest MV nonland first)
     let handFor6 = hand7.slice();
-    handFor6.sort((a,b)=>{
-      // prefer bottoming high MV nonlands that aren't ramp/cheap; lands last
-      const ka = (a.isLand?2:0) + (a.isRamp?0:1) + (a.isCheap?0:1) + a.mv/10;
-      const kb = (b.isLand?2:0) + (b.isRamp?0:1) + (b.isCheap?0:1) + b.mv/10;
+    handFor6.sort((a,b) => {
+      const ka = (a.isLand ? 2 : 0) + (a.isRamp ? 0 : 1) + (a.isCheap ? 0 : 1) + a.mv / 10;
+      const kb = (b.isLand ? 2 : 0) + (b.isRamp ? 0 : 1) + (b.isCheap ? 0 : 1) + b.mv / 10;
       return kb - ka;
     });
-    handFor6.pop(); // bottom one
+    handFor6.pop();
     if (isKeepable7(handFor6, idMask)) keep6++;
   }
 
-  return { keep7: (keep7*100/trials), keep6: (keep6*100/trials) };
+  return {
+    keep7: (keep7 * 100 / trials),
+    keep6: (keep6 * 100 / trials)
+  };
 }
 
-// Tempo score 1–10: curve speed + ramp density + nonland producers + draw density
-function computeTempoScore(res){
-  const total = Math.max(1, res.total);
-  const nonlands = Math.max(1, res.spells);
-  // Components in [0,1] before weighting
-  const curveSpeed = 1 - Math.min(1, (res.avgMV || 0) / 5);         // 1 at MV=0, ~0 at MV>=5
-  const rampDensity = Math.min(1, (res.heur.ramp || 0) / 20);       // ~1 if ~20 ramp pieces
-  const drawDensity = Math.min(1, (res.heur.draw || 0) / 20);       // ~1 if ~20 draw pieces
-  const nonlandProducers = Math.min(1, (res.producers.Artifact + res.producers.Creature + res.producers.Enchantment + res.producers.Planeswalker) / 25 || 0);
+function computeTempoScore(res) {
+  const curveSpeed = 1 - Math.min(1, (res.avgMV || 0) / 5);
+  const rampDensity = Math.min(1, (res.heur.ramp || 0) / 20);
+  const drawDensity = Math.min(1, (res.heur.draw || 0) / 20);
+  const nonlandProducers = Math.min(
+    1,
+    (res.producerTypes.Artifact + res.producerTypes.Creature + res.producerTypes.Enchantment + res.producerTypes.Planeswalker) / 25 || 0
+  );
 
-  // weights (sum ~1.0)
-  const wCurve=0.35, wRamp=0.30, wDraw=0.20, wNLP=0.15;
-  const raw = wCurve*curveSpeed + wRamp*rampDensity + wDraw*drawDensity + wNLP*nonlandProducers;
+  const wCurve = 0.35, wRamp = 0.30, wDraw = 0.20, wNLP = 0.15;
+  const raw = wCurve * curveSpeed + wRamp * rampDensity + wDraw * drawDensity + wNLP * nonlandProducers;
 
-  // map to [1,10], clamp
-  return Math.max(1, Math.min(10, +(1 + raw*9).toFixed(1)));
+  return Math.max(1, Math.min(10, +(1 + raw * 9).toFixed(1)));
 }
 
-function renderTableExperience(extras){
-  const idxEl = document.getElementById('saltIndex');
-  const wipeEl = document.getElementById('wipeCount');
-  const notes = document.getElementById('saltNotes');
-
-  idxEl.textContent = extras.saltIndex.toFixed(1);
-  wipeEl.textContent = extras.softWipeCount
-  ? `${extras.wipeCount} (soft ${extras.softWipeCount})`
-  : String(extras.wipeCount);
-  const parts = [];
-  if (extras.saltReasons.length) parts.push(`Signals: ${extras.saltReasons.join(', ')}`);
-  if (extras.softWipeCount) parts.push('Includes soft wipes (damage/bounce)');
-  notes.textContent = parts.join(' • ');
-
-}
-
-function renderMulligansAndTempo(res, items, nameToCard){
+function renderMulligansAndTempo(res, items, nameToCard) {
   const idMask = identityMaskFrom(res.id);
   const deck = buildMulliganModel(items, nameToCard);
   const trials = parseInt(document.getElementById('simTrials')?.value, 10) || 1000;
@@ -952,24 +1111,35 @@ function renderMulligansAndTempo(res, items, nameToCard){
   const { keep7, keep6 } = simulateMulligans(deck, idMask, trials);
   const tempo = computeTempoScore(res);
 
-  document.getElementById('keep7').textContent = `${keep7.toFixed(1)}%`;
-  document.getElementById('keep6').textContent = `${keep6.toFixed(1)}%`;
-  document.getElementById('tempoScore').textContent = `${tempo}`;
-  document.getElementById('tempoNotes').textContent =
-    'Keep rule: 2–5 lands, ≥2 colors (or identity with wildcards), and an early play or ramp.';
+  const k7El = document.getElementById('keep7');
+  const k6El = document.getElementById('keep6');
+  const tempoEl = document.getElementById('tempoScore');
+  const notesEl = document.getElementById('tempoNotes');
+
+  if (k7El) k7El.textContent = `${keep7.toFixed(1)}%`;
+  if (k6El) k6El.textContent = `${keep6.toFixed(1)}%`;
+  if (tempoEl) tempoEl.textContent = `${tempo}`;
+  if (notesEl) {
+    notesEl.textContent =
+      'Keep rule (7): 2–5 lands, at least two colors (or identity covered via “any color” sources), and an early play or ramp piece. London to 6 assumes bottoming the least-valuable card in hand.';
+  }
+
+  LAST_METRICS.keep7 = keep7;
+  LAST_METRICS.tempo = tempo;
+  renderBracketEstimate();
 }
 
-
-/* ====================== Monte-Carlo Color Access ====================== */
 const BIT = { W:1<<0, U:1<<1, B:1<<2, R:1<<3, G:1<<4 };
-function identityMaskFrom(arr){ return (arr||[]).reduce((m,c)=> m | (BIT[c]||0), 0); }
 
-// Build deck array with *separate* per-color mask and omni flags
-function buildDeckMaskArray(items, nameToCard, includeNonlands){
+function identityMaskFrom(arr) {
+  return (arr || []).reduce((m,c) => m | (BIT[c] || 0), 0);
+}
+
+function buildDeckMaskArray(items, nameToCard, includeNonlands) {
   const masks = [];
   const omni  = [];
 
-  for (const it of items){
+  for (const it of items) {
     if (/(Sideboard|Maybeboard|Commander|Companion)/i.test(it.section)) continue;
 
     const card = nameToCard.get(it.name);
@@ -978,16 +1148,15 @@ function buildDeckMaskArray(items, nameToCard, includeNonlands){
     const prod = (!includeNonlands && !isL) ? { isProducer:false } : detectProducers(card);
 
     let maskBits = 0;
-    if (prod.isProducer){
+    if (prod.isProducer) {
       if (prod.W) maskBits |= BIT.W;
       if (prod.U) maskBits |= BIT.U;
       if (prod.B) maskBits |= BIT.B;
       if (prod.R) maskBits |= BIT.R;
       if (prod.G) maskBits |= BIT.G;
-      // do NOT expand OMNI here
     }
 
-    for (let i=0;i<qty;i++){
+    for (let i = 0; i < qty; i++) {
       masks.push(maskBits);
       omni.push(!!prod.OMNI);
     }
@@ -995,60 +1164,56 @@ function buildDeckMaskArray(items, nameToCard, includeNonlands){
   return { masks, omni };
 }
 
-// Use wildcards for "Any color" sources instead of granting all 5 colors at once
-function simulateColorAccess(deck, idMask, draws, trials){
+function simulateColorAccess(deck, idMask, draws, trials) {
   const n = deck.masks.length;
   if (n === 0) return { perColor:{W:0,U:0,B:0,R:0,G:0}, allColors:0, twoPlus:0 };
 
-  const idxBase = Array.from({length:n}, (_,i)=>i);
+  const idxBase = Array.from({ length: n }, (_,i) => i);
 
-  const perColorHits = {W:0,U:0,B:0,R:0,G:0};
+  const perColorHits = { W:0,U:0,B:0,R:0,G:0 };
   let allColorsHits = 0;
   let twoPlusHits   = 0;
 
-  for (let t=0; t<trials; t++){
-    // partial Fisher–Yates
+  for (let t = 0; t < trials; t++) {
     const idx = idxBase.slice();
-    for (let i=0;i<Math.min(draws,n);i++){
+    for (let i = 0; i < Math.min(draws, n); i++) {
       const j = i + Math.floor(Math.random() * (n - i));
       [idx[i], idx[j]] = [idx[j], idx[i]];
     }
 
-    // top `draws`
     let mask = 0;
     let wild = 0;
     const D = Math.min(draws, n);
-    for (let k=0;k<D;k++){
+    for (let k = 0; k < D; k++) {
       const m = deck.masks[idx[k]];
       mask |= m;
       if (deck.omni[idx[k]]) wild++;
     }
 
-    // Per-color presence: OMNI satisfies any single color presence
-    if ((mask & BIT.W) || wild>0) perColorHits.W++;
-    if ((mask & BIT.U) || wild>0) perColorHits.U++;
-    if ((mask & BIT.B) || wild>0) perColorHits.B++;
-    if ((mask & BIT.R) || wild>0) perColorHits.R++;
-    if ((mask & BIT.G) || wild>0) perColorHits.G++;
+    if ((mask & BIT.W) || wild > 0) perColorHits.W++;
+    if ((mask & BIT.U) || wild > 0) perColorHits.U++;
+    if ((mask & BIT.B) || wild > 0) perColorHits.B++;
+    if ((mask & BIT.R) || wild > 0) perColorHits.R++;
+    if ((mask & BIT.G) || wild > 0) perColorHits.G++;
 
-    // All identity colors simultaneously: wildcards cover missing colors one-for-one
     const missingMask = idMask & ~mask;
     const missingCount =
-      ((missingMask & BIT.W)?1:0) + ((missingMask & BIT.U)?1:0) +
-      ((missingMask & BIT.B)?1:0) + ((missingMask & BIT.R)?1:0) +
+      ((missingMask & BIT.W)?1:0)+((missingMask & BIT.U)?1:0)+
+      ((missingMask & BIT.B)?1:0)+((missingMask & BIT.R)?1:0)+
       ((missingMask & BIT.G)?1:0);
     if (wild >= missingCount) allColorsHits++;
 
-    // At least two colors online: distinct from mask plus wildcards
     const distinctFromMask =
-      ((mask & BIT.W)?1:0) + ((mask & BIT.U)?1:0) +
-      ((mask & BIT.B)?1:0) + ((mask & BIT.R)?1:0) +
+      ((mask & BIT.W)?1:0)+((mask & BIT.U)?1:0)+
+      ((mask & BIT.B)?1:0)+((mask & BIT.R)?1:0)+
       ((mask & BIT.G)?1:0);
     const distinctTotal = Math.min(5, distinctFromMask + wild);
     if (distinctTotal >= 2) twoPlusHits++;
   }
 
-  const perColorPct = Object.fromEntries(['W','U','B','R','G'].map(k => [k, perColorHits[k] * 100 / trials]));
+  const perColorPct = Object.fromEntries(
+    ['W','U','B','R','G'].map(k => [k, perColorHits[k] * 100 / trials])
+  );
   return {
     perColor: perColorPct,
     allColors: allColorsHits * 100 / trials,
@@ -1056,22 +1221,28 @@ function simulateColorAccess(deck, idMask, draws, trials){
   };
 }
 
-// Exact hypergeometric sanity check for single colors
 const logFact = (() => {
-  const cache=[0];
-  return n => { for (let i=cache.length;i<=n;i++) cache[i]=cache[i-1]+Math.log(i); return cache[n]; };
+  const cache = [0];
+  return n => {
+    for (let i = cache.length; i <= n; i++) {
+      cache[i] = cache[i-1] + Math.log(i);
+    }
+    return cache[n];
+  };
 })();
-const logComb = (n,k) => (k<0||k>n) ? -Infinity : (logFact(n)-logFact(k)-logFact(n-k));
-function exactAtLeastOne(N, K, n){
-  if (K<=0) return 0;
-  if (n>N) n=N;
-  const logP0 = logComb(N-K, n) - logComb(N, n);
+const logComb = (n,k) =>
+  (k < 0 || k > n) ? -Infinity : (logFact(n) - logFact(k) - logFact(n - k));
+
+function exactAtLeastOne(N, K, n) {
+  if (K <= 0) return 0;
+  if (n > N) n = N;
+  const logP0 = logComb(N - K, n) - logComb(N, n);
   return 1 - Math.exp(logP0);
 }
 
-function renderColorAccess(res, items, nameToCard){
+function renderColorAccess(res, items, nameToCard) {
   const includeNonlands = document.getElementById('includeNonlands')?.checked ?? true;
-  const trials = parseInt(document.getElementById('simTrials')?.value, 10) || 1000; // 100/1000/5000
+  const trials = parseInt(document.getElementById('simTrials')?.value, 10) || 1000;
   const draws = 10;
 
   const deck = buildDeckMaskArray(items, nameToCard, includeNonlands);
@@ -1079,54 +1250,68 @@ function renderColorAccess(res, items, nameToCard){
 
   const sim = simulateColorAccess(deck, idMask, draws, trials);
 
-  // exact per-color sanity values (count OMNI as satisfying any color)
   const N = deck.masks.length;
-  const countColor = k => deck.masks.reduce((s,m,i)=> s + (((m & BIT[k]) || deck.omni[i]) ? 1 : 0), 0);
+  const countColor = k =>
+    deck.masks.reduce(
+      (s,m,i) => s + (((m & BIT[k]) || deck.omni[i]) ? 1 : 0),
+      0
+    );
   const exact = {
-    W: exactAtLeastOne(N, countColor('W'), draws)*100,
-    U: exactAtLeastOne(N, countColor('U'), draws)*100,
-    B: exactAtLeastOne(N, countColor('B'), draws)*100,
-    R: exactAtLeastOne(N, countColor('R'), draws)*100,
-    G: exactAtLeastOne(N, countColor('G'), draws)*100
+    W: exactAtLeastOne(N, countColor('W'), draws) * 100,
+    U: exactAtLeastOne(N, countColor('U'), draws) * 100,
+    B: exactAtLeastOne(N, countColor('B'), draws) * 100,
+    R: exactAtLeastOne(N, countColor('R'), draws) * 100,
+    G: exactAtLeastOne(N, countColor('G'), draws) * 100
   };
 
   const grid = document.getElementById('colorAccessGrid');
   const showColors = res.id.length ? res.id : ['W','U','B','R','G'];
-  grid.innerHTML = showColors.map(k => `
-    <div class="prob">
-      <div class="label">${pipHTML(k)}${k}</div>
-      <div class="value">
-        <strong>${sim.perColor[k].toFixed(1)}%</strong>
-        <span class="inline-hint" title="Exact hypergeometric">${exact[k].toFixed(1)}% exact</span>
+  grid.innerHTML =
+    showColors.map(k => `
+      <div class="prob">
+        <div class="label">${pipHTML(k)}${k}</div>
+        <div class="value">
+          <strong>${sim.perColor[k].toFixed(1)}%</strong>
+          <span class="inline-hint" title="Exact hypergeometric">${exact[k].toFixed(1)}% exact</span>
+        </div>
       </div>
-    </div>`).join('') + `
-    <div class="prob big"><div class="label">All identity colors online</div><div class="value"><strong>${sim.allColors.toFixed(1)}%</strong></div></div>
-    <div class="prob big"><div class="label">At least two colors online</div><div class="value"><strong>${sim.twoPlus.toFixed(1)}%</strong></div></div>
-  `;
+    `).join('') +
+    `
+      <div class="prob big">
+        <div class="label">All identity colors online</div>
+        <div class="value"><strong>${sim.allColors.toFixed(1)}%</strong></div>
+      </div>
+      <div class="prob big">
+        <div class="label">At least two colors online</div>
+        <div class="value"><strong>${sim.twoPlus.toFixed(1)}%</strong></div>
+      </div>
+    `;
 
   const asum = document.getElementById('colorAccessAssump');
-  if (asum){
-    asum.innerHTML = `Assumptions: “Any” sources act as wildcards that each cover one missing color; we check presence in top 10, not castability. Trials: ${trials.toLocaleString()}.`;
+  if (asum) {
+    asum.innerHTML =
+      `Assumptions: “Any” sources act as wildcards that each cover one missing color; we check presence in top 10, not castability. Trials: ${trials.toLocaleString()}.`;
   }
+
+  LAST_METRICS.allColorsOnline = sim.allColors;
+  renderBracketEstimate();
 }
 
-/* ====================== Orchestration ====================== */
-let LAST_ITEMS = [];
-let LAST_NAME_TO_CARD = new Map();
-let LAST_COMMANDERS = [];
-
-async function runAnalysis(){
+async function runAnalysis() {
   const spinner = document.getElementById('spinner');
   spinner.hidden = false;
 
-  try{
+  try {
     const text = document.getElementById('deckInput').value;
     const items = parseDeckText(text);
     LAST_ITEMS = items;
-    document.getElementById('empty').hidden = items.length>0;
-    if (!items.length) { spinner.hidden = true; return; }
+    document.getElementById('empty').hidden = items.length > 0;
+    if (!items.length) {
+      spinner.hidden = true;
+      return;
+    }
 
-    const names = [...new Set(items.map(it=>it.name))];
+    const names = [...new Set(items.map(it => it.name))];
     const nameToCard = await fetchCollectionByNames(names);
     LAST_NAME_TO_CARD = nameToCard;
 
@@ -1144,9 +1329,8 @@ async function runAnalysis(){
     renderProducers(res);
     renderHeur(res);
     renderIssues(res);
-
-    // (These were missing)
     renderTableExperience(res.extras);
+    renderMetaPopularity(res);
     renderMulligansAndTempo(res, LAST_ITEMS, LAST_NAME_TO_CARD);
     renderColorAccess(res, items, nameToCard);
   } finally {
@@ -1154,15 +1338,16 @@ async function runAnalysis(){
   }
 }
 
-
-function collectCommanderSelection(){
+function collectCommanderSelection() {
   const boxes = document.querySelectorAll('.cmdr-sections input[type="checkbox"]');
   const sel = [];
-  boxes.forEach(b=>{ if (b.checked) sel.push(b.getAttribute('data-name')); });
+  boxes.forEach(b => {
+    if (b.checked) sel.push(b.getAttribute('data-name'));
+  });
   return sel;
 }
 
-function reAnalyzeWithSelection(){
+function reAnalyzeWithSelection() {
   const sel = collectCommanderSelection();
   LAST_COMMANDERS = sel.slice();
   const res = analyze(LAST_ITEMS, LAST_NAME_TO_CARD, sel);
@@ -1172,54 +1357,68 @@ function reAnalyzeWithSelection(){
   renderHeur(res);
   renderIssues(res);
   renderTableExperience(res.extras);
+  renderMetaPopularity(res);
   renderMulligansAndTempo(res, LAST_ITEMS, LAST_NAME_TO_CARD);
   renderColorAccess(res, LAST_ITEMS, LAST_NAME_TO_CARD);
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('analyzeBtn').addEventListener('click', runAnalysis);
-  document.getElementById('clearBtn').addEventListener('click', ()=>{
-    document.getElementById('deckInput').value='';
-    document.getElementById('summary').innerHTML='';
-    ['chartCurve','chartTypes','chartColors','chartProducers'].forEach(id=>{ const svg=document.getElementById(id); while(svg.firstChild) svg.removeChild(svg.firstChild); });
-    document.getElementById('legendColors').innerHTML='';
-    document.getElementById('legendProducers').innerHTML='';
-    document.getElementById('producerTypes').innerHTML='';
-    document.getElementById('listHeur').innerHTML='';
-    document.getElementById('issues').textContent='';
-    document.getElementById('colorAccessGrid').innerHTML='';
-    document.getElementById('colorAccessAssump').innerHTML='';
-    ['cmdrSingles','cmdrPartners','cmdrChooseBg','cmdrBackgrounds'].forEach(id => document.getElementById(id).innerHTML='');
-    document.getElementById('empty').hidden=false;
-    document.getElementById('saltIndex').textContent='—';
-    document.getElementById('wipeCount').textContent='—';
-    document.getElementById('saltNotes').textContent='';
-    document.getElementById('keep7').textContent='—';
-    document.getElementById('keep6').textContent='—';
-    document.getElementById('tempoScore').textContent='';
-    document.getElementById('tempoNotes').textContent='';
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('deckInput').value = '';
+    document.getElementById('summary').innerHTML = '';
+    ['chartCurve','chartTypes','chartColors','chartProducers'].forEach(id => {
+      const svg = document.getElementById(id);
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+    });
+    document.getElementById('legendColors').innerHTML = '';
+    document.getElementById('legendProducers').innerHTML = '';
+    document.getElementById('producerTypes').innerHTML = '';
+    document.getElementById('listHeur').innerHTML = '';
+    document.getElementById('issues').textContent = '';
+    document.getElementById('colorAccessGrid').innerHTML = '';
+    document.getElementById('colorAccessAssump').innerHTML = '';
+    ['cmdrSingles','cmdrPartners','cmdrChooseBg','cmdrBackgrounds'].forEach(id => {
+      document.getElementById(id).innerHTML = '';
+    });
+    document.getElementById('empty').hidden = false;
+    document.getElementById('wipeCount').textContent = '—';
+    document.getElementById('saltNotes').textContent = '';
+    document.getElementById('keep7').textContent = '—';
+    document.getElementById('keep6').textContent = '—';
+    document.getElementById('tempoScore').textContent = '—';
+    document.getElementById('tempoNotes').textContent = '';
+    document.getElementById('avgPopularity').textContent = '—';
+    document.getElementById('metaNotes').textContent = '';
+    document.getElementById('bracketEst').textContent = '—';
 
+    LAST_ITEMS = [];
+    LAST_NAME_TO_CARD = new Map();
+    LAST_COMMANDERS = [];
+    LAST_METRICS = { metaAvg:null, tempo:null, keep7:null, allColorsOnline:null };
   });
 
-  // Re-run color access if sim settings change
-  document.getElementById('simTrials').addEventListener('change', ()=>{
+  document.getElementById('simTrials').addEventListener('change', () => {
     if (LAST_ITEMS.length) {
       const res = analyze(LAST_ITEMS, LAST_NAME_TO_CARD, LAST_COMMANDERS);
       renderColorAccess(res, LAST_ITEMS, LAST_NAME_TO_CARD);
       renderMulligansAndTempo(res, LAST_ITEMS, LAST_NAME_TO_CARD);
       renderTableExperience(res.extras);
+      renderMetaPopularity(res);
     }
   });
-  document.getElementById('includeNonlands').addEventListener('change', ()=>{
+
+  document.getElementById('includeNonlands').addEventListener('change', () => {
     if (LAST_ITEMS.length) {
       const res = analyze(LAST_ITEMS, LAST_NAME_TO_CARD, LAST_COMMANDERS);
       renderColorAccess(res, LAST_ITEMS, LAST_NAME_TO_CARD);
       renderMulligansAndTempo(res, LAST_ITEMS, LAST_NAME_TO_CARD);
       renderTableExperience(res.extras);
+      renderMetaPopularity(res);
     }
   });
 
-  document.addEventListener('change', e=>{
+  document.addEventListener('change', e => {
     if (e.target.closest('.cmdr-sections') && e.target.matches('input[type="checkbox"]')) {
       reAnalyzeWithSelection();
     }
@@ -1227,7 +1426,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 </script>
 
-<!-- Background video loader -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -1239,17 +1437,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const vid  = document.getElementById('bgVideoEl');
   if (!wrap || !vid) return;
 
-  if (!allowVideo) { wrap.style.display = 'none'; return; }
+  if (!allowVideo) {
+    wrap.style.display = 'none';
+    return;
+  }
+
   vid.src = '/assets/Blackhole_Animtation.mp4';
 
-  const onReady = () => { wrap.classList.add('ready'); const p = vid.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); };
+  const onReady = () => {
+    wrap.classList.add('ready');
+    const p = vid.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  };
+
   vid.addEventListener('canplay', onReady, { once: true });
   vid.addEventListener('loadeddata', onReady, { once: true });
-  vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+  vid.addEventListener('loadedmetadata', () => {
+    wrap.classList.add('ready');
+  }, { once: true });
 });
 </script>
 
-<!-- Partials injector -->
 <script>
 (async () => {
   try {
@@ -1259,14 +1467,24 @@ document.addEventListener('DOMContentLoaded', () => {
       const html = await res.text();
       const tpl = document.createElement('template');
       tpl.innerHTML = html.trim();
-      tpl.content.querySelectorAll('style').forEach(st => { document.head.appendChild(st.cloneNode(true)); st.remove(); });
+      tpl.content.querySelectorAll('style').forEach(st => {
+        document.head.appendChild(st.cloneNode(true));
+        st.remove();
+      });
       return tpl.content.firstElementChild || null;
     }
+
     const header = document.getElementById('site-header');
     const navEl = await loadPartial('/partials/nav.html');
-    if (header && navEl) { header.innerHTML = ''; header.appendChild(navEl); initNav(header); }
+    if (header && navEl) {
+      header.innerHTML = '';
+      header.appendChild(navEl);
+      initNav(header);
+    }
+
     const discordEl = await loadPartial('/partials/discord.html');
     if (discordEl) document.body.appendChild(discordEl);
+
     const footerEl = await loadPartial('/partials/footer.html');
     if (footerEl) document.body.appendChild(footerEl);
 
@@ -1283,12 +1501,16 @@ document.addEventListener('DOMContentLoaded', () => {
       scope.querySelectorAll('.nav-link').forEach(a => {
         let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
         if (href === '/blog/') href = '/blog';
-        if (here === href || ((here === '' || here === '/') && href === '/index.html')) a.setAttribute('aria-current', 'page');
+        if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
+          a.setAttribute('aria-current', 'page');
+        }
         if (here.includes('/projects')) a.setAttribute('aria-current', 'page');
         if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
       });
     }
-  } catch (e) { console.warn('Partial load failed:', e); }
+  } catch (e) {
+    console.warn('Partial load failed:', e);
+  }
 })();
 </script>
 </body>
