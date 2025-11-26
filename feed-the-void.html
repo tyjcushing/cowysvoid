@@ -1,0 +1,1579 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Feed the Void — Cowy’s Void</title>
+  <meta name="description" content="A tiny cosmic clicker in Cowy’s Void: feed fragments into a hungry singularity, unlock orbiting anomalies, and serve the Cult of Cowy." />
+
+  <!-- Icons -->
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="64x64">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="180x180">
+  <link rel="apple-touch-icon" href="/assets/icons/BlackHole.png">
+
+  <!-- Unified styles -->
+  <link rel="stylesheet" href="/assets/css/void.css">
+
+  <!-- Page-specific styles -->
+  <style>
+    /* Make page/gamespace wider */
+    .container.void-clicker-page {
+      max-width: 1400px;
+      width: min(100% - 32px, 1400px);
+    }
+
+    .void-clicker-page {
+      padding-top: 32px;
+      padding-bottom: 40px;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    .void-clicker-header .code {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+
+    .void-clicker-header h1 {
+      font-size: clamp(2.1rem, 3vw, 2.7rem);
+      margin: 0 0 8px;
+    }
+
+    .void-clicker-header .sub {
+      max-width: 40rem;
+      opacity: 0.9;
+    }
+
+    .void-clicker-layout {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      width: 100%;
+    }
+
+    .void-core {
+      background: rgba(3, 6, 20, 0.85);
+      border-radius: 16px;
+      padding: 20px 24px 22px;
+      box-shadow: 0 0 32px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(100, 116, 255, 0.16);
+      backdrop-filter: blur(10px);
+      width: 100%;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 400ms ease-out; /* for gravity warp */
+    }
+
+    .void-core-top {
+      width: 100%;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 3; /* always above the black hole visuals */
+    }
+
+    .void-core-left {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1 1 auto;
+      min-width: 0;
+      transition: transform 400ms ease-out; /* gravity warp */
+    }
+
+    .void-core-level-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: radial-gradient(circle at top left, rgba(59,130,246,0.3), rgba(15,23,42,1));
+      border: 1px solid rgba(129,140,248,0.7);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      align-self: flex-start;
+    }
+
+    .void-core-level-chip-label {
+      opacity: 0.8;
+    }
+
+    .void-core-level-chip-value {
+      font-weight: 600;
+    }
+
+    .void-stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      gap: 12px;
+      width: 100%;
+      transition: transform 400ms ease-out; /* gravity warp */
+    }
+
+    .void-stat {
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: radial-gradient(circle at top left, rgba(96, 165, 250, 0.22), rgba(15, 23, 42, 0.9));
+      min-width: 140px;
+    }
+
+    .void-stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      opacity: 0.8;
+      margin-bottom: 2px;
+    }
+
+    .void-stat-value {
+      font-size: 1.1rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Meta panel (total fed / to next level) */
+    .void-meta-panel {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 4px;
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 12px;
+      padding: 8px 12px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow: 0 0 20px rgba(15, 23, 42, 0.95);
+      font-size: 0.75rem;
+      min-width: 190px;
+      flex-shrink: 0;
+      transition: transform 400ms ease-out; /* gravity warp */
+    }
+
+    .void-meta-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      align-items: baseline;
+    }
+
+    .void-meta-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .void-meta-label {
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    /* Main void button */
+    .void-button {
+      position: relative;
+      margin: 26px 0 12px;
+      width: 340px;
+      height: 340px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(148, 163, 253, 0.55), transparent 55%),
+        radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.5), transparent 60%),
+        radial-gradient(circle at 50% 80%, rgba(15, 23, 42, 0.9), #020617 70%, #000000 100%);
+      box-shadow:
+        0 0 60px rgba(59, 130, 246, 0.7),
+        0 0 120px rgba(129, 140, 248, 0.6),
+        inset 0 0 36px rgba(15, 23, 42, 0.99);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      outline-offset: 3px;
+      transition: box-shadow 140ms ease-out;
+      z-index: 1; /* behind the top UI panel */
+    }
+
+    .void-button:active {
+      box-shadow:
+        0 0 40px rgba(59, 130, 246, 0.7),
+        0 0 90px rgba(129, 140, 248, 0.55),
+        inset 0 0 50px rgba(15, 23, 42, 1);
+    }
+
+    .void-ring {
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      border-radius: 999px;
+      border: 2px solid rgba(191, 219, 254, 0.32);
+      box-shadow: 0 0 24px rgba(59, 130, 246, 0.9);
+      transform: rotate(20deg);
+      pointer-events: none;
+    }
+
+    .void-accretion {
+      position: absolute;
+      width: 260px;
+      height: 120px;
+      border-radius: 50%;
+      background:
+        radial-gradient(ellipse at center, rgba(248, 250, 252, 0.4), transparent 60%),
+        radial-gradient(ellipse at center, rgba(56, 189, 248, 0.3), transparent 75%);
+      opacity: 0.6;
+      filter: blur(2px);
+      transform: rotate(18deg);
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    .void-core-dot {
+      position: absolute;
+      width: 110px;
+      height: 110px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #38bdf8, #020617 70%);
+      box-shadow:
+        0 0 40px rgba(59, 130, 246, 0.95),
+        0 0 80px rgba(37, 99, 235, 0.9);
+    }
+
+    .void-orbits {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .void-orbit-wrapper {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 0 0;
+    }
+
+    .void-orbit-body {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      transform: translateX(200px) rotate(45deg);
+      box-shadow:
+        0 0 10px rgba(248, 250, 252, 0.9),
+        0 0 20px rgba(59, 130, 246, 0.8);
+      background: radial-gradient(circle at 30% 20%, #e5e7eb, #38bdf8);
+    }
+
+    .void-orbit-orbitingStar {
+      box-shadow:
+        0 0 10px rgba(250, 249, 246, 0.9),
+        0 0 22px rgba(251, 191, 36, 0.95);
+      background: radial-gradient(circle at 30% 20%, #fefce8, #fbbf24);
+    }
+
+    .void-orbit-unstableRift {
+      box-shadow:
+        0 0 10px rgba(167, 243, 208, 0.9),
+        0 0 22px rgba(34, 197, 94, 0.9);
+      background: radial-gradient(circle at 30% 20%, #bbf7d0, #22c55e);
+    }
+
+    .void-orbit-cultOfCowy {
+      box-shadow:
+        0 0 12px rgba(244, 114, 182, 0.95),
+        0 0 26px rgba(147, 51, 234, 0.95);
+      background: radial-gradient(circle at 30% 20%, #f9a8d4, #8b5cf6);
+    }
+
+    .void-button-label {
+      position: relative;
+      z-index: 3;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+    }
+
+    .void-click-splash {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at center, rgba(248, 250, 252, 0.18), transparent 60%);
+      opacity: 0; /* kept but never toggled now */
+      pointer-events: none;
+      transition: opacity 260ms ease-out;
+      z-index: 2;
+    }
+
+    .void-flavor {
+      font-size: 0.9rem;
+      opacity: 0.85;
+      margin-top: 8px;
+      min-height: 1.3em;
+      position: relative;
+      z-index: 3;
+      transition: transform 400ms ease-out; /* gravity warp */
+    }
+
+    .void-meta {
+      margin-top: 4px;
+      font-size: 0.75rem;
+      opacity: 0.7;
+      min-height: 1em;
+      position: relative;
+      z-index: 3;
+      transition: transform 400ms ease-out; /* gravity warp */
+    }
+
+    .void-actions-row {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 3;
+      transition: transform 400ms ease-out; /* gravity warp */
+    }
+
+    .void-upgrades-toggle {
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.85);
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.25), rgba(15, 23, 42, 0.95));
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .void-upgrades-toggle span.icon {
+      font-size: 0.9rem;
+    }
+
+    .void-back-link {
+      margin-top: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+
+    .void-back-link span {
+      font-size: 1rem;
+    }
+
+    /* Upgrades side modal / sheet */
+    .void-upgrades-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(
+        to left,
+        rgba(15, 23, 42, 0.96) 40%,
+        rgba(15, 23, 42, 0.5) 65%,
+        transparent 100%
+      );
+      display: flex;
+      justify-content: flex-end;
+      align-items: stretch;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease-out;
+      z-index: 50;
+    }
+
+    .void-upgrades-modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .void-upgrades-modal {
+      width: min(420px, 100%);
+      max-width: 420px;
+      background: rgba(3, 6, 20, 0.98);
+      border-left: 1px solid rgba(148, 163, 184, 0.7);
+      box-shadow:
+        -12px 0 32px rgba(15, 23, 42, 0.9),
+        0 0 40px rgba(15, 23, 42, 0.85);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 180ms ease-out;
+    }
+
+    .void-upgrades-modal-backdrop.open .void-upgrades-modal {
+      transform: translateX(0);
+    }
+
+    .void-upgrades-header {
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid rgba(30, 64, 175, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .void-upgrades-header-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .void-upgrades-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .void-upgrades-sub {
+      font-size: 0.78rem;
+      opacity: 0.8;
+    }
+
+    .void-upgrades-close {
+      border: none;
+      border-radius: 999px;
+      padding: 4px 8px;
+      cursor: pointer;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.9);
+      font-size: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .void-upgrades-body {
+      padding: 10px 12px 12px;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .void-upgrades-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 100%;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .void-upgrade-card {
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(94, 234, 212, 0.2);
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .void-upgrade-main {
+      flex: 1 1 auto;
+    }
+
+    .void-upgrade-name-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 4px;
+      margin-bottom: 2px;
+    }
+
+    .void-upgrade-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .void-upgrade-level {
+      font-size: 0.75rem;
+      opacity: 0.85;
+    }
+
+    .void-upgrade-desc {
+      font-size: 0.8rem;
+      opacity: 0.9;
+      margin-bottom: 3px;
+    }
+
+    .void-upgrade-meta {
+      font-size: 0.75rem;
+      opacity: 0.82;
+    }
+
+    .void-upgrade-cost {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .void-upgrade-action {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+    }
+
+    .void-upgrade-btn {
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(191, 219, 254, 0.35);
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.25), rgba(15, 23, 42, 0.9));
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform 80ms ease-out, background 80ms ease-out, opacity 80ms ease-out;
+    }
+
+    .void-upgrade-btn:disabled {
+      cursor: default;
+      opacity: 0.45;
+      background: rgba(15, 23, 42, 0.95);
+    }
+
+    .void-upgrade-btn:not(:disabled):active {
+      transform: translateY(1px);
+    }
+
+    /* Fragment particles that fly into the void */
+    .void-fragment {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #e5e7eb, #38bdf8);
+      box-shadow:
+        0 0 12px rgba(56, 189, 248, 0.9),
+        0 0 22px rgba(96, 165, 250, 0.7);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .void-fragment--auto {
+      width: 8px;
+      height: 8px;
+      box-shadow:
+        0 0 10px rgba(248, 250, 252, 0.9),
+        0 0 20px rgba(249, 250, 251, 0.8);
+      background: radial-gradient(circle at 30% 20%, #f9fafb, #64748b);
+    }
+
+    /* Star colors by temperature-ish */
+    .void-fragment--blue {
+      background: radial-gradient(circle at 30% 20%, #e0f2fe, #1d4ed8);
+      box-shadow:
+        0 0 14px rgba(59, 130, 246, 0.95),
+        0 0 28px rgba(37, 99, 235, 0.9);
+      width: 11px;
+      height: 11px;
+    }
+
+    .void-fragment--white {
+      background: radial-gradient(circle at 30% 20%, #f9fafb, #cbd5f5);
+      box-shadow:
+        0 0 12px rgba(248, 250, 252, 0.95),
+        0 0 22px rgba(191, 219, 254, 0.9);
+    }
+
+    .void-fragment--yellow {
+      background: radial-gradient(circle at 30% 20%, #fef9c3, #f59e0b);
+      box-shadow:
+        0 0 12px rgba(252, 211, 77, 0.95),
+        0 0 22px rgba(245, 158, 11, 0.9);
+    }
+
+    .void-fragment--orange {
+      background: radial-gradient(circle at 30% 20%, #ffedd5, #f97316);
+      box-shadow:
+        0 0 12px rgba(253, 186, 116, 0.95),
+        0 0 22px rgba(234, 88, 12, 0.9);
+    }
+
+    .void-fragment--red {
+      background: radial-gradient(circle at 30% 20%, #fee2e2, #b91c1c);
+      box-shadow:
+        0 0 10px rgba(248, 113, 113, 0.95),
+        0 0 18px rgba(185, 28, 28, 0.9);
+      width: 9px;
+      height: 9px;
+    }
+
+    @media (max-width: 800px) {
+      .void-core {
+        padding: 14px 14px 16px;
+      }
+      .void-button {
+        width: 260px;
+        height: 260px;
+      }
+      .void-ring {
+        width: 190px;
+        height: 190px;
+      }
+      .void-accretion {
+        width: 220px;
+        height: 100px;
+      }
+      .void-core-dot {
+        width: 84px;
+        height: 84px;
+      }
+      .void-core-top {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .void-meta-panel {
+        align-self: flex-start;
+      }
+      .void-stats {
+        justify-content: flex-start;
+      }
+      .void-upgrades-modal-backdrop {
+        background: rgba(15, 23, 42, 0.96);
+      }
+      .void-upgrades-modal {
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background video container -->
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
+  <div class="app-layer">
+    <header id="site-header" aria-label="Primary"></header>
+
+    <main class="container void-clicker-page" id="content">
+      <section aria-labelledby="game-title">
+        <div class="void-clicker-header">
+          <div class="code">Cowy's &lt;&gt; Void</div>
+          <h1 id="game-title">Feed the Void</h1>
+          <p class="sub">Cast fragments into a hungry singularity. Raise orbiting anomalies. Whisper vows to the Cult of Cowy.</p>
+        </div>
+
+        <div class="void-clicker-layout" aria-label="Feed the Void clicker game">
+          <!-- Core / click area -->
+          <section class="void-core" aria-label="Void core and stats">
+            <div class="void-core-top">
+              <div class="void-core-left">
+                <div class="void-core-level-chip">
+                  <span class="void-core-level-chip-label">Void Level</span>
+                  <span class="void-core-level-chip-value" id="voidLevel">I</span>
+                </div>
+
+                <div class="void-stats" aria-label="Void statistics">
+                  <div class="void-stat">
+                    <div class="void-stat-label">Fragments</div>
+                    <div class="void-stat-value" id="fragmentsCount">0</div>
+                  </div>
+                  <div class="void-stat">
+                    <div class="void-stat-label">Per click</div>
+                    <div class="void-stat-value" id="fragmentsPerClick">1</div>
+                  </div>
+                  <div class="void-stat">
+                    <div class="void-stat-label">Per second</div>
+                    <div class="void-stat-value" id="fragmentsPerSecond">0</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="void-meta-panel" aria-label="Void progress">
+                <div class="void-meta-row">
+                  <span class="void-meta-value" id="metaTotalFragments">0.0</span>
+                  <span class="void-meta-label">total fed</span>
+                </div>
+                <div class="void-meta-row">
+                  <span class="void-meta-value" id="metaToNextLevel">0.0</span>
+                  <span class="void-meta-label" id="metaToNextLabel">to next level</span>
+                </div>
+              </div>
+            </div>
+
+            <button class="void-button" id="voidButton" type="button" aria-label="Feed the void with fragments">
+              <span class="void-click-splash" id="voidClickSplash"></span>
+              <span class="void-accretion" aria-hidden="true"></span>
+              <span class="void-orbits" id="voidOrbits" aria-hidden="true"></span>
+              <span class="void-ring" aria-hidden="true"></span>
+              <span class="void-core-dot" aria-hidden="true"></span>
+              <span class="void-button-label">Feed the Void</span>
+            </button>
+
+            <p class="void-flavor" id="voidFlavor">The void is hungry.</p>
+            <p class="void-meta" id="voidMeta"></p>
+
+            <div class="void-actions-row">
+              <button class="void-upgrades-toggle" type="button" id="openUpgradesBtn">
+                <span class="icon">☄</span>
+                <span>Upgrades &amp; Rituals</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <a class="void-back-link" href="/index.html">
+          <span>←</span>
+          <span>Back to the rest of the Void</span>
+        </a>
+      </section>
+    </main>
+  </div>
+
+  <!-- Upgrades side modal -->
+  <div class="void-upgrades-modal-backdrop" id="upgradesBackdrop" aria-hidden="true">
+    <aside class="void-upgrades-modal" role="dialog" aria-modal="true" aria-labelledby="upgradesTitle">
+      <header class="void-upgrades-header">
+        <div class="void-upgrades-header-main">
+          <div class="void-upgrades-title" id="upgradesTitle">Void Upgrades</div>
+          <div class="void-upgrades-sub">Shape orbits, open rifts, and expand the Cult’s reach.</div>
+        </div>
+        <button class="void-upgrades-close" type="button" id="closeUpgradesBtn">
+          <span>✕</span><span>Close</span>
+        </button>
+      </header>
+      <div class="void-upgrades-body">
+        <div class="void-upgrades-grid" id="upgradesList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Partials injector (same pattern as index.html) -->
+  <script>
+    (async () => {
+      try {
+        async function loadPartial(url) {
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) return null;
+          const html = await res.text();
+          const tpl = document.createElement('template');
+          tpl.innerHTML = html.trim();
+
+          tpl.content.querySelectorAll('style').forEach(st => {
+            document.head.appendChild(st.cloneNode(true));
+            st.remove();
+          });
+
+          return tpl.content.firstElementChild || null;
+        }
+
+        const header = document.getElementById('site-header');
+        const navEl = await loadPartial('/partials/nav.html');
+        if (header && navEl) {
+          header.innerHTML = '';
+          header.appendChild(navEl);
+          initNav(header);
+        }
+
+        const discordEl = await loadPartial('/partials/discord.html');
+        if (discordEl) document.body.appendChild(discordEl);
+
+        const footerEl = await loadPartial('/partials/footer.html');
+        if (footerEl) document.body.appendChild(footerEl);
+
+        function initNav(scope) {
+          const btn   = scope.querySelector('.menu-toggle');
+          const panel = scope.querySelector('#nav-panel');
+          if (btn && panel) {
+            btn.addEventListener('click', () => {
+              const open = panel.classList.toggle('open');
+              btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+          }
+          const here = location.pathname.replace(/\/+$/, '').toLowerCase();
+          scope.querySelectorAll('.nav-link').forEach(a => {
+            let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+            if (href === '/blog/') href = '/blog';
+            if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
+              a.setAttribute('aria-current', 'page');
+            }
+            if (here.startsWith('/blog') && href === '/blog') {
+              a.setAttribute('aria-current', 'page');
+            }
+            if (here.includes('/mtg') && href === '/mtg.html') a.setAttribute('aria-current','page');
+            if (here.includes('/projects') && href === '/projects.html') a.setAttribute('aria-current','page');
+            if (here.includes('/feed-the-void') && href === '/feed-the-void.html') a.setAttribute('aria-current','page');
+          });
+        }
+      } catch (e) {
+        console.warn('Partial load failed:', e);
+      }
+    })();
+  </script>
+
+  <!-- Connection-aware background video loader -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) {
+        wrap.style.display = 'none';
+        return;
+      }
+
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+
+      const onReady = () => {
+        wrap.classList.add('ready');
+        const p = vid.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      };
+
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
+  </script>
+
+  <!-- GSAP animation library -->
+  <script src="https://unpkg.com/gsap@3/dist/gsap.min.js"></script>
+
+  <!-- Feed the Void game logic -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const fragmentsEl = document.getElementById('fragmentsCount');
+      const perClickEl = document.getElementById('fragmentsPerClick');
+      const perSecondEl = document.getElementById('fragmentsPerSecond');
+      const voidLevelEl = document.getElementById('voidLevel');
+      const voidFlavorEl = document.getElementById('voidFlavor');
+      const voidMetaEl = document.getElementById('voidMeta');
+      const voidButton = document.getElementById('voidButton');
+      const voidCore = document.querySelector('.void-core');
+      const voidCoreLeft = document.querySelector('.void-core-left');
+      const voidStats = document.querySelector('.void-stats');
+      const voidMetaPanel = document.querySelector('.void-meta-panel');
+      const voidActionsRow = document.querySelector('.void-actions-row');
+      const voidOrbits = document.getElementById('voidOrbits');
+      const voidAccretion = document.querySelector('.void-accretion');
+      const voidCoreDot = document.querySelector('.void-core-dot');
+
+      const metaTotalEl = document.getElementById('metaTotalFragments');
+      const metaToNextEl = document.getElementById('metaToNextLevel');
+      const metaToNextLabelEl = document.getElementById('metaToNextLabel');
+
+      const upgradesList = document.getElementById('upgradesList');
+      const openUpgradesBtn = document.getElementById('openUpgradesBtn');
+      const closeUpgradesBtn = document.getElementById('closeUpgradesBtn');
+      const upgradesBackdrop = document.getElementById('upgradesBackdrop');
+
+      if (!fragmentsEl || !voidButton || !voidCore || !metaTotalEl || !metaToNextEl || !metaToNextLabelEl ||
+          !upgradesList || !openUpgradesBtn || !closeUpgradesBtn || !upgradesBackdrop || !voidOrbits) {
+        return;
+      }
+
+      // Idle animations (if GSAP is available)
+      let voidBaseScale = 1;
+
+      if (window.gsap && voidButton) {
+        const ringEl = voidButton.querySelector('.void-ring');
+
+        gsap.to(voidButton, {
+          y: -4,
+          duration: 2.7,
+          yoyo: true,
+          repeat: -1,
+          ease: 'sine.inOut'
+        });
+
+        if (ringEl) {
+          gsap.to(ringEl, {
+            rotate: 360,
+            duration: 18,
+            repeat: -1,
+            ease: 'none'
+          });
+        }
+
+        if (voidAccretion) {
+          gsap.to(voidAccretion, {
+            rotate: 360,
+            duration: 28,
+            repeat: -1,
+            ease: 'none'
+          });
+          gsap.to(voidAccretion, {
+            opacity: 0.35,
+            duration: 2.2,
+            yoyo: true,
+            repeat: -1,
+            ease: 'sine.inOut'
+          });
+        }
+
+        if (voidCoreDot) {
+          gsap.to(voidCoreDot, {
+            scale: 1.08,
+            duration: 1.8,
+            yoyo: true,
+            repeat: -1,
+            ease: 'sine.inOut'
+          });
+        }
+      }
+
+      const STORAGE_KEY = 'voidClickerState_v1';
+
+      const UPGRADE_CONFIG = [
+        {
+          id: 'orbitingStar',
+          name: 'Orbiting Star',
+          description: 'A captured star circles the event horizon, shedding light into the dark.',
+          baseCost: 15,
+          costMultiplier: 1.15,
+          perSecond: 0.2,
+          perClick: 0
+        },
+        {
+          id: 'meteorShower',
+          name: 'Meteor Shower',
+          description: 'Your guidance bends meteor paths straight into the singularity.',
+          baseCost: 80,
+          costMultiplier: 1.18,
+          perSecond: 0.0,
+          perClick: 1
+        },
+        {
+          id: 'cultOfCowy',
+          name: 'Cult of Cowy',
+          description: 'Robed figures chant around the void, offering their futures willingly.',
+          baseCost: 250,
+          costMultiplier: 1.2,
+          perSecond: 0.5,
+          perClick: 1
+        },
+        {
+          id: 'unstableRift',
+          name: 'Unstable Rift',
+          description: 'A tear in space leaks fragments from somewhere that should not exist.',
+          baseCost: 600,
+          costMultiplier: 1.22,
+          perSecond: 2,
+          perClick: 0
+        },
+        {
+          id: 'singularityTuning',
+          name: 'Singularity Tuning',
+          description: 'You whisper forbidden geometries to the core. Each click hits harder.',
+          baseCost: 1200,
+          costMultiplier: 1.25,
+          perSecond: 0.0,
+          perClick: 3
+        }
+      ];
+
+      const LEVELS = [
+        { threshold:        0, label: 'I',   flavor: 'The void notices you.' },
+        { threshold:      200, label: 'II',  flavor: 'Gravity bends a little closer when you log on.' },
+        { threshold:     1500, label: 'III', flavor: 'Stars at the edge of your sky go missing.' },
+        { threshold:    10000, label: 'IV',  flavor: 'Distant galaxies list gently toward your orbit.' },
+        { threshold:    50000, label: 'V',   flavor: 'Black sand storms around the core. It purrs.' },
+        { threshold:   250000, label: 'VI',  flavor: 'Space-time near you feels… thinner than it should.' },
+        { threshold:  1000000, label: 'VII', flavor: 'The void gazes back. You are its favorite cultist.' }
+      ];
+
+      const defaultState = {
+        fragments: 0,
+        totalFragments: 0,
+        fragmentsPerClick: 1,
+        fragmentsPerSecond: 0,
+        upgrades: {},
+        lastSave: Date.now(),
+        currentLevelIndex: 0
+      };
+
+      let state = { ...defaultState };
+
+      function formatNumber(value, decimals = 1) {
+        return value.toLocaleString(undefined, {
+          minimumFractionDigits: (value % 1 === 0 ? 0 : 1),
+          maximumFractionDigits: decimals
+        });
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          state = {
+            ...defaultState,
+            ...parsed,
+            upgrades: parsed.upgrades || {},
+            currentLevelIndex: parsed.currentLevelIndex || 0
+          };
+        } catch (e) {
+          console.warn('Failed to load void clicker state:', e);
+          state = { ...defaultState };
+        }
+      }
+
+      function saveState() {
+        try {
+          state.lastSave = Date.now();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+          console.warn('Failed to save void clicker state:', e);
+        }
+      }
+
+      function getUpgradeLevel(id) {
+        return state.upgrades[id]?.level || 0;
+      }
+
+      function setUpgradeLevel(id, level) {
+        if (!state.upgrades[id]) state.upgrades[id] = { level: 0 };
+        state.upgrades[id].level = level;
+      }
+
+      function getUpgradeCost(cfg) {
+        const level = getUpgradeLevel(cfg.id);
+        return Math.floor(cfg.baseCost * Math.pow(cfg.costMultiplier, level));
+      }
+
+      function recalcRates() {
+        let perClick = 1;
+        let perSecond = 0;
+
+        UPGRADE_CONFIG.forEach(cfg => {
+          const lvl = getUpgradeLevel(cfg.id);
+          if (!lvl) return;
+          perClick  += cfg.perClick * lvl;
+          perSecond += cfg.perSecond * lvl;
+        });
+
+        state.fragmentsPerClick = perClick;
+        state.fragmentsPerSecond = perSecond;
+      }
+
+      function getLevelIndex(totalFragments) {
+        let idx = 0;
+        for (let i = 0; i < LEVELS.length; i++) {
+          if (totalFragments >= LEVELS[i].threshold) {
+            idx = i;
+          } else {
+            break;
+          }
+        }
+        return idx;
+      }
+
+      function animateVoidLevelChange(index) {
+        if (!window.gsap || !voidButton) return;
+        const targetScale = 1 + index * 0.15; // more dramatic growth
+
+        gsap.to(voidButton, {
+          scale: targetScale * 1.18,
+          duration: 0.35,
+          ease: 'power2.out',
+          onComplete() {
+            gsap.to(voidButton, {
+              scale: targetScale,
+              duration: 0.3,
+              ease: 'power2.out'
+            });
+          }
+        });
+
+        voidBaseScale = targetScale;
+      }
+
+      function updateLevelInfo() {
+        const idx = getLevelIndex(state.totalFragments);
+        const info = LEVELS[idx];
+
+        if (idx !== state.currentLevelIndex) {
+          state.currentLevelIndex = idx;
+          animateVoidLevelChange(idx);
+        }
+
+        voidLevelEl.textContent = info.label;
+        voidFlavorEl.textContent = info.flavor;
+      }
+
+      // Gravity warp: UI bends more as totalFragments increases
+      function getGravityStrength() {
+        const maxThreshold = LEVELS[LEVELS.length - 1].threshold || 1;
+        const raw = state.totalFragments / maxThreshold;
+        return Math.max(0, Math.min(1, raw)); // 0..1
+      }
+
+      function applyGravityWarp() {
+        const s = getGravityStrength();
+        const tiltX = -2 * s;
+        const tiltY = 3 * s;
+        const skew = 4 * s;
+
+        if (voidCore) {
+          voidCore.style.transform =
+            `perspective(1200px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+        }
+        if (voidCoreLeft) {
+          voidCoreLeft.style.transform = `skewX(${-skew}deg)`;
+        }
+        if (voidStats) {
+          voidStats.style.transform = `skewX(${-skew * 0.6}deg)`;
+        }
+        if (voidMetaPanel) {
+          voidMetaPanel.style.transform = `skewX(${skew}deg)`;
+        }
+        if (voidActionsRow) {
+          voidActionsRow.style.transform = `skewX(${skew * 0.4}deg)`;
+        }
+        if (voidFlavorEl) {
+          voidFlavorEl.style.transform = `skewX(${skew * 0.25}deg)`;
+        }
+        if (voidMetaEl) {
+          voidMetaEl.style.transform = `skewX(${skew * 0.2}deg)`;
+        }
+      }
+
+      let orbitTweens = [];
+      let orbitBodies = []; // { el, upgradeId }
+
+      function clearOrbits() {
+        orbitTweens.forEach(t => t.kill && t.kill());
+        orbitTweens = [];
+        orbitBodies = [];
+        voidOrbits.innerHTML = '';
+      }
+
+      function refreshOrbits() {
+        if (!window.gsap || !voidOrbits || !voidButton) return;
+
+        clearOrbits();
+
+        const activeConfigs = UPGRADE_CONFIG.filter(cfg => cfg.perSecond > 0 && getUpgradeLevel(cfg.id) > 0);
+        if (!activeConfigs.length) return;
+
+        const baseRadius = 190; // clearly outside the "horizon"
+        activeConfigs.forEach((cfg, index) => {
+          const lvl = getUpgradeLevel(cfg.id);
+          const radius = baseRadius + index * 24;
+
+          const wrapper = document.createElement('div');
+          wrapper.className = 'void-orbit-wrapper';
+
+          const ship = document.createElement('div');
+          ship.className = `void-orbit-body void-orbit-${cfg.id}`;
+          ship.style.transform = `translateX(${radius}px) rotate(45deg)`;
+          ship.dataset.upgradeId = cfg.id;
+
+          wrapper.appendChild(ship);
+          voidOrbits.appendChild(wrapper);
+
+          const duration = Math.max(6, 18 - lvl * 1.5);
+          const dir = index % 2 === 0 ? 1 : -1;
+
+          const tween = gsap.to(wrapper, {
+            rotation: dir * 360,
+            duration,
+            repeat: -1,
+            ease: 'none',
+            transformOrigin: '0 0'
+          });
+
+          orbitTweens.push(tween);
+          orbitBodies.push({ el: ship, upgradeId: cfg.id });
+        });
+      }
+
+      const AUTO_COLORS_BY_UPGRADE = {
+        orbitingStar: 'yellow',
+        unstableRift: 'blue',
+        cultOfCowy: 'purple'
+      };
+
+      function updateUI() {
+        fragmentsEl.textContent   = formatNumber(state.fragments);
+        perClickEl.textContent    = formatNumber(state.fragmentsPerClick);
+        perSecondEl.textContent   = formatNumber(state.fragmentsPerSecond);
+
+        updateLevelInfo();
+        applyGravityWarp();
+
+        metaTotalEl.textContent = formatNumber(state.totalFragments);
+
+        const nextLevel = LEVELS.find(l => l.threshold > state.totalFragments);
+        if (nextLevel) {
+          const remaining = nextLevel.threshold - state.totalFragments;
+          metaToNextEl.textContent = formatNumber(Math.max(remaining, 0));
+          metaToNextLabelEl.textContent = `to level ${nextLevel.label}`;
+        } else {
+          metaToNextEl.textContent = '—';
+          metaToNextLabelEl.textContent = 'void ascendant';
+        }
+
+        upgradesList.querySelectorAll('[data-upgrade-id]').forEach(card => {
+          const id = card.getAttribute('data-upgrade-id');
+          const cfg = UPGRADE_CONFIG.find(u => u.id === id);
+          if (!cfg) return;
+          const level = getUpgradeLevel(id);
+          const cost  = getUpgradeCost(cfg);
+
+          const levelEl = card.querySelector('[data-upgrade-level]');
+          const costEl  = card.querySelector('[data-upgrade-cost]');
+          const btn     = card.querySelector('button');
+
+          if (levelEl) levelEl.textContent = `Lv. ${level}`;
+          if (costEl) costEl.textContent = `${cost.toLocaleString()} fragments`;
+
+          if (btn) {
+            btn.disabled = state.fragments < cost;
+          }
+        });
+      }
+
+      function createUpgradeCard(cfg) {
+        const card = document.createElement('article');
+        card.className = 'void-upgrade-card';
+        card.setAttribute('data-upgrade-id', cfg.id);
+
+        const main = document.createElement('div');
+        main.className = 'void-upgrade-main';
+
+        const nameRow = document.createElement('div');
+        nameRow.className = 'void-upgrade-name-row';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'void-upgrade-name';
+        nameEl.textContent = cfg.name;
+
+        const levelEl = document.createElement('div');
+        levelEl.className = 'void-upgrade-level';
+        levelEl.setAttribute('data-upgrade-level', 'true');
+        levelEl.textContent = 'Lv. 0';
+
+        nameRow.appendChild(nameEl);
+        nameRow.appendChild(levelEl);
+
+        const descEl = document.createElement('div');
+        descEl.className = 'void-upgrade-desc';
+        descEl.textContent = cfg.description;
+
+        const metaEl = document.createElement('div');
+        metaEl.className = 'void-upgrade-meta';
+
+        const effects = [];
+        if (cfg.perClick) {
+          effects.push(`+${cfg.perClick} / click`);
+        }
+        if (cfg.perSecond) {
+          effects.push(`+${cfg.perSecond} / sec`);
+        }
+
+        const effectsSpan = document.createElement('span');
+        effectsSpan.textContent = effects.join(' • ');
+
+        const costSpan = document.createElement('span');
+        costSpan.className = 'void-upgrade-cost';
+        costSpan.setAttribute('data-upgrade-cost', 'true');
+        costSpan.style.marginLeft = '6px';
+
+        metaEl.appendChild(effectsSpan);
+        metaEl.appendChild(costSpan);
+
+        main.appendChild(nameRow);
+        main.appendChild(descEl);
+        main.appendChild(metaEl);
+
+        const action = document.createElement('div');
+        action.className = 'void-upgrade-action';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'void-upgrade-btn';
+        btn.textContent = 'Invoke';
+
+        btn.addEventListener('click', () => {
+          const cost = getUpgradeCost(cfg);
+          if (state.fragments < cost) return;
+          state.fragments -= cost;
+          setUpgradeLevel(cfg.id, getUpgradeLevel(cfg.id) + 1);
+          recalcRates();
+          refreshOrbits();
+          updateUI();
+          saveState();
+        });
+
+        action.appendChild(btn);
+        card.appendChild(main);
+        card.appendChild(action);
+
+        return card;
+      }
+
+      function initUpgrades() {
+        upgradesList.innerHTML = '';
+        UPGRADE_CONFIG.forEach(cfg => {
+          const card = createUpgradeCard(cfg);
+          upgradesList.appendChild(card);
+        });
+      }
+
+      // Spawn fragment particle with "scatter then fall in" option
+      function spawnFragment(x, y, opts = {}) {
+        if (!window.gsap || !voidButton) return;
+
+        const kind = opts.kind || 'click'; // 'click' | 'auto'
+        const color = opts.color || null;   // 'blue','white','yellow','orange','red','purple',...
+        const sizeScale = opts.sizeScale || (kind === 'auto' ? 0.6 : 0.8);
+        const scatter = opts.scatter ?? false;
+
+        const frag = document.createElement('div');
+        frag.className = 'void-fragment';
+        if (kind === 'auto') frag.classList.add('void-fragment--auto');
+        if (color) frag.classList.add(`void-fragment--${color}`);
+
+        document.body.appendChild(frag);
+
+        const rect = voidButton.getBoundingClientRect();
+        const targetX = rect.left + rect.width / 2 - 5;
+        const targetY = rect.top + rect.height / 2 - 5;
+
+        if (scatter) {
+          gsap.set(frag, {
+            x: x - 5,
+            y: y - 5,
+            opacity: 1,
+            scale: sizeScale
+          });
+
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 25 + Math.random() * 45;
+          const scatterX = x + Math.cos(angle) * dist - 5;
+          const scatterY = y + Math.sin(angle) * dist - 5;
+
+          gsap.timeline()
+            .to(frag, {
+              duration: 0.18,
+              x: scatterX,
+              y: scatterY,
+              ease: 'power1.out'
+            })
+            .to(frag, {
+              duration: kind === 'auto' ? 0.7 : 0.55,
+              x: targetX,
+              y: targetY,
+              scale: 0.15,
+              opacity: 0,
+              ease: 'power2.in',
+              onComplete: () => frag.remove()
+            }, '>-0.02');
+        } else {
+          gsap.set(frag, {
+            x: x - 5,
+            y: y - 5,
+            opacity: 1,
+            scale: sizeScale
+          });
+
+          gsap.to(frag, {
+            duration: kind === 'auto' ? 0.7 : 0.55,
+            x: targetX,
+            y: targetY,
+            scale: 0.15,
+            opacity: 0,
+            ease: 'power2.in',
+            onComplete: () => frag.remove()
+          });
+        }
+      }
+
+      // Star denominations by "temperature"
+      const STAR_DENOMS = [
+        { color: 'blue',   value: 16 },
+        { color: 'white',  value: 8 },
+        { color: 'yellow', value: 4 },
+        { color: 'orange', value: 2 },
+        { color: 'red',    value: 1 }
+      ];
+
+      function spawnClickStars(evt) {
+        const perClick = state.fragmentsPerClick || 1;
+        const x = evt && typeof evt.clientX === 'number' ? evt.clientX : window.innerWidth / 2;
+        const y = evt && typeof evt.clientY === 'number' ? evt.clientY : window.innerHeight / 2;
+
+        // Small clicks: one soft white star
+        if (perClick <= 1.5) {
+          spawnFragment(x, y, { kind: 'click', color: 'white', sizeScale: 0.8, scatter: true });
+          return;
+        }
+
+        // Fewer stars overall: capped by log of perClick
+        const breakdown = [];
+        let remaining = perClick;
+        const maxStars = Math.min(6, Math.ceil(Math.log10(perClick + 1)) * 2 || 3);
+
+        while (remaining > 0.5 && breakdown.length < maxStars) {
+          const available = STAR_DENOMS.filter(d => d.value <= remaining);
+          const pool = available.length ? available.slice().sort((a, b) => b.value - a.value)
+                                        : [STAR_DENOMS[STAR_DENOMS.length - 1]];
+
+          // Bias toward hotter/brighter stars, but with some randomness
+          let pick = pool[0];
+          if (pool.length > 1 && Math.random() < 0.3) {
+            pick = pool[1 + Math.floor(Math.random() * (pool.length - 1))];
+          }
+
+          breakdown.push(pick);
+          remaining -= pick.value;
+        }
+
+        breakdown.forEach(denom => {
+          const sizeScale =
+            denom.color === 'blue'  ? 1.0 :
+            denom.color === 'white' ? 0.9 :
+            denom.color === 'yellow'? 0.85 :
+            denom.color === 'orange'? 0.8 :
+                                      0.75;
+
+          spawnFragment(x, y, {
+            kind: 'click',
+            color: denom.color,
+            sizeScale,
+            scatter: true
+          });
+        });
+      }
+
+      function handleClick(evt) {
+        state.fragments += state.fragmentsPerClick;
+        state.totalFragments += state.fragmentsPerClick;
+
+        updateUI();
+        spawnClickStars(evt);
+        // No flash, no extra jiggle — just the idle pulse + gravity warp evolving over time.
+      }
+
+      // Big click area: anywhere inside the core card except the upgrades button
+      voidButton.addEventListener('click', handleClick);
+
+      voidCore.addEventListener('click', (evt) => {
+        if (voidButton.contains(evt.target)) return;
+        if (openUpgradesBtn.contains(evt.target)) return;
+        handleClick(evt);
+      });
+
+      // Upgrades modal open/close
+      function openUpgrades() {
+        upgradesBackdrop.classList.add('open');
+        upgradesBackdrop.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeUpgrades() {
+        upgradesBackdrop.classList.remove('open');
+        upgradesBackdrop.setAttribute('aria-hidden', 'true');
+      }
+
+      openUpgradesBtn.addEventListener('click', (evt) => {
+        evt.stopPropagation();
+        openUpgrades();
+      });
+
+      closeUpgradesBtn.addEventListener('click', (evt) => {
+        evt.stopPropagation();
+        closeUpgrades();
+      });
+
+      upgradesBackdrop.addEventListener('click', (evt) => {
+        const modal = evt.currentTarget.querySelector('.void-upgrades-modal');
+        if (!modal.contains(evt.target)) {
+          closeUpgrades();
+        }
+      });
+
+      document.addEventListener('keydown', (evt) => {
+        if (evt.key === 'Escape') {
+          closeUpgrades();
+        }
+      });
+
+      // Passive income loop using delta time + auto fragment animations
+      let lastFrame = performance.now();
+      let autoFragmentTimer = 0;
+
+      function tick(now) {
+        const dt = (now - lastFrame) / 1000;
+        lastFrame = now;
+
+        if (state.fragmentsPerSecond > 0 && dt > 0) {
+          const gained = state.fragmentsPerSecond * dt;
+          state.fragments += gained;
+          state.totalFragments += gained;
+
+          autoFragmentTimer += dt;
+          const interval = Math.max(0.25, 1.2 / Math.max(state.fragmentsPerSecond, 0.5));
+
+          while (autoFragmentTimer >= interval) {
+            autoFragmentTimer -= interval;
+
+            let srcEl = voidButton;
+            let color = 'white';
+
+            if (orbitBodies.length > 0) {
+              const pick = orbitBodies[Math.floor(Math.random() * orbitBodies.length)];
+              srcEl = pick.el || srcEl;
+              const uId = pick.upgradeId;
+              if (AUTO_COLORS_BY_UPGRADE[uId]) {
+                color = AUTO_COLORS_BY_UPGRADE[uId];
+              }
+            }
+
+            const rect = srcEl.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            spawnFragment(x, y, { kind: 'auto', color, scatter: false });
+          }
+        }
+
+        updateUI();
+        requestAnimationFrame(tick);
+      }
+
+      loadState();
+      recalcRates();
+      initUpgrades();
+
+      // Initialize scale based on stored level
+      voidBaseScale = 1 + (state.currentLevelIndex || 0) * 0.15;
+      if (window.gsap && voidButton) {
+        gsap.set(voidButton, { scale: voidBaseScale });
+      }
+
+      refreshOrbits();
+      updateUI();
+
+      requestAnimationFrame(tick);
+      setInterval(saveState, 5000);
+    });
+  </script>
+</body>
+</html>
