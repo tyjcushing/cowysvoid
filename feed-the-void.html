@@ -1463,7 +1463,7 @@
         if (nextLevel) {
           const remaining = nextLevel.threshold - state.totalFragments;
           metaToNextEl.textContent = formatNumber(Math.max(remaining, 0));
-          metaToNextLabelEl.textContent = `to state ${nextLevel.label}`;
+          metaToNextLabelEl.textContent = `to Stage ${nextLevel.label}`;
         } else {
           metaToNextEl.textContent = '—';
           metaToNextLabelEl.textContent = 'void complete (?)';
