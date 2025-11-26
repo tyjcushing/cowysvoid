@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Feed the Void — Cowy’s Void</title>
-  <meta name="description" content="A tiny cosmic clicker in Cowy’s Void: feed fragments into a hungry singularity, unlock orbiting anomalies, and serve the Cult of Cowy." />
+  <meta name="description" content="A cosmic clicker in Cowy’s Void: hurl starlight into a hungry singularity and see how far the Cult of Cowy will go." />
 
   <!-- Icons -->
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
@@ -16,8 +16,17 @@
   <!-- Unified styles -->
   <link rel="stylesheet" href="/assets/css/void.css">
 
+  <!-- Orbitron font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <!-- Page-specific styles -->
   <style>
+    :root {
+      --void-orbitron: "Orbitron", system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    }
+
     /* Make page/gamespace wider */
     .container.void-clicker-page {
       max-width: 1400px;
@@ -39,11 +48,14 @@
       letter-spacing: 0.16em;
       opacity: 0.8;
       margin-bottom: 4px;
+      font-family: var(--void-orbitron);
     }
 
     .void-clicker-header h1 {
       font-size: clamp(2.1rem, 3vw, 2.7rem);
       margin: 0 0 8px;
+      font-family: var(--void-orbitron);
+      letter-spacing: 0.08em;
     }
 
     .void-clicker-header .sub {
@@ -74,7 +86,7 @@
       text-align: center;
       position: relative;
       overflow: hidden;
-      transition: transform 400ms ease-out; /* for gravity warp */
+      transition: transform 400ms ease-out; /* gravity warp */
     }
 
     .void-core-top {
@@ -103,12 +115,13 @@
       gap: 6px;
       padding: 4px 8px;
       border-radius: 999px;
-      background: radial-gradient(circle at top left, rgba(59,130,246,0.3), rgba(15,23,42,1));
+      background: radial-gradient(circle at top left, rgba(59,130,246,0.28), rgba(15,23,42,1));
       border: 1px solid rgba(129,140,248,0.7);
       font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.16em;
       align-self: flex-start;
+      font-family: var(--void-orbitron);
     }
 
     .void-core-level-chip-label {
@@ -141,11 +154,13 @@
       letter-spacing: 0.14em;
       opacity: 0.8;
       margin-bottom: 2px;
+      font-family: var(--void-orbitron);
     }
 
     .void-stat-value {
       font-size: 1.1rem;
       font-variant-numeric: tabular-nums;
+      font-family: var(--void-orbitron);
     }
 
     /* Meta panel (total fed / to next level) */
@@ -174,6 +189,7 @@
     .void-meta-value {
       font-variant-numeric: tabular-nums;
       font-weight: 600;
+      font-family: var(--void-orbitron);
     }
 
     .void-meta-label {
@@ -181,6 +197,7 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       white-space: nowrap;
+      font-family: var(--void-orbitron);
     }
 
     /* Main void button */
@@ -192,14 +209,11 @@
       border-radius: 999px;
       border: none;
       cursor: pointer;
-      background:
-        radial-gradient(circle at 20% 10%, rgba(148, 163, 253, 0.55), transparent 55%),
-        radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.5), transparent 60%),
-        radial-gradient(circle at 50% 80%, rgba(15, 23, 42, 0.9), #020617 70%, #000000 100%);
+      background: #020617;
       box-shadow:
-        0 0 60px rgba(59, 130, 246, 0.7),
+        0 0 60px rgba(59, 130, 246, 0.75),
         0 0 120px rgba(129, 140, 248, 0.6),
-        inset 0 0 36px rgba(15, 23, 42, 0.99);
+        inset 0 0 40px rgba(0, 0, 0, 1);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -213,51 +227,24 @@
       box-shadow:
         0 0 40px rgba(59, 130, 246, 0.7),
         0 0 90px rgba(129, 140, 248, 0.55),
-        inset 0 0 50px rgba(15, 23, 42, 1);
+        inset 0 0 55px rgba(0, 0, 0, 1);
     }
 
-    .void-ring {
+    /* WebGL black hole canvas */
+    .void-canvas {
       position: absolute;
-      width: 240px;
-      height: 240px;
-      border-radius: 999px;
-      border: 2px solid rgba(191, 219, 254, 0.32);
-      box-shadow: 0 0 24px rgba(59, 130, 246, 0.9);
-      transform: rotate(20deg);
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
       pointer-events: none;
-    }
-
-    .void-accretion {
-      position: absolute;
-      width: 260px;
-      height: 120px;
-      border-radius: 50%;
-      background:
-        radial-gradient(ellipse at center, rgba(248, 250, 252, 0.4), transparent 60%),
-        radial-gradient(ellipse at center, rgba(56, 189, 248, 0.3), transparent 75%);
-      opacity: 0.6;
-      filter: blur(2px);
-      transform: rotate(18deg);
-      mix-blend-mode: screen;
-      pointer-events: none;
-    }
-
-    .void-core-dot {
-      position: absolute;
-      width: 110px;
-      height: 110px;
-      border-radius: 999px;
-      background: radial-gradient(circle at 30% 20%, #38bdf8, #020617 70%);
-      box-shadow:
-        0 0 40px rgba(59, 130, 246, 0.95),
-        0 0 80px rgba(37, 99, 235, 0.9);
     }
 
     .void-orbits {
       position: absolute;
       inset: 0;
       pointer-events: none;
-      z-index: 2;
+      z-index: 3;
     }
 
     .void-orbit-wrapper {
@@ -301,11 +288,12 @@
 
     .void-button-label {
       position: relative;
-      z-index: 3;
+      z-index: 4;
       font-weight: 600;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
       font-size: 0.8rem;
+      font-family: var(--void-orbitron);
     }
 
     .void-click-splash {
@@ -316,12 +304,12 @@
       opacity: 0; /* kept but never toggled now */
       pointer-events: none;
       transition: opacity 260ms ease-out;
-      z-index: 2;
+      z-index: 1;
     }
 
     .void-flavor {
       font-size: 0.9rem;
-      opacity: 0.85;
+      opacity: 0.88;
       margin-top: 8px;
       min-height: 1.3em;
       position: relative;
@@ -360,8 +348,9 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
+      font-family: var(--void-orbitron);
     }
 
     .void-upgrades-toggle span.icon {
@@ -441,6 +430,9 @@
     .void-upgrades-title {
       font-size: 0.95rem;
       font-weight: 600;
+      font-family: var(--void-orbitron);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
     }
 
     .void-upgrades-sub {
@@ -459,6 +451,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      font-family: var(--void-orbitron);
     }
 
     .void-upgrades-body {
@@ -503,11 +496,15 @@
     .void-upgrade-name {
       font-size: 0.9rem;
       font-weight: 600;
+      font-family: var(--void-orbitron);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .void-upgrade-level {
       font-size: 0.75rem;
       opacity: 0.85;
+      font-family: var(--void-orbitron);
     }
 
     .void-upgrade-desc {
@@ -540,6 +537,9 @@
       cursor: pointer;
       white-space: nowrap;
       transition: transform 80ms ease-out, background 80ms ease-out, opacity 80ms ease-out;
+      font-family: var(--void-orbitron);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .void-upgrade-btn:disabled {
@@ -615,6 +615,72 @@
       height: 9px;
     }
 
+    /* Debug panel (temporary) */
+    .void-debug-panel {
+      position: fixed;
+      left: 12px;
+      bottom: 12px;
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      padding: 8px 10px;
+      z-index: 99999;
+      font-size: 0.75rem;
+      color: #e5e7eb;
+      box-shadow: 0 0 24px rgba(15, 23, 42, 0.9);
+      max-width: 260px;
+      backdrop-filter: blur(8px);
+      font-family: var(--void-orbitron);
+    }
+
+    .void-debug-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 4px;
+      opacity: 0.86;
+    }
+
+    .void-debug-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .void-debug-row label {
+      opacity: 0.8;
+    }
+
+    .void-debug-panel input,
+    .void-debug-panel select {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.9);
+      color: #e5e7eb;
+      padding: 2px 4px;
+      font-size: 0.72rem;
+      min-width: 0;
+      flex: 1 1 auto;
+      font-family: var(--void-orbitron);
+    }
+
+    .void-debug-panel button {
+      background: rgba(30, 64, 175, 0.9);
+      border-radius: 999px;
+      border: 1px solid rgba(191, 219, 254, 0.8);
+      color: #e5e7eb;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      font-family: var(--void-orbitron);
+    }
+
+    .void-debug-panel button:active {
+      transform: translateY(1px);
+    }
+
     @media (max-width: 800px) {
       .void-core {
         padding: 14px 14px 16px;
@@ -622,18 +688,6 @@
       .void-button {
         width: 260px;
         height: 260px;
-      }
-      .void-ring {
-        width: 190px;
-        height: 190px;
-      }
-      .void-accretion {
-        width: 220px;
-        height: 100px;
-      }
-      .void-core-dot {
-        width: 84px;
-        height: 84px;
       }
       .void-core-top {
         flex-direction: column;
@@ -652,6 +706,10 @@
         width: 100%;
         max-width: 100%;
       }
+      .void-debug-panel {
+        max-width: 210px;
+        font-size: 0.7rem;
+      }
     }
   </style>
 </head>
@@ -669,7 +727,9 @@
         <div class="void-clicker-header">
           <div class="code">Cowy's &lt;&gt; Void</div>
           <h1 id="game-title">Feed the Void</h1>
-          <p class="sub">Cast fragments into a hungry singularity. Raise orbiting anomalies. Whisper vows to the Cult of Cowy.</p>
+          <p class="sub">
+            Offer starlight to a patient singularity. Grow its mass, wake its orbiters, and see how far the Cult of Cowy will go.
+          </p>
         </div>
 
         <div class="void-clicker-layout" aria-label="Feed the Void clicker game">
@@ -678,21 +738,21 @@
             <div class="void-core-top">
               <div class="void-core-left">
                 <div class="void-core-level-chip">
-                  <span class="void-core-level-chip-label">Void Level</span>
+                  <span class="void-core-level-chip-label">Void State</span>
                   <span class="void-core-level-chip-value" id="voidLevel">I</span>
                 </div>
 
                 <div class="void-stats" aria-label="Void statistics">
                   <div class="void-stat">
-                    <div class="void-stat-label">Fragments</div>
+                    <div class="void-stat-label">Void Fragments</div>
                     <div class="void-stat-value" id="fragmentsCount">0</div>
                   </div>
                   <div class="void-stat">
-                    <div class="void-stat-label">Per click</div>
+                    <div class="void-stat-label">Per Click</div>
                     <div class="void-stat-value" id="fragmentsPerClick">1</div>
                   </div>
                   <div class="void-stat">
-                    <div class="void-stat-label">Per second</div>
+                    <div class="void-stat-label">Ambient Drift</div>
                     <div class="void-stat-value" id="fragmentsPerSecond">0</div>
                   </div>
                 </div>
@@ -701,31 +761,29 @@
               <div class="void-meta-panel" aria-label="Void progress">
                 <div class="void-meta-row">
                   <span class="void-meta-value" id="metaTotalFragments">0.0</span>
-                  <span class="void-meta-label">total fed</span>
+                  <span class="void-meta-label">total offerings</span>
                 </div>
                 <div class="void-meta-row">
                   <span class="void-meta-value" id="metaToNextLevel">0.0</span>
-                  <span class="void-meta-label" id="metaToNextLabel">to next level</span>
+                  <span class="void-meta-label" id="metaToNextLabel">to next awakening</span>
                 </div>
               </div>
             </div>
 
             <button class="void-button" id="voidButton" type="button" aria-label="Feed the void with fragments">
+              <canvas id="voidCanvas" class="void-canvas" aria-hidden="true"></canvas>
               <span class="void-click-splash" id="voidClickSplash"></span>
-              <span class="void-accretion" aria-hidden="true"></span>
               <span class="void-orbits" id="voidOrbits" aria-hidden="true"></span>
-              <span class="void-ring" aria-hidden="true"></span>
-              <span class="void-core-dot" aria-hidden="true"></span>
-              <span class="void-button-label">Feed the Void</span>
+              <span class="void-button-label">Cast Fragments</span>
             </button>
 
-            <p class="void-flavor" id="voidFlavor">The void is hungry.</p>
+            <p class="void-flavor" id="voidFlavor">A quiet gravity hums under your cursor.</p>
             <p class="void-meta" id="voidMeta"></p>
 
             <div class="void-actions-row">
               <button class="void-upgrades-toggle" type="button" id="openUpgradesBtn">
                 <span class="icon">☄</span>
-                <span>Upgrades &amp; Rituals</span>
+                <span>Upgrades &amp; Rites</span>
               </button>
             </div>
           </section>
@@ -733,7 +791,7 @@
 
         <a class="void-back-link" href="/index.html">
           <span>←</span>
-          <span>Back to the rest of the Void</span>
+          <span>Return to the rest of the Void</span>
         </a>
       </section>
     </main>
@@ -744,11 +802,11 @@
     <aside class="void-upgrades-modal" role="dialog" aria-modal="true" aria-labelledby="upgradesTitle">
       <header class="void-upgrades-header">
         <div class="void-upgrades-header-main">
-          <div class="void-upgrades-title" id="upgradesTitle">Void Upgrades</div>
-          <div class="void-upgrades-sub">Shape orbits, open rifts, and expand the Cult’s reach.</div>
+          <div class="void-upgrades-title" id="upgradesTitle">Cult Engineering</div>
+          <div class="void-upgrades-sub">Invest starlight into orbiters, rifts, and stranger geometries.</div>
         </div>
         <button class="void-upgrades-close" type="button" id="closeUpgradesBtn">
-          <span>✕</span><span>Close</span>
+          <span>✕</span><span>Seal</span>
         </button>
       </header>
       <div class="void-upgrades-body">
@@ -757,6 +815,28 @@
         </div>
       </div>
     </aside>
+  </div>
+
+  <!-- TEMP: Debug panel -->
+  <div class="void-debug-panel" id="voidDebugPanel">
+    <div class="void-debug-title">Void Debug (temp)</div>
+    <div class="void-debug-row">
+      <label for="debugFragmentsInput">Fragments</label>
+      <input type="number" id="debugFragmentsInput" />
+      <button type="button" id="debugSetFragments">Set</button>
+    </div>
+    <div class="void-debug-row">
+      <button type="button" data-debug-fragment-delta="100">+100</button>
+      <button type="button" data-debug-fragment-delta="1000">+1k</button>
+      <button type="button" data-debug-fragment-delta="-100">-100</button>
+    </div>
+    <div class="void-debug-row">
+      <label for="debugLevelSelect">Void State</label>
+      <select id="debugLevelSelect"></select>
+    </div>
+    <div class="void-debug-row">
+      <button type="button" id="debugReset">Reset Save</button>
+    </div>
   </div>
 
   <!-- Partials injector (same pattern as index.html) -->
@@ -856,33 +936,228 @@
   <!-- GSAP animation library -->
   <script src="https://unpkg.com/gsap@3/dist/gsap.min.js"></script>
 
-  <!-- Feed the Void game logic -->
+  <!-- Feed the Void game logic + WebGL black hole -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const fragmentsEl = document.getElementById('fragmentsCount');
-      const perClickEl = document.getElementById('fragmentsPerClick');
-      const perSecondEl = document.getElementById('fragmentsPerSecond');
-      const voidLevelEl = document.getElementById('voidLevel');
-      const voidFlavorEl = document.getElementById('voidFlavor');
-      const voidMetaEl = document.getElementById('voidMeta');
-      const voidButton = document.getElementById('voidButton');
-      const voidCore = document.querySelector('.void-core');
-      const voidCoreLeft = document.querySelector('.void-core-left');
-      const voidStats = document.querySelector('.void-stats');
-      const voidMetaPanel = document.querySelector('.void-meta-panel');
-      const voidActionsRow = document.querySelector('.void-actions-row');
-      const voidOrbits = document.getElementById('voidOrbits');
-      const voidAccretion = document.querySelector('.void-accretion');
-      const voidCoreDot = document.querySelector('.void-core-dot');
+      /* ---------------------------
+         WebGL black hole init
+      --------------------------- */
+      let shaderController = null;
 
-      const metaTotalEl = document.getElementById('metaTotalFragments');
-      const metaToNextEl = document.getElementById('metaToNextLevel');
-      const metaToNextLabelEl = document.getElementById('metaToNextLabel');
+      function initVoidWebGL() {
+        const canvas = document.getElementById('voidCanvas');
+        if (!canvas) return;
 
-      const upgradesList = document.getElementById('upgradesList');
-      const openUpgradesBtn = document.getElementById('openUpgradesBtn');
-      const closeUpgradesBtn = document.getElementById('closeUpgradesBtn');
-      const upgradesBackdrop = document.getElementById('upgradesBackdrop');
+        const gl = canvas.getContext('webgl', { alpha: true, antialias: true });
+        if (!gl) {
+          console.warn('WebGL not supported for void canvas');
+          return;
+        }
+
+        const vsSource = `
+          attribute vec2 a_position;
+          void main() {
+            gl_Position = vec4(a_position, 0.0, 1.0);
+          }
+        `;
+
+        const fsSource = `
+          precision mediump float;
+          uniform float t;
+          uniform vec2 r;
+          uniform float u_level;
+
+          vec2 myTanh(vec2 x) {
+            vec2 ex = exp(x);
+            vec2 emx = exp(-x);
+            return (ex - emx) / (ex + emx);
+          }
+
+          void main() {
+            vec4 o_bg = vec4(0.0);
+            vec4 o_anim = vec4(0.0);
+
+            // Background structure
+            {
+              vec2 p_img = (gl_FragCoord.xy * 2.0 - r) / r.y * mat2(1.0, -1.0, 1.0, 1.0);
+              vec2 l_val = myTanh(p_img * 5.0 + 2.0);
+              l_val = min(l_val, l_val * 3.0);
+              vec2 clamped = clamp(l_val, -2.0, 0.0);
+              float diff_y = clamped.y - l_val.y;
+              float safe_px = abs(p_img.x) < 0.001 ? 0.001 : p_img.x;
+              float term = (0.1 - max(0.01 - dot(p_img, p_img) / 200.0, 0.0) * (diff_y / safe_px))
+                           / (0.15 + abs(length(p_img) - 0.7));
+              o_bg += vec4(term);
+              o_bg = max(o_bg, vec4(0.0));
+            }
+
+            // Animated layer
+            {
+              vec2 p_anim = (gl_FragCoord.xy * 2.0 - r) / r.y / (0.7 - u_level * 0.12);
+              vec2 d = vec2(-1.0, 1.0);
+              float denom = 0.1 + 5.0 / dot(5.0 * p_anim - d, 5.0 * p_anim - d);
+              vec2 c = p_anim * mat2(1.0, 1.0, d.x / denom, d.y / denom);
+              vec2 v = c;
+              v *= mat2(cos(log(length(v)) + t * (0.2 + u_level * 0.3) + vec4(0.0, 33.0, 11.0, 0.0))) * (5.0 + u_level * 1.5);
+              vec4 animAccum = vec4(0.0);
+              for (int i = 1; i <= 9; i++) {
+                float fi = float(i);
+                animAccum += sin(vec4(v.x, v.y, v.y, v.x)) + vec4(1.0);
+                v += 0.7 * sin(vec2(v.y, v.x) * fi + t) / fi + 0.5;
+              }
+              vec4 animTerm = 1.0 - exp(-exp(c.x * vec4(0.6, -0.4, -1.0, 0.0))
+                                / animAccum
+                                / (0.1 + 0.1 * pow(length(sin(v / 0.3) * 0.2 + c * vec2(1.0, 2.0)) - 1.0, 2.0))
+                                / (1.0 + 7.0 * exp(0.3 * c.y - dot(c, c)))
+                                / (0.05 + abs(length(p_anim) - 0.7)) * (0.15 + u_level * 0.1));
+              o_anim += animTerm;
+            }
+
+            vec4 col = mix(o_bg, o_anim, 0.6);
+            col = max(col, vec4(0.0));
+
+            // Blue/purple tint & dimmer overall, with more energy at higher level
+            vec3 tintA = vec3(0.30, 0.40, 0.85);
+            vec3 tintB = vec3(0.70, 0.40, 0.95);
+            float m = clamp((col.r + col.g + col.b) / 3.0, 0.0, 1.0);
+            vec3 tinted = mix(tintA, tintB, m);
+            float energy = 0.7 + u_level * 0.9;
+            col.rgb *= tinted * energy;
+
+            // Dark event horizon in the center, slightly swelling with level
+            vec2 uv = (gl_FragCoord.xy / r) * 2.0 - 1.0;
+            float rad = length(uv);
+            float horizonRadius = 0.28 + u_level * 0.03;
+            float hole = smoothstep(0.0, horizonRadius, rad);
+            col.rgb *= hole;
+
+            col = clamp(col, 0.0, 1.0);
+            gl_FragColor = col;
+          }
+        `;
+
+        function createShader(gl, type, source) {
+          const shader = gl.createShader(type);
+          gl.shaderSource(shader, source);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.error('Shader compile failed:', gl.getShaderInfoLog(shader));
+            gl.deleteShader(shader);
+            return null;
+          }
+          return shader;
+        }
+
+        function createProgram(gl, vs, fs) {
+          const v = createShader(gl, gl.VERTEX_SHADER, vs);
+          const f = createShader(gl, gl.FRAGMENT_SHADER, fs);
+          if (!v || !f) return null;
+          const prog = gl.createProgram();
+          gl.attachShader(prog, v);
+          gl.attachShader(prog, f);
+          gl.linkProgram(prog);
+          if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+            console.error('Program link failed:', gl.getProgramInfoLog(prog));
+            gl.deleteProgram(prog);
+            return null;
+          }
+          return prog;
+        }
+
+        const program = createProgram(gl, vsSource, fsSource);
+        if (!program) return;
+        gl.useProgram(program);
+
+        const positionLocation   = gl.getAttribLocation(program, 'a_position');
+        const timeLocation       = gl.getUniformLocation(program, 't');
+        const resolutionLocation = gl.getUniformLocation(program, 'r');
+        const levelLocation      = gl.getUniformLocation(program, 'u_level');
+
+        const vertices = new Float32Array([
+          -1, -1,
+           1, -1,
+          -1,  1,
+          -1,  1,
+           1, -1,
+           1,  1,
+        ]);
+
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        function resize() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          const width = Math.max(1, Math.round(rect.width * dpr));
+          const height = Math.max(1, Math.round(rect.height * dpr));
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+            gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+          }
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        let startTime = performance.now();
+        let levelIntensity = 0.0;
+
+        function setLevel(value) {
+          levelIntensity = Math.max(0.0, Math.min(1.0, value));
+        }
+
+        function render() {
+          resize();
+          const now = performance.now();
+          const delta = (now - startTime) / 1000;
+          gl.uniform1f(timeLocation, delta);
+          gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+          gl.uniform1f(levelLocation, levelIntensity);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+          requestAnimationFrame(render);
+        }
+        requestAnimationFrame(render);
+
+        shaderController = { setLevel };
+      }
+
+      initVoidWebGL();
+
+      /* ---------------------------
+         Game logic
+      --------------------------- */
+      const fragmentsEl     = document.getElementById('fragmentsCount');
+      const perClickEl      = document.getElementById('fragmentsPerClick');
+      const perSecondEl     = document.getElementById('fragmentsPerSecond');
+      const voidLevelEl     = document.getElementById('voidLevel');
+      const voidFlavorEl    = document.getElementById('voidFlavor');
+      const voidMetaEl      = document.getElementById('voidMeta');
+      const voidButton      = document.getElementById('voidButton');
+      const voidCore        = document.querySelector('.void-core');
+      const voidCoreLeft    = document.querySelector('.void-core-left');
+      const voidStats       = document.querySelector('.void-stats');
+      const voidMetaPanel   = document.querySelector('.void-meta-panel');
+      const voidActionsRow  = document.querySelector('.void-actions-row');
+      const voidOrbits      = document.getElementById('voidOrbits');
+
+      const metaTotalEl      = document.getElementById('metaTotalFragments');
+      const metaToNextEl     = document.getElementById('metaToNextLevel');
+      const metaToNextLabelEl= document.getElementById('metaToNextLabel');
+
+      const upgradesList      = document.getElementById('upgradesList');
+      const openUpgradesBtn   = document.getElementById('openUpgradesBtn');
+      const closeUpgradesBtn  = document.getElementById('closeUpgradesBtn');
+      const upgradesBackdrop  = document.getElementById('upgradesBackdrop');
+
+      const debugPanel           = document.getElementById('voidDebugPanel');
+      const debugFragmentsInput  = document.getElementById('debugFragmentsInput');
+      const debugSetFragmentsBtn = document.getElementById('debugSetFragments');
+      const debugLevelSelect     = document.getElementById('debugLevelSelect');
+      const debugResetBtn        = document.getElementById('debugReset');
 
       if (!fragmentsEl || !voidButton || !voidCore || !metaTotalEl || !metaToNextEl || !metaToNextLabelEl ||
           !upgradesList || !openUpgradesBtn || !closeUpgradesBtn || !upgradesBackdrop || !voidOrbits) {
@@ -893,8 +1168,6 @@
       let voidBaseScale = 1;
 
       if (window.gsap && voidButton) {
-        const ringEl = voidButton.querySelector('.void-ring');
-
         gsap.to(voidButton, {
           y: -4,
           duration: 2.7,
@@ -902,41 +1175,6 @@
           repeat: -1,
           ease: 'sine.inOut'
         });
-
-        if (ringEl) {
-          gsap.to(ringEl, {
-            rotate: 360,
-            duration: 18,
-            repeat: -1,
-            ease: 'none'
-          });
-        }
-
-        if (voidAccretion) {
-          gsap.to(voidAccretion, {
-            rotate: 360,
-            duration: 28,
-            repeat: -1,
-            ease: 'none'
-          });
-          gsap.to(voidAccretion, {
-            opacity: 0.35,
-            duration: 2.2,
-            yoyo: true,
-            repeat: -1,
-            ease: 'sine.inOut'
-          });
-        }
-
-        if (voidCoreDot) {
-          gsap.to(voidCoreDot, {
-            scale: 1.08,
-            duration: 1.8,
-            yoyo: true,
-            repeat: -1,
-            ease: 'sine.inOut'
-          });
-        }
       }
 
       const STORAGE_KEY = 'voidClickerState_v1';
@@ -944,8 +1182,8 @@
       const UPGRADE_CONFIG = [
         {
           id: 'orbitingStar',
-          name: 'Orbiting Star',
-          description: 'A captured star circles the event horizon, shedding light into the dark.',
+          name: 'Captured Star',
+          description: 'You pin a wandering sun into orbit. It peels light off for the void.',
           baseCost: 15,
           costMultiplier: 1.15,
           perSecond: 0.2,
@@ -953,8 +1191,8 @@
         },
         {
           id: 'meteorShower',
-          name: 'Meteor Shower',
-          description: 'Your guidance bends meteor paths straight into the singularity.',
+          name: 'Guided Meteors',
+          description: 'You nudge stray rock into perfect sacrificial arcs.',
           baseCost: 80,
           costMultiplier: 1.18,
           perSecond: 0.0,
@@ -963,7 +1201,7 @@
         {
           id: 'cultOfCowy',
           name: 'Cult of Cowy',
-          description: 'Robed figures chant around the void, offering their futures willingly.',
+          description: 'Robed silhouettes swear their timelines to the singularity.',
           baseCost: 250,
           costMultiplier: 1.2,
           perSecond: 0.5,
@@ -972,7 +1210,7 @@
         {
           id: 'unstableRift',
           name: 'Unstable Rift',
-          description: 'A tear in space leaks fragments from somewhere that should not exist.',
+          description: 'A crack in reality leaks fragments from a sky that is not yours.',
           baseCost: 600,
           costMultiplier: 1.22,
           perSecond: 2,
@@ -981,7 +1219,7 @@
         {
           id: 'singularityTuning',
           name: 'Singularity Tuning',
-          description: 'You whisper forbidden geometries to the core. Each click hits harder.',
+          description: 'You whisper forbidden math into the core. Each ritual hits harder.',
           baseCost: 1200,
           costMultiplier: 1.25,
           perSecond: 0.0,
@@ -990,13 +1228,13 @@
       ];
 
       const LEVELS = [
-        { threshold:        0, label: 'I',   flavor: 'The void notices you.' },
-        { threshold:      200, label: 'II',  flavor: 'Gravity bends a little closer when you log on.' },
-        { threshold:     1500, label: 'III', flavor: 'Stars at the edge of your sky go missing.' },
-        { threshold:    10000, label: 'IV',  flavor: 'Distant galaxies list gently toward your orbit.' },
-        { threshold:    50000, label: 'V',   flavor: 'Black sand storms around the core. It purrs.' },
-        { threshold:   250000, label: 'VI',  flavor: 'Space-time near you feels… thinner than it should.' },
-        { threshold:  1000000, label: 'VII', flavor: 'The void gazes back. You are its favorite cultist.' }
+        { threshold:        0, label: 'I',   flavor: 'A quiet gravity hums under your cursor.' },
+        { threshold:      200, label: 'II',  flavor: 'Star charts twitch; the void has noticed your offerings.' },
+        { threshold:     1500, label: 'III', flavor: 'Faint halos appear around the cursor when you are not looking.' },
+        { threshold:    10000, label: 'IV',  flavor: 'Distant constellations rearrange themselves into cow-shaped sigils.' },
+        { threshold:    50000, label: 'V',   flavor: 'Space near you feels thicker, like wading through cooled starlight.' },
+        { threshold:   250000, label: 'VI',  flavor: 'Whispers count your fragments whenever you blink.' },
+        { threshold:  1000000, label: 'VII', flavor: 'The void has memorized your name. It hums it like a favorite song.' }
       ];
 
       const defaultState = {
@@ -1087,7 +1325,7 @@
 
       function animateVoidLevelChange(index) {
         if (!window.gsap || !voidButton) return;
-        const targetScale = 1 + index * 0.15; // more dramatic growth
+        const targetScale = 1 + index * 0.15;
 
         gsap.to(voidButton, {
           scale: targetScale * 1.18,
@@ -1116,6 +1354,11 @@
 
         voidLevelEl.textContent = info.label;
         voidFlavorEl.textContent = info.flavor;
+
+        if (shaderController && typeof shaderController.setLevel === 'function') {
+          const norm = LEVELS.length > 1 ? idx / (LEVELS.length - 1) : 0;
+          shaderController.setLevel(norm);
+        }
       }
 
       // Gravity warp: UI bends more as totalFragments increases
@@ -1208,7 +1451,7 @@
       const AUTO_COLORS_BY_UPGRADE = {
         orbitingStar: 'yellow',
         unstableRift: 'blue',
-        cultOfCowy: 'purple'
+        cultOfCowy: 'blue'
       };
 
       function updateUI() {
@@ -1225,10 +1468,10 @@
         if (nextLevel) {
           const remaining = nextLevel.threshold - state.totalFragments;
           metaToNextEl.textContent = formatNumber(Math.max(remaining, 0));
-          metaToNextLabelEl.textContent = `to level ${nextLevel.label}`;
+          metaToNextLabelEl.textContent = `to state ${nextLevel.label}`;
         } else {
           metaToNextEl.textContent = '—';
-          metaToNextLabelEl.textContent = 'void ascendant';
+          metaToNextLabelEl.textContent = 'void complete (?)';
         }
 
         upgradesList.querySelectorAll('[data-upgrade-id]').forEach(card => {
@@ -1242,13 +1485,19 @@
           const costEl  = card.querySelector('[data-upgrade-cost]');
           const btn     = card.querySelector('button');
 
-          if (levelEl) levelEl.textContent = `Lv. ${level}`;
+          if (levelEl) levelEl.textContent = `Rank ${level}`;
           if (costEl) costEl.textContent = `${cost.toLocaleString()} fragments`;
 
           if (btn) {
             btn.disabled = state.fragments < cost;
           }
         });
+
+        // Debug panel sync
+        if (debugPanel && debugFragmentsInput && debugLevelSelect) {
+          debugFragmentsInput.value = Math.round(state.fragments);
+          debugLevelSelect.value = String(state.currentLevelIndex || 0);
+        }
       }
 
       function createUpgradeCard(cfg) {
@@ -1269,7 +1518,7 @@
         const levelEl = document.createElement('div');
         levelEl.className = 'void-upgrade-level';
         levelEl.setAttribute('data-upgrade-level', 'true');
-        levelEl.textContent = 'Lv. 0';
+        levelEl.textContent = 'Rank 0';
 
         nameRow.appendChild(nameEl);
         nameRow.appendChild(levelEl);
@@ -1283,7 +1532,7 @@
 
         const effects = [];
         if (cfg.perClick) {
-          effects.push(`+${cfg.perClick} / click`);
+          effects.push(`+${cfg.perClick} / ritual`);
         }
         if (cfg.perSecond) {
           effects.push(`+${cfg.perSecond} / sec`);
@@ -1310,7 +1559,7 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'void-upgrade-btn';
-        btn.textContent = 'Invoke';
+        btn.textContent = 'Invest';
 
         btn.addEventListener('click', () => {
           const cost = getUpgradeCost(cfg);
@@ -1421,9 +1670,9 @@
         const x = evt && typeof evt.clientX === 'number' ? evt.clientX : window.innerWidth / 2;
         const y = evt && typeof evt.clientY === 'number' ? evt.clientY : window.innerHeight / 2;
 
-        // Small clicks: one soft white star
+        // Small clicks: one cool red star (coolest temp)
         if (perClick <= 1.5) {
-          spawnFragment(x, y, { kind: 'click', color: 'white', sizeScale: 0.8, scatter: true });
+          spawnFragment(x, y, { kind: 'click', color: 'red', sizeScale: 0.8, scatter: true });
           return;
         }
 
@@ -1470,7 +1719,7 @@
 
         updateUI();
         spawnClickStars(evt);
-        // No flash, no extra jiggle — just the idle pulse + gravity warp evolving over time.
+        // No flash, no extra jiggle — just idle pulse + gravity warp evolving over time.
       }
 
       // Big click area: anywhere inside the core card except the upgrades button
@@ -1558,6 +1807,56 @@
         requestAnimationFrame(tick);
       }
 
+      // Debug hooks
+      function initDebug() {
+        if (!debugPanel || !debugFragmentsInput || !debugLevelSelect || !debugSetFragmentsBtn || !debugResetBtn) return;
+
+        // Populate level select
+        debugLevelSelect.innerHTML = '';
+        LEVELS.forEach((lvl, idx) => {
+          const opt = document.createElement('option');
+          opt.value = String(idx);
+          opt.textContent = `State ${lvl.label} (${lvl.threshold.toLocaleString()})`;
+          debugLevelSelect.appendChild(opt);
+        });
+
+        debugSetFragmentsBtn.addEventListener('click', () => {
+          const v = parseFloat(debugFragmentsInput.value);
+          if (isNaN(v)) return;
+          state.fragments = Math.max(0, v);
+          updateUI();
+          saveState();
+        });
+
+        document.querySelectorAll('[data-debug-fragment-delta]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const delta = parseFloat(btn.getAttribute('data-debug-fragment-delta') || '0');
+            state.fragments = Math.max(0, state.fragments + delta);
+            updateUI();
+            saveState();
+          });
+        });
+
+        debugLevelSelect.addEventListener('change', () => {
+          const idx = parseInt(debugLevelSelect.value, 10);
+          if (isNaN(idx)) return;
+          const clamped = Math.max(0, Math.min(LEVELS.length - 1, idx));
+          const lvlCfg = LEVELS[clamped];
+          state.totalFragments = Math.max(lvlCfg.threshold, state.totalFragments);
+          state.currentLevelIndex = clamped;
+          updateUI();
+          saveState();
+        });
+
+        debugResetBtn.addEventListener('click', () => {
+          state = { ...defaultState, upgrades: {} };
+          recalcRates();
+          refreshOrbits();
+          updateUI();
+          saveState();
+        });
+      }
+
       loadState();
       recalcRates();
       initUpgrades();
@@ -1569,6 +1868,7 @@
       }
 
       refreshOrbits();
+      initDebug();
       updateUI();
 
       requestAnimationFrame(tick);
