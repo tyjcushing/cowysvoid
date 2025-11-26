@@ -204,16 +204,10 @@
     .void-button {
       position: relative;
       margin: 26px 0 12px;
-      width: 340px;
+      width: 100%;
       height: 340px;
-      border-radius: 999px;
-      border: none;
       cursor: pointer;
       background: #020617;
-      box-shadow:
-        0 0 60px rgba(59, 130, 246, 0.75),
-        0 0 120px rgba(129, 140, 248, 0.6),
-        inset 0 0 40px rgba(0, 0, 0, 1);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -223,12 +217,13 @@
       z-index: 1; /* behind the top UI panel */
     }
 
+    /* click highlighter
     .void-button:active {
       box-shadow:
         0 0 40px rgba(59, 130, 246, 0.7),
         0 0 90px rgba(129, 140, 248, 0.55),
         inset 0 0 55px rgba(0, 0, 0, 1);
-    }
+    }*/
 
     /* WebGL black hole canvas */
     .void-canvas {
@@ -295,17 +290,17 @@
       font-size: 0.8rem;
       font-family: var(--void-orbitron);
     }
-
+/*
     .void-click-splash {
       position: absolute;
       inset: 0;
       border-radius: inherit;
       background: radial-gradient(circle at center, rgba(248, 250, 252, 0.18), transparent 60%);
-      opacity: 0; /* kept but never toggled now */
+      opacity: 0;
       pointer-events: none;
       transition: opacity 260ms ease-out;
       z-index: 1;
-    }
+    }*/
 
     .void-flavor {
       font-size: 0.9rem;
@@ -738,7 +733,7 @@
             <div class="void-core-top">
               <div class="void-core-left">
                 <div class="void-core-level-chip">
-                  <span class="void-core-level-chip-label">Void State</span>
+                  <span class="void-core-level-chip-label">Void Stage</span>
                   <span class="void-core-level-chip-value" id="voidLevel">I</span>
                 </div>
 
@@ -752,7 +747,7 @@
                     <div class="void-stat-value" id="fragmentsPerClick">1</div>
                   </div>
                   <div class="void-stat">
-                    <div class="void-stat-label">Ambient Drift</div>
+                    <div class="void-stat-label">Per Second</div>
                     <div class="void-stat-value" id="fragmentsPerSecond">0</div>
                   </div>
                 </div>
@@ -802,11 +797,11 @@
     <aside class="void-upgrades-modal" role="dialog" aria-modal="true" aria-labelledby="upgradesTitle">
       <header class="void-upgrades-header">
         <div class="void-upgrades-header-main">
-          <div class="void-upgrades-title" id="upgradesTitle">Cult Engineering</div>
+          <div class="void-upgrades-title" id="upgradesTitle">Upgrades</div>
           <div class="void-upgrades-sub">Invest starlight into orbiters, rifts, and stranger geometries.</div>
         </div>
         <button class="void-upgrades-close" type="button" id="closeUpgradesBtn">
-          <span>✕</span><span>Seal</span>
+          <span>✕</span><span>Close</span>
         </button>
       </header>
       <div class="void-upgrades-body">
@@ -1532,7 +1527,7 @@
 
         const effects = [];
         if (cfg.perClick) {
-          effects.push(`+${cfg.perClick} / ritual`);
+          effects.push(`+${cfg.perClick} / click`);
         }
         if (cfg.perSecond) {
           effects.push(`+${cfg.perSecond} / sec`);
