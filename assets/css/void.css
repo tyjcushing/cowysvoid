@@ -558,3 +558,25 @@ body > footer .container {
     .blog-footer-nav{ display: flex; gap: 12px; margin-top: 30px; }
 
     /* ===== Blog Post Styles End ===== */
+
+    /* Cosmic WebGL background layer */
+.void-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none; /* game/UI stays interactive */
+}
+
+/* Full-viewport canvas */
+.void-bg-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Make sure your main content floats above the background */
+.app-layer {
+  position: relative;
+  z-index: 1;
+}

@@ -217,14 +217,6 @@
       z-index: 1; /* behind the top UI panel */
     }
 
-    /* click highlighter
-    .void-button:active {
-      box-shadow:
-        0 0 40px rgba(59, 130, 246, 0.7),
-        0 0 90px rgba(129, 140, 248, 0.55),
-        inset 0 0 55px rgba(0, 0, 0, 1);
-    }*/
-
     /* WebGL black hole canvas */
     .void-canvas {
       position: absolute;
@@ -290,17 +282,6 @@
       font-size: 0.8rem;
       font-family: var(--void-orbitron);
     }
-/*
-    .void-click-splash {
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: radial-gradient(circle at center, rgba(248, 250, 252, 0.18), transparent 60%);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 260ms ease-out;
-      z-index: 1;
-    }*/
 
     .void-flavor {
       font-size: 0.9rem;
@@ -709,11 +690,6 @@
   </style>
 </head>
 <body>
-  <!-- Background video container -->
-  <div id="bgVideo" class="bg-video" aria-hidden="true">
-    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
-  </div>
-
   <div class="app-layer">
     <header id="site-header" aria-label="Primary"></header>
 
@@ -767,7 +743,6 @@
 
             <button class="void-button" id="voidButton" type="button" aria-label="Feed the void with fragments">
               <canvas id="voidCanvas" class="void-canvas" aria-hidden="true"></canvas>
-              <span class="void-click-splash" id="voidClickSplash"></span>
               <span class="void-orbits" id="voidOrbits" aria-hidden="true"></span>
               <span class="void-button-label">Feed the Void</span>
             </button>
@@ -897,37 +872,6 @@
     })();
   </script>
 
-  <!-- Connection-aware background video loader -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
-      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
-      const allowVideo = isFast && isWifiLike;
-
-      const wrap = document.getElementById('bgVideo');
-      const vid  = document.getElementById('bgVideoEl');
-      if (!wrap || !vid) return;
-
-      if (!allowVideo) {
-        wrap.style.display = 'none';
-        return;
-      }
-
-      vid.src = '/assets/Blackhole_Animtation.mp4';
-
-      const onReady = () => {
-        wrap.classList.add('ready');
-        const p = vid.play();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      };
-
-      vid.addEventListener('canplay', onReady, { once: true });
-      vid.addEventListener('loadeddata', onReady, { once: true });
-      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
-    });
-  </script>
-
   <!-- GSAP animation library -->
   <script src="https://unpkg.com/gsap@3/dist/gsap.min.js"></script>
 
@@ -976,9 +920,9 @@
             {
               vec2 p_img = (gl_FragCoord.xy * 2.0 - r) / r.y * mat2(1.0, -1.0, 1.0, 1.0);
               vec2 l_val = myTanh(p_img * 5.0 + 2.0);
-              l_val = min(l_val, l_val * 3.0);
+              l_val = min(l_val, l_val * 0.);
               vec2 clamped = clamp(l_val, -2.0, 0.0);
-              float diff_y = clamped.y - l_val.y;
+              float diff_y = clamped.y - l_val.y; // clamp on line angle
               float safe_px = abs(p_img.x) < 0.001 ? 0.001 : p_img.x;
               float term = (0.1 - max(0.01 - dot(p_img, p_img) / 200.0, 0.0) * (diff_y / safe_px))
                            / (0.15 + abs(length(p_img) - 0.7));

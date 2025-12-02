@@ -17,11 +17,6 @@
   <link rel="stylesheet" href="/assets/css/void.css">
 </head>
 <body>
-  <!-- Background video container (behind everything) -->
-  <div id="bgVideo" class="bg-video" aria-hidden="true">
-    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
-  </div>
-
   <!-- Content layer above background -->
   <div class="app-layer">
     <header id="site-header" aria-label="Primary"></header>
@@ -65,22 +60,12 @@
         </article>
         
         <article class="card" aria-labelledby="void-clicker-head">
-            <h3 id="void-clicker-head">Feed the Void 👾</h3>
-            <p>????</p>
-            <ul class="list">
-              <li><a href="/feed-the-void.html">Play Feed the Void 👾 →</a></li>
-            </ul>
-          </article>
-        <!-- Add more cards whenever you’re ready
-        <article class="card" aria-labelledby="news-head">
-          <h3 id="news-head">What’s new</h3>
-          <p>Recent updates, posts, or highlights.</p>
+          <h3 id="void-clicker-head">Feed the Void 👾</h3>
+          <p>????</p>
           <ul class="list">
-            <li><a href="#">Latest post →</a></li>
-            <li><a href="#">Release notes →</a></li>
+            <li><a href="/feed-the-void.html">Play Feed the Void 👾 →</a></li>
           </ul>
         </article>
-        -->
       </section>
     </main>
   </div><!-- /.app-layer -->
@@ -103,6 +88,13 @@
         });
 
         return tpl.content.firstElementChild || null;
+      }
+
+      // VOID BACKGROUND (WebGL)
+      const bgEl = await loadPartial('/partials/void-background.html');
+      if (bgEl) {
+        // Put background behind .app-layer
+        document.body.prepend(bgEl);
       }
 
       // NAV
@@ -135,14 +127,31 @@
         scope.querySelectorAll('.nav-link').forEach(a => {
           let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
           if (href === '/blog/') href = '/blog';
+
+          // Home / index
           if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
             a.setAttribute('aria-current', 'page');
           }
+
+          // Blog section
           if (here.startsWith('/blog') && href === '/blog') {
             a.setAttribute('aria-current', 'page');
           }
-          if (here.includes('/mtg') && href === '/mtg.html') a.setAttribute('aria-current','page');
-          if (here.includes('/projects') && href === '/projects.html') a.setAttribute('aria-current','page');
+
+          // MTG
+          if (here.includes('/mtg') && href === '/mtg.html') {
+            a.setAttribute('aria-current','page');
+          }
+
+          // Projects
+          if (here.includes('/projects') && href === '/projects.html') {
+            a.setAttribute('aria-current','page');
+          }
+
+          // Feed the Void
+          if (here.includes('/feed-the-void') && href === '/feed-the-void.html') {
+            a.setAttribute('aria-current','page');
+          }
         });
       }
     } catch (e) {
@@ -151,35 +160,7 @@
   })();
   </script>
 
-  <!-- Connection-aware background video loader -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
-      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
-      const allowVideo = isFast && isWifiLike;
-
-      const wrap = document.getElementById('bgVideo');
-      const vid  = document.getElementById('bgVideoEl');
-      if (!wrap || !vid) return;
-
-      if (!allowVideo) {
-        wrap.style.display = 'none';
-        return;
-      }
-
-      vid.src = '/assets/Blackhole_Animtation.mp4';
-
-      const onReady = () => {
-        wrap.classList.add('ready');
-        const p = vid.play();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      };
-
-      vid.addEventListener('canplay', onReady, { once: true });
-      vid.addEventListener('loadeddata', onReady, { once: true });
-      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
-    });
-  </script>
+  <!-- WebGL background driver (reads localStorage void state) -->
+  <script src="/assets/js/void-background.js"></script>
 </body>
 </html>
