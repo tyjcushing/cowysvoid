@@ -17,7 +17,7 @@
     .control-inline label{font-size:13px;color:var(--muted);user-select:none;white-space:nowrap}
     .control-inline input[type="number"]{width:84px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.22);color:var(--text);outline:none}
 
-    /* ✅ picklist: pure black bg, pure white text */
+    /* picklist: pure black bg, pure white text */
     .control-inline select{
       padding:8px 10px;border-radius:10px;
       border:1px solid rgba(255,255,255,.18);
@@ -25,7 +25,6 @@
     }
     .control-inline select option{background:#000;color:#fff}
 
-    /* ✅ wrap build+print together */
     .btn-group{display:inline-flex;gap:8px;padding:8px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.16)}
 
     .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:10px}
@@ -42,19 +41,54 @@
     .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
     .modal-backdrop.open{display:flex}
     .modal{width:min(1080px,96vw);max-height:88vh;overflow:auto;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(10,10,14,.92);box-shadow:0 18px 44px rgba(0,0,0,.55);padding:14px}
-    .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 6px 12px;border-bottom:1px solid rgba(255,255,255,.10);margin-bottom:12px}
+
+    /* Modal header always visible */
+    .modal-head{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:6px 6px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      margin-bottom:12px;
+
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(10,10,14,.96);
+      backdrop-filter: blur(10px);
+    }
     .modal-head h3{margin:0;font-size:16px}
 
     .prints-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
-    .print-tile{border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.16);overflow:hidden;cursor:pointer;transition:transform .08s ease}
+    .print-tile{
+      border-radius:16px;border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.16);overflow:hidden;cursor:pointer;transition:transform .08s ease;
+      position:relative;
+    }
     .print-tile:hover{transform:translateY(-1px)}
     .print-tile img{width:100%;height:auto;display:block}
     .print-cap{padding:10px}
     .print-cap .line1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
     .print-cap .line1 strong{font-size:12px}
     .print-cap .line2{margin-top:4px;font-size:11px;color:var(--muted)}
+
     .badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);font-size:11px;color:var(--text)}
-    .badge.good{border-color:rgba(120,255,180,.25)}
+
+    /* Selected art border */
+    .print-tile.selected{
+      outline: 3px solid var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,.7) inset, 0 10px 26px rgba(0,0,0,.35);
+    }
+    .print-tile.selected::after{
+      content: "Selected";
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.75);
+      border: 1px solid rgba(255,255,255,.16);
+      color: #fff;
+      font-size: 12px;
+    }
   </style>
 </head>
 
@@ -70,7 +104,7 @@
       <section class="panel page-panel solid-surface">
         <header class="page">
           <h1>Print Sheet Builder</h1>
-          <p class="sub">Paste card names. Load → swap art per card → build a print sheet → print.</p>
+          <p class="sub">Paste card names. Load → swap art per card → Print opens a new tab with the formatted sheet.</p>
         </header>
 
         <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
@@ -127,11 +161,9 @@ Dark Ritual
             </span>
           </div>
 
-          <!-- ✅ combined -->
           <div class="right">
-            <div class="btn-group" aria-label="Build and print">
-              <button id="buildBtn" class="btn" type="button">Build Print Sheet</button>
-              <button id="printBtn" class="btn ghost solid-ghost-btn" type="button">Print</button>
+            <div class="btn-group" aria-label="Print">
+              <button id="printBtn" class="btn" type="button">Print</button>
             </div>
           </div>
         </div>
@@ -144,18 +176,14 @@ Dark Ritual
         <div id="empty" class="empty" hidden>Paste cards and click Load.</div>
         <div id="cards" class="cards-grid"></div>
       </section>
-
-      <section id="printArea" hidden></section>
     </main>
   </div>
 
+  <!-- Art Modal -->
   <div id="artModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Choose art">
     <div class="modal solid-surface">
       <div class="modal-head">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <h3 id="artModalTitle" style="margin:0">Choose Art</h3>
-          <span id="artModalPicked" class="badge good" hidden>Selected</span>
-        </div>
+        <h3 id="artModalTitle" style="margin:0">Choose Art</h3>
         <button id="artModalClose" class="btn ghost solid-ghost-btn" type="button">Close</button>
       </div>
       <div id="artModalBody"></div>
@@ -170,8 +198,6 @@ Dark Ritual
     }[m]));
   }
 
-  // Keep original input for display, but normalize for lookups.
-  // Also trims annotations like "(showcase)" or "[set]" etc.
   function stripNameAnnotations(s = '') {
     s = s.trim();
     const cuts = [s.indexOf('['), s.indexOf('{'), s.indexOf('('), s.indexOf('^^')].filter(i => i >= 0);
@@ -184,6 +210,9 @@ Dark Ritual
     return stripNameAnnotations(s).toLowerCase().replace(/\s+/g,' ').trim();
   }
 
+  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+  function mm(n) { return `${n}mm`; }
+
   function parseCardLines(text) {
     const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
     const out = [];
@@ -193,7 +222,7 @@ Dark Ritual
       line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
       if (!line) continue;
 
-      let m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
+      const m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
       if (m) {
         const qty = parseInt(m[1], 10);
         const nameRaw = stripNameAnnotations(m[2]);
@@ -204,6 +233,17 @@ Dark Ritual
       }
     }
     return out;
+  }
+
+  function collapseToUniqueItems(parsedItems) {
+    const byKey = new Map();
+    for (const row of parsedItems) {
+      const k = row.nameKey;
+      const prev = byKey.get(k);
+      if (!prev) byKey.set(k, { nameKey:k, displayName: row.nameRaw, qty: row.qty || 1 });
+      else prev.qty += (row.qty || 1);
+    }
+    return [...byKey.values()];
   }
 
   // ---------- Scryfall ----------
@@ -229,15 +269,12 @@ Dark Ritual
         console.log('[DEBUG] /cards/collection JSON:', j);
         console.log('[DEBUG] /cards/collection JSON.stringify:', JSON.stringify(j));
       }
-      for (const card of (j.data || [])) {
-        out.set(keyName(card.name), card);
-      }
+      for (const card of (j.data || [])) out.set(keyName(card.name), card);
     }
     return out;
   }
 
   async function fetchPrintsForOracle(oracleId) {
-    // Prints endpoint may be paginated
     const url = `https://api.scryfall.com/cards/search?order=released&q=oracleid:${encodeURIComponent(oracleId)}&unique=prints`;
     let next = url;
     const all = [];
@@ -259,11 +296,18 @@ Dark Ritual
     return null;
   }
 
+  function bestPrintImageUrl(card) {
+    return getFrontImage(card, 'png')
+        || getFrontImage(card, 'large')
+        || getFrontImage(card, 'normal')
+        || getFrontImage(card, 'border_crop')
+        || null;
+  }
+
   // ---------- State ----------
-  // items are "unique card rows" (one per normalized nameKey), each has qty and selectedPrintId/imageUrl
-  let ITEMS = []; // [{ nameKey, displayName, qty, oracleId, selectedPrintId, selectedImg }]
-  let KEY_TO_CARD = new Map(); // nameKey -> base card from collection
-  const PRINT_CACHE = new Map(); // oracleId -> prints array
+  let ITEMS = [];                 // [{ nameKey, displayName, qty, oracleId, selectedPrintId, selectedImg }]
+  let KEY_TO_CARD = new Map();    // nameKey -> base card
+  const PRINT_CACHE = new Map();  // oracleId -> prints
 
   // ---------- Elements ----------
   const els = {
@@ -279,21 +323,16 @@ Dark Ritual
     scaleDown: document.getElementById('scaleDown'),
     scaleUp: document.getElementById('scaleUp'),
     bleed: document.getElementById('bleed'),
-
-    buildBtn: document.getElementById('buildBtn'),
     printBtn: document.getElementById('printBtn'),
-    printArea: document.getElementById('printArea'),
 
     artBackdrop: document.getElementById('artModalBackdrop'),
     artClose: document.getElementById('artModalClose'),
     artTitle: document.getElementById('artModalTitle'),
-    artBody: document.getElementById('artModalBody'),
-    artPicked: document.getElementById('artModalPicked')
+    artBody: document.getElementById('artModalBody')
   };
 
   function setStatus(msg='') { els.status.textContent = msg; }
   function setBusy(b) { els.spinner.hidden = !b; }
-  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
   // ---------- UI render ----------
   function renderCards() {
@@ -303,8 +342,9 @@ Dark Ritual
     setStatus(`Loaded ${ITEMS.length} unique name(s), ${total} total card(s).`);
 
     for (const it of ITEMS) {
-      const img = it.selectedImg || getFrontImage(KEY_TO_CARD.get(it.nameKey), 'normal') || getFrontImage(KEY_TO_CARD.get(it.nameKey), 'large');
       const base = KEY_TO_CARD.get(it.nameKey);
+      const img = it.selectedImg || getFrontImage(base, 'normal') || getFrontImage(base, 'large');
+
       const setName = (base?.set || '').toUpperCase();
       const cn = base?.collector_number || '—';
       const artist = base?.artist || '—';
@@ -336,21 +376,6 @@ Dark Ritual
   }
 
   // ---------- Load flow ----------
-  function collapseToUniqueItems(parsedItems) {
-    const byKey = new Map();
-    for (const row of parsedItems) {
-      const k = row.nameKey;
-      const prev = byKey.get(k);
-      if (!prev) {
-        byKey.set(k, { nameKey:k, displayName: row.nameRaw, qty: row.qty || 1 });
-      } else {
-        prev.qty += (row.qty || 1);
-        // keep first display name as typed
-      }
-    }
-    return [...byKey.values()];
-  }
-
   async function load() {
     setBusy(true);
     try {
@@ -366,14 +391,11 @@ Dark Ritual
       }
 
       const uniqItems = collapseToUniqueItems(parsed);
-
-      // For collection identifiers, use the *displayName* (original) so Scryfall has best chance of matching.
       const namesForScryfall = uniqItems.map(it => it.displayName);
       const mapKeyToCard = await fetchCollectionByNames(namesForScryfall);
 
       KEY_TO_CARD = mapKeyToCard;
 
-      // Build ITEMS with oracleId + default selected art
       const missing = [];
       ITEMS = uniqItems.map(it => {
         const base = mapKeyToCard.get(it.nameKey);
@@ -410,11 +432,9 @@ Dark Ritual
     MODAL_KEY = nameKey;
     const item = ITEMS.find(x => x.nameKey === nameKey);
     const base = KEY_TO_CARD.get(nameKey);
-
     if (!item || !base?.oracle_id) return;
 
     els.artTitle.textContent = `Choose Art — ${item.displayName}`;
-    els.artPicked.hidden = true;
     els.artBody.innerHTML = `<div class="inline-hint">Loading prints…</div>`;
     els.artBackdrop.classList.add('open');
 
@@ -429,7 +449,6 @@ Dark Ritual
         PRINT_CACHE.set(oracleId, prints);
       }
 
-      // Filter to things that actually have front images
       const good = prints
         .map(p => ({
           id: p.id,
@@ -452,12 +471,14 @@ Dark Ritual
         </div>
         <div class="prints-grid">
           ${good.map(p => `
-            <div class="print-tile" data-print-id="${esc(p.id)}" data-img="${esc(p.img)}">
+            <div class="print-tile ${p.id === selectedPrintId ? 'selected' : ''}"
+                 data-print-id="${esc(p.id)}"
+                 data-img="${esc(p.img)}">
               <img src="${esc(p.img)}" alt="${esc(p.set)} ${esc(p.cn)}" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">
               <div class="print-cap">
                 <div class="line1">
                   <strong>${esc(p.set)}</strong>
-                  <span class="badge ${p.id === selectedPrintId ? 'good' : ''}">${p.id === selectedPrintId ? 'Selected' : `#${esc(p.cn)}`}</span>
+                  <span class="badge">${`#${esc(p.cn)}`}</span>
                 </div>
                 <div class="line2">${esc(p.released)} · ${esc(p.artist)}</div>
               </div>
@@ -479,40 +500,203 @@ Dark Ritual
   function applySelectedPrintToItem(nameKey, printId, imgUrl) {
     const idx = ITEMS.findIndex(x => x.nameKey === nameKey);
     if (idx < 0) return;
-
     ITEMS[idx].selectedPrintId = printId;
-    // store a normal-ish image for the tile display; "small" is fine too but normal looks nicer
-    // we only have whatever was in the modal; that might be small. We'll ask scryfall for a better one:
     ITEMS[idx].selectedImg = imgUrl;
-
-    // Update badge feedback in modal
-    els.artPicked.hidden = false;
-    els.artPicked.textContent = 'Selected';
-
     renderCards();
   }
 
-  // ---------- Print sheet (stub for now, stays functional)
-  function buildPrintSheet() {
-    if (!ITEMS.length) { setStatus('Load cards first.'); return; }
+  // ---------- Print Sheet (new tab) ----------
+  const PAGE = { w: 215.9, h: 279.4 }; // letter in mm
 
-    const scale = Number(els.scalePct.value || 100) / 100;
-    const gapMm = Number(els.bleed.value || 0);
+  function getSelectedPrintCardForItem(item) {
+    if (!item) return null;
 
-    setStatus(
-      `Print settings:\n- Scale: ${(scale * 100).toFixed(0)}%\n- Gap/Bleed: ${gapMm}mm\n\nNext: render print grid (work-in-progress).`
-    );
-
-    els.printArea.hidden = true;
-    els.printArea.innerHTML = '';
+    if (item.selectedPrintId && item.oracleId) {
+      const prints = PRINT_CACHE.get(item.oracleId);
+      const found = prints?.find(p => p.id === item.selectedPrintId);
+      if (found) return found;
+    }
+    return KEY_TO_CARD.get(item.nameKey) || null;
   }
 
-  function doPrint() {
-    if (!els.printArea.innerHTML.trim()) {
-      setStatus('Build the print sheet first. (Print grid output is not rendered yet.)');
-      return;
+  function expandToCopies() {
+    const out = [];
+    for (const it of ITEMS) {
+      const card = getSelectedPrintCardForItem(it);
+      const url = bestPrintImageUrl(card);
+      if (!url) continue;
+      for (let i = 0; i < (it.qty || 1); i++) out.push({ name: it.displayName, url });
     }
-    window.print();
+    return out;
+  }
+
+  function computeLayout(scalePct, gapMm, paddingMm = 6) {
+    const scale = scalePct / 100;
+    const cardW = 63 * scale;
+    const cardH = 88 * scale;
+
+    const availW = PAGE.w - (paddingMm * 2);
+    const availH = PAGE.h - (paddingMm * 2);
+
+    const cols = Math.max(1, Math.floor((availW + gapMm) / (cardW + gapMm)));
+    const rows = Math.max(1, Math.floor((availH + gapMm) / (cardH + gapMm)));
+    const perPage = Math.max(1, cols * rows);
+
+    return { cardW, cardH, cols, rows, perPage, gapMm, paddingMm };
+  }
+
+  function chunk(arr, size) {
+    const out = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+
+  function buildPrintHtml(pages, layout) {
+    const pageSections = pages.map(cards => {
+      const cardsHtml = cards.map(c => `
+        <div class="card">
+          <img src="${esc(c.url)}" alt="${esc(c.name)}" loading="eager" referrerpolicy="no-referrer" crossorigin="anonymous">
+        </div>
+      `).join('');
+
+      return `
+        <section class="page">
+          <div class="grid" style="
+            grid-template-columns: repeat(${layout.cols}, ${mm(layout.cardW)});
+            grid-auto-rows: ${mm(layout.cardH)};
+            gap: ${mm(layout.gapMm)};
+            padding: ${mm(layout.paddingMm)};
+          ">
+            ${cardsHtml}
+          </div>
+        </section>
+      `;
+    }).join('');
+
+    return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Print Sheet</title>
+  <style>
+    @page { size: letter; margin: 0; }
+    html, body { margin: 0; padding: 0; background: #fff; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+
+    .page {
+      width: ${mm(PAGE.w)};
+      height: ${mm(PAGE.h)};
+      margin: 0;
+      page-break-after: always;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      justify-content: center;
+      align-content: start;
+      box-sizing: border-box;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      outline: 0.2mm solid #000;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .hint {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,.75);
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      z-index: 9999;
+    }
+
+    @media print {
+      .hint { display: none; }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hint">Tip: Disable “Headers and footers” for clean pages.</div>
+  ${pageSections}
+</body>
+</html>`;
+  }
+
+  function openPrintTab() {
+    if (!ITEMS.length) { setStatus('Load cards first.'); return; }
+
+    const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
+    const gapMm = Number(els.bleed.value || 0);
+    els.scalePct.value = String(scalePct);
+
+    const copies = expandToCopies();
+    if (!copies.length) { setStatus('No printable images found.'); return; }
+
+    const layout = computeLayout(scalePct, gapMm, 6);
+    const pages = chunk(copies, layout.perPage);
+
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (!w) { setStatus('Popup blocked. Allow popups to open the print sheet tab.'); return; }
+
+    const html = buildPrintHtml(pages, layout);
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+
+    // IMPORTANT: attach printing logic from parent, not inside the child HTML string
+    const kick = () => {
+      try {
+        const imgs = Array.from(w.document.images || []);
+        let pending = imgs.length;
+        if (!pending) { w.print(); return; }
+
+        const done = () => {
+          pending--;
+          if (pending <= 0) setTimeout(() => w.print(), 50);
+        };
+
+        imgs.forEach(img => {
+          if (img.complete) return done();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        });
+      } catch (e) {
+        // fallback
+        try { w.print(); } catch (_) {}
+      }
+    };
+
+    // Wait for the new document to fully exist
+    w.addEventListener('load', kick, { once: true });
+
+    setStatus(
+      `Opened print sheet in a new tab.\n` +
+      `Layout: ${layout.cols}×${layout.rows} (${layout.perPage}/page)\n` +
+      `Scale: ${scalePct}% · Gap: ${gapMm}mm · Pages: ${pages.length}`
+    );
   }
 
   // ---------- Events ----------
@@ -539,23 +723,26 @@ Dark Ritual
       els.scalePct.value = String(clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140));
     });
 
-    els.buildBtn.addEventListener('click', buildPrintSheet);
-    els.printBtn.addEventListener('click', doPrint);
+    els.printBtn.addEventListener('click', openPrintTab);
 
     els.cards.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-action="art"]');
       if (!btn) return;
-      const k = btn.getAttribute('data-key');
-      openArtModalFor(k);
+      openArtModalFor(btn.getAttribute('data-key'));
     });
 
     els.artClose.addEventListener('click', closeArtModal);
-    els.artBackdrop.addEventListener('click', (e) => { if (e.target === els.artBackdrop) closeArtModal(); });
+    els.artBackdrop.addEventListener('click', (e) => {
+      if (e.target === els.artBackdrop) closeArtModal();
+    });
 
-    // Click a print tile -> select
     els.artBody.addEventListener('click', (e) => {
       const tile = e.target.closest('.print-tile');
       if (!tile || !MODAL_KEY) return;
+
+      els.artBody.querySelectorAll('.print-tile.selected').forEach(n => n.classList.remove('selected'));
+      tile.classList.add('selected');
+
       const pid = tile.getAttribute('data-print-id');
       const img = tile.getAttribute('data-img');
       applySelectedPrintToItem(MODAL_KEY, pid, img);
@@ -645,5 +832,6 @@ Dark Ritual
     }
   })();
 </script>
+
 </body>
 </html>
