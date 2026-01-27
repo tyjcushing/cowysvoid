@@ -176,10 +176,14 @@ Commander: Alela, Artful Provocateur
           <span class="pill-lite control">
             <button id="printBtn" class="btn">Print</button>
           </span>
+
+          <span class="pill-lite control" title="Opens the proxied image for the first card (debug)">
+            <button id="debugImgBtn" class="btn ghost solid-ghost-btn" type="button">Debug Image</button>
+          </span>
         </div>
 
         <div class="inline-hint" style="margin-top:8px">
-          This generates a PDF (no popups needed beyond opening a new tab). If it fails, it’s usually the image proxy/CSP.
+          If your PDF shows placeholders, check the status output below — it will tell you exactly which image fetch/decode failed.
         </div>
 
         <div id="status" class="status-box"></div>
@@ -237,6 +241,7 @@ Commander: Alela, Artful Provocateur
       gapMm: document.getElementById('gapMm'),
       layout: document.getElementById('layout'),
       printBtn: document.getElementById('printBtn'),
+      debugImgBtn: document.getElementById('debugImgBtn'),
 
       artBackdrop: document.getElementById('artBackdrop'),
       artTitle: document.getElementById('artTitle'),
@@ -464,172 +469,98 @@ Commander: Alela, Artful Provocateur
 
     function mmToPt(mm) { return mm * (72 / 25.4); }
 
-    function sniffImageKind(u8) {
-      if (!u8 || u8.length < 12) return 'unknown';
-
-      const isPng =
-        u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4E && u8[3] === 0x47 &&
-        u8[4] === 0x0D && u8[5] === 0x0A && u8[6] === 0x1A && u8[7] === 0x0A;
-
-      const isJpg = u8[0] === 0xFF && u8[1] === 0xD8 && u8[2] === 0xFF;
-
-      const isWebp =
-        u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46 &&
-        u8[8] === 0x57 && u8[9] === 0x45 && u8[10] === 0x42 && u8[11] === 0x50;
-
-      const isHtml =
-        u8[0] === 0x3C && (u8[1] === 0x21 || u8[1] === 0x68 || u8[1] === 0x48);
-
-      const ascii = (i) => String.fromCharCode(u8[i] || 0);
-      const head = `${ascii(0)}${ascii(1)}${ascii(2)}${ascii(3)}${ascii(4)}${ascii(5)}${ascii(6)}${ascii(7)}${ascii(8)}${ascii(9)}${ascii(10)}${ascii(11)}${ascii(12)}${ascii(13)}${ascii(14)}${ascii(15)}`;
-      const isBmff = head.includes('ftyp');
-
-      if (isPng) return 'png';
-      if (isJpg) return 'jpg';
-      if (isWebp) return 'webp';
-      if (isHtml) return 'html';
-      if (isBmff) return 'bmff';
-      return 'unknown';
-    }
-
     async function blobToUint8(blob) {
       const buf = await blob.arrayBuffer();
       return new Uint8Array(buf);
     }
 
-    async function convertBlobToPngBytes(blob) {
-      const bmp = await createImageBitmap(blob);
+    async function loadImageFromBlob(blob) {
+      return await new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.decoding = 'async';
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const w = img.naturalWidth || img.width;
+          const h = img.naturalHeight || img.height;
+          if (!w || !h) {
+            reject(new Error('Image decoded but has 0x0 dimensions'));
+            return;
+          }
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Image decode failed (img.onerror)'));
+        };
+        img.src = url;
+      });
+    }
+
+    async function blobToPngBytes(blob) {
+      const img = await loadImageFromBlob(blob);
+
       const canvas = document.createElement('canvas');
-      canvas.width = bmp.width;
-      canvas.height = bmp.height;
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
 
       const ctx = canvas.getContext('2d', { alpha: true });
-      ctx.drawImage(bmp, 0, 0);
-      bmp.close?.();
+      ctx.drawImage(img, 0, 0);
 
       const pngBlob = await new Promise((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/png');
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas.toBlob failed'))), 'image/png');
       });
 
       return await blobToUint8(pngBlob);
     }
 
-    async function fetchAsImageBytes(url, originalUrlHint) {
-      const r = await fetch(url, { cache: 'no-store' });
+    async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
+      const r = await fetch(proxiedUrl, { cache: 'no-store' });
+      const ct = (r.headers.get('content-type') || '').toLowerCase();
 
       if (!r.ok) {
-        const txt = await r.text().catch(() => '');
-        throw new Error(`Image fetch failed (${r.status}) for ${originalUrlHint || url}\n${txt.slice(0, 200)}`);
+        const t = await r.text().catch(() => '');
+        throw new Error(`Fetch ${r.status} for ${originalUrlHint || proxiedUrl}\ncontent-type: ${ct || '(missing)'}\n${t.slice(0, 240)}`);
       }
 
-      const ct = (r.headers.get('content-type') || '').toLowerCase();
       const blob = await r.blob();
 
-      const raw = await blobToUint8(blob);
-      const kind = sniffImageKind(raw);
-
-      if (kind === 'png') return { bytes: raw, kind: 'png', contentType: ct };
-      if (kind === 'jpg') return { bytes: raw, kind: 'jpg', contentType: ct };
-
-      if (kind === 'html' || ct.includes('text/html') || ct.includes('application/json') || ct.startsWith('text/')) {
-        const txt = await blob.text().catch(() => '');
+      // If proxy is returning an error page, surface it clearly
+      if (ct.includes('text/html') || ct.includes('application/json') || ct.startsWith('text/')) {
+        const t = await blob.text().catch(() => '');
         throw new Error(
-          `Proxy did not return an image for ${originalUrlHint || url}\n` +
+          `Proxy did not return an image for ${originalUrlHint || proxiedUrl}\n` +
           `content-type: ${ct || '(missing)'}\n` +
-          `${txt.slice(0, 240)}`
+          `${t.slice(0, 240)}`
         );
       }
 
+      // Convert to PNG bytes via reliable <img> decode path
       try {
-        const pngBytes = await convertBlobToPngBytes(blob);
-        return { bytes: pngBytes, kind: 'png', contentType: 'image/png' };
+        return await blobToPngBytes(blob);
       } catch (e) {
-        throw new Error(
-          `Unsupported/corrupt image format for ${originalUrlHint || url}\n` +
-          `content-type: ${ct || '(missing)'} kind: ${kind}\n` +
-          `convert failed: ${e?.message || e}`
-        );
+        // One more diagnostic: try to read as text to see if it's actually HTML without correct headers
+        const t = await blob.text().catch(() => '');
+        const head = t.slice(0, 120).replace(/\s+/g, ' ').trim();
+        if (head.startsWith('<') || head.toLowerCase().includes('cloudflare')) {
+          throw new Error(
+            `Image decode failed; response looks like HTML for ${originalUrlHint || proxiedUrl}\n` +
+            `content-type: ${ct || '(missing)'}\n` +
+            `${t.slice(0, 240)}`
+          );
+        }
+        throw new Error(`Image decode failed for ${originalUrlHint || proxiedUrl}\ncontent-type: ${ct || '(missing)'}\n${e?.message || e}`);
       }
     }
 
-    async function embedImageSmart(pdf, payload) {
-      if (payload.kind === 'png') return await pdf.embedPng(payload.bytes);
-      if (payload.kind === 'jpg') return await pdf.embedJpg(payload.bytes);
-      throw new Error(`Unsupported embedded kind: ${payload.kind}`);
+    async function embedPngFromProxy(pdf, proxiedUrl, originalUrlHint) {
+      const pngBytes = await fetchAsPngBytes(proxiedUrl, originalUrlHint);
+      return await pdf.embedPng(pngBytes);
     }
-
-    async function blobToUint8(blob) {
-  const buf = await blob.arrayBuffer();
-  return new Uint8Array(buf);
-}
-
-async function loadImageFromBlob(blob) {
-  // Most reliable cross-browser decode path:
-  // Blob -> objectURL -> <img> -> draw to canvas
-  return await new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Image decode failed (img.onerror)'));
-    };
-    img.src = url;
-  });
-}
-
-async function blobToPngBytes(blob) {
-  const img = await loadImageFromBlob(blob);
-
-  const canvas = document.createElement('canvas');
-  canvas.width = img.naturalWidth || img.width;
-  canvas.height = img.naturalHeight || img.height;
-
-  const ctx = canvas.getContext('2d', { alpha: true });
-  ctx.drawImage(img, 0, 0);
-
-  const pngBlob = await new Promise((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas.toBlob failed'))), 'image/png');
-  });
-
-  return await blobToUint8(pngBlob);
-}
-
-async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
-  const r = await fetch(proxiedUrl, { cache: 'no-store' });
-
-  // If your proxy sometimes returns HTML or JSON, surface it clearly.
-  const ct = (r.headers.get('content-type') || '').toLowerCase();
-
-  if (!r.ok) {
-    const t = await r.text().catch(() => '');
-    throw new Error(`Image fetch failed (${r.status}) for ${originalUrlHint || proxiedUrl}\n${t.slice(0, 240)}`);
-  }
-
-  const blob = await r.blob();
-
-  // If proxy returned text/html, show snippet
-  if (ct.includes('text/html') || ct.includes('application/json') || ct.startsWith('text/')) {
-    const t = await blob.text().catch(() => '');
-    throw new Error(
-      `Proxy did not return an image for ${originalUrlHint || proxiedUrl}\n` +
-      `content-type: ${ct || '(missing)'}\n` +
-      `${t.slice(0, 240)}`
-    );
-  }
-
-  // Convert anything decodable to PNG
-  return await blobToPngBytes(blob);
-}
-
 
     async function buildPdf() {
       const PDFLib = await loadPdfLib();
-      const { PDFDocument } = PDFLib;
+      const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
       const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
       const scale = scalePct / 100;
@@ -661,9 +592,9 @@ async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
       const pagesCount = Math.ceil(expanded.length / perPage);
 
       const pdf = await PDFDocument.create();
+      const font = await pdf.embedFont(StandardFonts.Helvetica);
 
-      const imageBytesCache = new Map();
-      const embedCache = new Map();
+      const embedCache = new Map(); // key -> embedded png
       const errors = [];
 
       for (let pi = 0; pi < pagesCount; pi++) {
@@ -687,15 +618,9 @@ async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
           const proxiedUrl = PROXY_IMG(chosenUrl);
 
           try {
-            let payload = imageBytesCache.get(key);
-            if (!payload) {
-              payload = await fetchAsImageBytes(proxiedUrl, chosenUrl);
-              imageBytesCache.set(key, payload);
-            }
-
             let embedded = embedCache.get(key);
             if (!embedded) {
-              embedded = await embedImageSmart(pdf, payload);
+              embedded = await embedPngFromProxy(pdf, proxiedUrl, chosenUrl);
               embedCache.set(key, embedded);
             }
 
@@ -706,13 +631,27 @@ async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
               height: mmToPt(cardHmm)
             });
           } catch (err) {
-            errors.push(`${it.name}: ${err?.message || err}`);
+            const msg = `${it.name}: ${err?.message || err}`;
+            errors.push(msg);
+
+            // Placeholder: WHITE fill (not black) + red border + label
             page.drawRectangle({
               x: mmToPt(xMm),
               y: mmToPt(yMm),
               width: mmToPt(cardWmm),
               height: mmToPt(cardHmm),
-              borderWidth: 0.75
+              color: rgb(1, 1, 1),
+              borderColor: rgb(0.75, 0.15, 0.15),
+              borderWidth: 1
+            });
+
+            const label = 'IMAGE FAILED';
+            page.drawText(label, {
+              x: mmToPt(xMm) + 6,
+              y: mmToPt(yMm) + 6,
+              size: 9,
+              font,
+              color: rgb(0.75, 0.15, 0.15)
             });
           }
         }
@@ -723,7 +662,8 @@ async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
       if (errors.length) {
         setStatus(
           `Built PDF with ${errors.length} image issue(s).\n` +
-          `First few:\n- ${errors.slice(0, 6).join('\n- ')}${errors.length > 6 ? '\n…' : ''}`
+          `First few:\n- ${errors.slice(0, 8).join('\n- ')}${errors.length > 8 ? '\n…' : ''}\n\n` +
+          `If these errors mention HTML/Cloudflare, your /img proxy is not returning image bytes for some URLs.`
         );
       }
 
@@ -746,7 +686,9 @@ async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
           a.href = url;
           a.download = 'mtg-print-sheet.pdf';
           a.click();
-          setStatus(`Popup blocked. Downloaded PDF instead.\nScale: ${scalePct}% · Gap: ${gapMm}mm · Layout: ${els.layout.value}`);
+          if (!els.status.textContent) {
+            setStatus(`Popup blocked. Downloaded PDF instead.\nScale: ${scalePct}% · Gap: ${gapMm}mm · Layout: ${els.layout.value}`);
+          }
           return;
         }
 
@@ -759,6 +701,23 @@ async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
       } finally {
         els.spinner.hidden = true;
       }
+    }
+
+    async function debugFirstImage() {
+      setStatus('');
+      if (!ITEMS.length) {
+        setStatus('No cards loaded. Load cards first.');
+        return;
+      }
+      const it = ITEMS[0];
+      const chosenUrl = it.chosen_img_pdf || PDF_IMG(ORACLE_TO_CARD.get(it.oracle_id));
+      if (!chosenUrl) {
+        setStatus('First card has no PDF image URL.');
+        return;
+      }
+      const proxiedUrl = PROXY_IMG(chosenUrl);
+      window.open(proxiedUrl, '_blank', 'noopener,noreferrer');
+      setStatus(`Opened proxied image in new tab:\n${proxiedUrl}\n\nIf this tab shows HTML/error, your /img proxy is the root cause.`);
     }
 
     async function load() {
@@ -855,6 +814,7 @@ async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
       });
 
       els.printBtn.addEventListener('click', printPdf);
+      els.debugImgBtn.addEventListener('click', debugFirstImage);
 
       els.cards.addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-action="art"]');
