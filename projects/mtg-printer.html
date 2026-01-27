@@ -11,178 +11,50 @@
   <link rel="stylesheet" href="/assets/css/void.css">
 
   <style>
-    /* Small page-specific additions that sit nicely on top of void.css */
-    .ps-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-      margin-top: 10px;
-    }
+    .ps-controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between}
+    .ps-controls .left,.ps-controls .right{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .control-inline{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18)}
+    .control-inline label{font-size:13px;color:var(--muted);user-select:none;white-space:nowrap}
+    .control-inline input[type="number"]{width:84px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.22);color:var(--text);outline:none}
 
-    .ps-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 14px;
-      align-items: center;
-      justify-content: space-between;
+    /* ✅ picklist: pure black bg, pure white text */
+    .control-inline select{
+      padding:8px 10px;border-radius:10px;
+      border:1px solid rgba(255,255,255,.18);
+      background:#000;color:#fff;outline:none;
     }
+    .control-inline select option{background:#000;color:#fff}
 
-    .ps-controls .left,
-    .ps-controls .right {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
+    /* ✅ wrap build+print together */
+    .btn-group{display:inline-flex;gap:8px;padding:8px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.16)}
 
-    .control-inline {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.18);
-    }
+    .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:10px}
+    .card-tile{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.14);box-shadow:0 10px 24px rgba(0,0,0,.24);overflow:hidden}
+    .thumb{width:96px;height:134px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.06)}
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .tile-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+    .tile-title strong{font-size:14px;line-height:1.2}
+    .tile-meta{margin-top:4px;font-size:12px;color:var(--muted)}
+    .tile-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
-    .control-inline label {
-      font-size: 13px;
-      color: var(--muted);
-      user-select: none;
-      white-space: nowrap;
-    }
+    .mono-pre{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px}
 
-    .control-inline input[type="number"] {
-      width: 84px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.22);
-      color: var(--text);
-      outline: none;
-    }
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
+    .modal-backdrop.open{display:flex}
+    .modal{width:min(1080px,96vw);max-height:88vh;overflow:auto;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(10,10,14,.92);box-shadow:0 18px 44px rgba(0,0,0,.55);padding:14px}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 6px 12px;border-bottom:1px solid rgba(255,255,255,.10);margin-bottom:12px}
+    .modal-head h3{margin:0;font-size:16px}
 
-    .control-inline input[type="range"] {
-      width: 160px;
-    }
-
-    .control-inline select {
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.22);
-      color: var(--text);
-      outline: none;
-    }
-
-    .btn-group {
-      display: inline-flex;
-      gap: 8px;
-      padding: 8px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.16);
-    }
-
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-      gap: 12px;
-      margin-top: 10px;
-    }
-
-    .card-tile {
-      display: grid;
-      grid-template-columns: 96px 1fr;
-      gap: 10px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.14);
-      box-shadow: 0 10px 24px rgba(0,0,0,.24);
-      overflow: hidden;
-    }
-
-    .thumb {
-      width: 96px;
-      height: 134px;
-      border-radius: 14px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.06);
-    }
-
-    .thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .tile-title {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .tile-title strong {
-      font-size: 14px;
-      line-height: 1.2;
-    }
-
-    .tile-meta {
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .tile-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-
-    .mono-pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12px;
-    }
-
-    /* Modal shell – matches your solid-surface vibe */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.68);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-      z-index: 9999;
-    }
-    .modal-backdrop.open { display: flex; }
-    .modal {
-      width: min(980px, 96vw);
-      max-height: 88vh;
-      overflow: auto;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(10,10,14,.92);
-      box-shadow: 0 18px 44px rgba(0,0,0,.55);
-      padding: 14px;
-    }
-    .modal-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 6px 6px 12px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      margin-bottom: 12px;
-    }
-    .modal-head h3 { margin: 0; font-size: 16px; }
+    .prints-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+    .print-tile{border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.16);overflow:hidden;cursor:pointer;transition:transform .08s ease}
+    .print-tile:hover{transform:translateY(-1px)}
+    .print-tile img{width:100%;height:auto;display:block}
+    .print-cap{padding:10px}
+    .print-cap .line1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+    .print-cap .line1 strong{font-size:12px}
+    .print-cap .line2{margin-top:4px;font-size:11px;color:var(--muted)}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);font-size:11px;color:var(--text)}
+    .badge.good{border-color:rgba(120,255,180,.25)}
   </style>
 </head>
 
@@ -198,19 +70,17 @@
       <section class="panel page-panel solid-surface">
         <header class="page">
           <h1>Print Sheet Builder</h1>
-          <p class="sub">
-            Paste card names. We’ll fetch Scryfall data, show images, let you swap art, then build a print-ready sheet.
-          </p>
+          <p class="sub">Paste card names. Load → swap art per card → build a print sheet → print.</p>
         </header>
 
         <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
           <label class="input input-solid solid-input" style="align-items:start">
             <textarea id="cardInput" class="textarea" placeholder="Examples:
 Sol Ring
+sol ring
 Dark Ritual
 3x Arcane Signet
-1 Command Tower
-..."></textarea>
+1 Command Tower"></textarea>
           </label>
         </div>
 
@@ -230,8 +100,7 @@ Dark Ritual
         </div>
 
         <div class="inline-hint">
-          Tip: if images ever fail again, it’s almost always CSP. Your site must allow
-          <code>img-src https://cards.scryfall.io</code>.
+          Case-insensitive matching is enabled: <code>Sol Ring</code> and <code>sol ring</code> resolve to the same card.
         </div>
       </section>
 
@@ -248,11 +117,6 @@ Dark Ritual
               <button id="scaleUp" class="btn ghost solid-ghost-btn" type="button">+</button>
             </span>
 
-            <span class="control-inline" title="Quick adjust scale">
-              <label for="scaleRange">Fine</label>
-              <input id="scaleRange" type="range" min="50" max="140" value="100">
-            </span>
-
             <span class="control-inline">
               <label for="bleed"><strong>Bleed / Gap</strong></label>
               <select id="bleed">
@@ -263,7 +127,7 @@ Dark Ritual
             </span>
           </div>
 
-          <!-- Wrapped together as requested -->
+          <!-- ✅ combined -->
           <div class="right">
             <div class="btn-group" aria-label="Build and print">
               <button id="buildBtn" class="btn" type="button">Build Print Sheet</button>
@@ -281,29 +145,43 @@ Dark Ritual
         <div id="cards" class="cards-grid"></div>
       </section>
 
-      <!-- Hidden print area -->
       <section id="printArea" hidden></section>
     </main>
   </div>
 
-  <!-- Art picker modal shell (hook points; we’ll fill it next) -->
   <div id="artModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Choose art">
     <div class="modal solid-surface">
       <div class="modal-head">
-        <h3 id="artModalTitle">Choose Art</h3>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <h3 id="artModalTitle" style="margin:0">Choose Art</h3>
+          <span id="artModalPicked" class="badge good" hidden>Selected</span>
+        </div>
         <button id="artModalClose" class="btn ghost solid-ghost-btn" type="button">Close</button>
       </div>
-      <div id="artModalBody" class="inline-hint">Coming next: visual list of prints for this card.</div>
+      <div id="artModalBody"></div>
     </div>
   </div>
 
 <script>
-  // ---------- Parsing ----------
+  // ---------- Helpers ----------
+  function esc(s) {
+    return (s || '').replace(/[&<>\"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  // Keep original input for display, but normalize for lookups.
+  // Also trims annotations like "(showcase)" or "[set]" etc.
   function stripNameAnnotations(s = '') {
     s = s.trim();
     const cuts = [s.indexOf('['), s.indexOf('{'), s.indexOf('('), s.indexOf('^^')].filter(i => i >= 0);
     if (!cuts.length) return s;
     return s.slice(0, Math.min(...cuts)).trim();
+  }
+
+  // canonical key for case-insensitive matching + whitespace normalization
+  function keyName(s='') {
+    return stripNameAnnotations(s).toLowerCase().replace(/\s+/g,' ').trim();
   }
 
   function parseCardLines(text) {
@@ -317,19 +195,22 @@ Dark Ritual
 
       let m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
       if (m) {
-        out.push({ qty: parseInt(m[1], 10), name: stripNameAnnotations(m[2]) });
+        const qty = parseInt(m[1], 10);
+        const nameRaw = stripNameAnnotations(m[2]);
+        out.push({ qty, nameRaw, nameKey: keyName(nameRaw) });
       } else {
-        out.push({ qty: 1, name: stripNameAnnotations(line) });
+        const nameRaw = stripNameAnnotations(line);
+        out.push({ qty: 1, nameRaw, nameKey: keyName(nameRaw) });
       }
     }
     return out;
   }
 
   // ---------- Scryfall ----------
-  async function fetchCollectionByNames(names) {
+  async function fetchCollectionByNames(namesOriginalCasing) {
     const CHUNK = 70;
-    const uniq = [...new Set(names.filter(Boolean))];
-    const out = new Map();
+    const uniq = [...new Set(namesOriginalCasing.filter(Boolean))];
+    const out = new Map(); // keyName(card.name) -> card
 
     for (let i = 0; i < uniq.length; i += CHUNK) {
       const slice = uniq.slice(i, i + CHUNK);
@@ -348,24 +229,43 @@ Dark Ritual
         console.log('[DEBUG] /cards/collection JSON:', j);
         console.log('[DEBUG] /cards/collection JSON.stringify:', JSON.stringify(j));
       }
-      for (const card of (j.data || [])) out.set(card.name, card);
+      for (const card of (j.data || [])) {
+        out.set(keyName(card.name), card);
+      }
     }
     return out;
+  }
+
+  async function fetchPrintsForOracle(oracleId) {
+    // Prints endpoint may be paginated
+    const url = `https://api.scryfall.com/cards/search?order=released&q=oracleid:${encodeURIComponent(oracleId)}&unique=prints`;
+    let next = url;
+    const all = [];
+    while (next) {
+      const r = await fetch(next);
+      if (!r.ok) break;
+      const j = await r.json();
+      all.push(...(j.data || []));
+      next = j.has_more ? j.next_page : null;
+    }
+    return all;
   }
 
   function getFrontImage(card, version = 'normal') {
     if (!card) return null;
     if (card.image_uris?.[version]) return card.image_uris[version];
     if (Array.isArray(card.card_faces) && card.card_faces[0]?.image_uris?.[version]) return card.card_faces[0].image_uris[version];
-    // fallback: redirect image endpoint
     if (card.id) return `https://api.scryfall.com/cards/${card.id}?format=image&version=${encodeURIComponent(version)}`;
     return null;
   }
 
   // ---------- State ----------
-  let LAST_ITEMS = [];
-  let LAST_NAME_TO_CARD = new Map();
+  // items are "unique card rows" (one per normalized nameKey), each has qty and selectedPrintId/imageUrl
+  let ITEMS = []; // [{ nameKey, displayName, qty, oracleId, selectedPrintId, selectedImg }]
+  let KEY_TO_CARD = new Map(); // nameKey -> base card from collection
+  const PRINT_CACHE = new Map(); // oracleId -> prints array
 
+  // ---------- Elements ----------
   const els = {
     input: document.getElementById('cardInput'),
     loadBtn: document.getElementById('loadBtn'),
@@ -376,7 +276,6 @@ Dark Ritual
     status: document.getElementById('status'),
 
     scalePct: document.getElementById('scalePct'),
-    scaleRange: document.getElementById('scaleRange'),
     scaleDown: document.getElementById('scaleDown'),
     scaleUp: document.getElementById('scaleUp'),
     bleed: document.getElementById('bleed'),
@@ -388,53 +287,47 @@ Dark Ritual
     artBackdrop: document.getElementById('artModalBackdrop'),
     artClose: document.getElementById('artModalClose'),
     artTitle: document.getElementById('artModalTitle'),
-    artBody: document.getElementById('artModalBody')
+    artBody: document.getElementById('artModalBody'),
+    artPicked: document.getElementById('artModalPicked')
   };
 
-  function esc(s) {
-    return (s || '').replace(/[&<>\"']/g, m => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[m]));
-  }
+  function setStatus(msg='') { els.status.textContent = msg; }
+  function setBusy(b) { els.spinner.hidden = !b; }
+  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
-  function setStatus(msg = '') {
-    els.status.textContent = msg;
-  }
-
-  function setBusy(b) {
-    els.spinner.hidden = !b;
-  }
-
-  // ---------- Render list ----------
-  function renderCards(items, nameToCard) {
+  // ---------- UI render ----------
+  function renderCards() {
     els.cards.innerHTML = '';
-    const total = items.reduce((s, it) => s + (it.qty || 1), 0);
-    setStatus(`Loaded ${items.length} unique name(s), ${total} total card(s).`);
 
-    for (const it of items) {
-      const card = nameToCard.get(it.name);
-      const img = getFrontImage(card, 'normal') || getFrontImage(card, 'large') || getFrontImage(card, 'png');
-      const setName = (card?.set || '').toUpperCase();
-      const cn = card?.collector_number || '—';
-      const artist = card?.artist || '—';
+    const total = ITEMS.reduce((s, it) => s + (it.qty || 1), 0);
+    setStatus(`Loaded ${ITEMS.length} unique name(s), ${total} total card(s).`);
+
+    for (const it of ITEMS) {
+      const img = it.selectedImg || getFrontImage(KEY_TO_CARD.get(it.nameKey), 'normal') || getFrontImage(KEY_TO_CARD.get(it.nameKey), 'large');
+      const base = KEY_TO_CARD.get(it.nameKey);
+      const setName = (base?.set || '').toUpperCase();
+      const cn = base?.collector_number || '—';
+      const artist = base?.artist || '—';
 
       const div = document.createElement('div');
       div.className = 'card-tile';
       div.innerHTML = `
         <div class="thumb">
-          ${img ? `<img src="${img}" alt="${esc(it.name)}" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">` : ''}
+          ${img ? `<img src="${img}" alt="${esc(it.displayName)}" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">` : ''}
         </div>
         <div>
           <div class="tile-title">
-            <strong>${esc(it.name)}</strong>
+            <strong>${esc(it.displayName)}</strong>
             <span class="pill">× <strong>${it.qty || 1}</strong></span>
           </div>
           <div class="tile-meta">${esc(setName)} · #${esc(cn)} · ${esc(artist)}</div>
           <div class="tile-actions">
-            <button class="btn ghost solid-ghost-btn" type="button" data-action="art" data-name="${esc(it.name)}">Change Art</button>
+            <button class="btn ghost solid-ghost-btn" type="button"
+              data-action="art"
+              data-key="${esc(it.nameKey)}">Change Art</button>
           </div>
           <div class="inline-hint" style="margin-top:8px; opacity:.9">
-            Image: <code>${esc(img || '—')}</code>
+            ${it.selectedPrintId ? `Selected print: <code>${esc(it.selectedPrintId)}</code>` : `Using default print.`}
           </div>
         </div>
       `;
@@ -442,35 +335,66 @@ Dark Ritual
     }
   }
 
-  // ---------- Load ----------
+  // ---------- Load flow ----------
+  function collapseToUniqueItems(parsedItems) {
+    const byKey = new Map();
+    for (const row of parsedItems) {
+      const k = row.nameKey;
+      const prev = byKey.get(k);
+      if (!prev) {
+        byKey.set(k, { nameKey:k, displayName: row.nameRaw, qty: row.qty || 1 });
+      } else {
+        prev.qty += (row.qty || 1);
+        // keep first display name as typed
+      }
+    }
+    return [...byKey.values()];
+  }
+
   async function load() {
     setBusy(true);
     try {
-      const items = parseCardLines(els.input.value);
-      LAST_ITEMS = items;
+      const parsed = parseCardLines(els.input.value);
+      els.empty.hidden = parsed.length > 0;
 
-      els.empty.hidden = items.length > 0;
-      if (!items.length) {
+      if (!parsed.length) {
+        ITEMS = [];
+        KEY_TO_CARD = new Map();
         els.cards.innerHTML = '';
         setStatus('Paste cards and click Load.');
         return;
       }
 
-      const names = [...new Set(items.map(it => it.name))];
-      const nameToCard = await fetchCollectionByNames(names);
-      LAST_NAME_TO_CARD = nameToCard;
+      const uniqItems = collapseToUniqueItems(parsed);
 
-      // Warn if any missing
-      const missing = names.filter(n => !nameToCard.get(n));
+      // For collection identifiers, use the *displayName* (original) so Scryfall has best chance of matching.
+      const namesForScryfall = uniqItems.map(it => it.displayName);
+      const mapKeyToCard = await fetchCollectionByNames(namesForScryfall);
+
+      KEY_TO_CARD = mapKeyToCard;
+
+      // Build ITEMS with oracleId + default selected art
+      const missing = [];
+      ITEMS = uniqItems.map(it => {
+        const base = mapKeyToCard.get(it.nameKey);
+        if (!base) missing.push(it.displayName);
+        return {
+          ...it,
+          oracleId: base?.oracle_id || null,
+          selectedPrintId: null,
+          selectedImg: null
+        };
+      });
+
+      renderCards();
+
       if (missing.length) {
         setStatus(
-          `Loaded ${names.length - missing.length}/${names.length} unique names.\nMissing:\n- ` +
+          `Loaded ${uniqItems.length - missing.length}/${uniqItems.length} unique name(s).\nMissing:\n- ` +
           missing.slice(0, 20).join('\n- ') +
           (missing.length > 20 ? `\n…and ${missing.length - 20} more` : '')
         );
       }
-
-      renderCards(items, nameToCard);
     } catch (e) {
       console.error(e);
       setStatus(String(e?.message || e));
@@ -479,63 +403,116 @@ Dark Ritual
     }
   }
 
-  // ---------- Art modal (placeholder hook) ----------
-  function openArtModal(cardName) {
-    els.artTitle.textContent = `Choose Art — ${cardName}`;
-    els.artBody.innerHTML = `
-      <div class="inline-hint">
-        Next step: we’ll call <code>/cards/search?order=released&q=oracleid:...</code> using this card’s <code>oracle_id</code>,
-        then render a selectable grid of prints (images) here.
-      </div>
-    `;
+  // ---------- Art swap modal ----------
+  let MODAL_KEY = null;
+
+  function openArtModalFor(nameKey) {
+    MODAL_KEY = nameKey;
+    const item = ITEMS.find(x => x.nameKey === nameKey);
+    const base = KEY_TO_CARD.get(nameKey);
+
+    if (!item || !base?.oracle_id) return;
+
+    els.artTitle.textContent = `Choose Art — ${item.displayName}`;
+    els.artPicked.hidden = true;
+    els.artBody.innerHTML = `<div class="inline-hint">Loading prints…</div>`;
     els.artBackdrop.classList.add('open');
-  }
-  function closeArtModal() {
-    els.artBackdrop.classList.remove('open');
+
+    loadPrintsIntoModal(base.oracle_id, item.selectedPrintId);
   }
 
-  // ---------- Print sheet (scaffold) ----------
-  function buildPrintSheet() {
-    if (!LAST_ITEMS.length || !LAST_NAME_TO_CARD.size) {
-      setStatus('Load cards first.');
-      return;
+  async function loadPrintsIntoModal(oracleId, selectedPrintId) {
+    try {
+      let prints = PRINT_CACHE.get(oracleId);
+      if (!prints) {
+        prints = await fetchPrintsForOracle(oracleId);
+        PRINT_CACHE.set(oracleId, prints);
+      }
+
+      // Filter to things that actually have front images
+      const good = prints
+        .map(p => ({
+          id: p.id,
+          set: (p.set || '').toUpperCase(),
+          cn: p.collector_number || '—',
+          artist: p.artist || '—',
+          released: p.released_at || '—',
+          img: getFrontImage(p, 'small') || getFrontImage(p, 'normal') || getFrontImage(p, 'large')
+        }))
+        .filter(p => !!p.img);
+
+      if (!good.length) {
+        els.artBody.innerHTML = `<div class="inline-hint">No printable images found for this card.</div>`;
+        return;
+      }
+
+      els.artBody.innerHTML = `
+        <div class="inline-hint" style="margin-bottom:10px">
+          Click a print to select its art. (${good.length} found)
+        </div>
+        <div class="prints-grid">
+          ${good.map(p => `
+            <div class="print-tile" data-print-id="${esc(p.id)}" data-img="${esc(p.img)}">
+              <img src="${esc(p.img)}" alt="${esc(p.set)} ${esc(p.cn)}" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">
+              <div class="print-cap">
+                <div class="line1">
+                  <strong>${esc(p.set)}</strong>
+                  <span class="badge ${p.id === selectedPrintId ? 'good' : ''}">${p.id === selectedPrintId ? 'Selected' : `#${esc(p.cn)}`}</span>
+                </div>
+                <div class="line2">${esc(p.released)} · ${esc(p.artist)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } catch (e) {
+      console.error(e);
+      els.artBody.innerHTML = `<div class="inline-hint">Failed to load prints: ${esc(e?.message || String(e))}</div>`;
     }
+  }
+
+  function closeArtModal() {
+    els.artBackdrop.classList.remove('open');
+    MODAL_KEY = null;
+  }
+
+  function applySelectedPrintToItem(nameKey, printId, imgUrl) {
+    const idx = ITEMS.findIndex(x => x.nameKey === nameKey);
+    if (idx < 0) return;
+
+    ITEMS[idx].selectedPrintId = printId;
+    // store a normal-ish image for the tile display; "small" is fine too but normal looks nicer
+    // we only have whatever was in the modal; that might be small. We'll ask scryfall for a better one:
+    ITEMS[idx].selectedImg = imgUrl;
+
+    // Update badge feedback in modal
+    els.artPicked.hidden = false;
+    els.artPicked.textContent = 'Selected';
+
+    renderCards();
+  }
+
+  // ---------- Print sheet (stub for now, stays functional)
+  function buildPrintSheet() {
+    if (!ITEMS.length) { setStatus('Load cards first.'); return; }
 
     const scale = Number(els.scalePct.value || 100) / 100;
     const gapMm = Number(els.bleed.value || 0);
 
-    // For now, we just confirm settings; the next iteration will generate a full print layout.
-    // This keeps the “baseline works” behavior while we add the real print geometry.
     setStatus(
-      `Print settings:\n- Scale: ${(scale * 100).toFixed(0)}%\n- Gap/Bleed: ${gapMm}mm\n\n` +
-      `Next: render a print-ready grid at MTG card size with these settings.`
+      `Print settings:\n- Scale: ${(scale * 100).toFixed(0)}%\n- Gap/Bleed: ${gapMm}mm\n\nNext: render print grid (work-in-progress).`
     );
 
-    // leave printArea empty for now
     els.printArea.hidden = true;
     els.printArea.innerHTML = '';
   }
 
   function doPrint() {
-    // Printing only makes sense after we generate the sheet. We'll keep it safe for now.
     if (!els.printArea.innerHTML.trim()) {
-      setStatus('Build the print sheet first.');
+      setStatus('Build the print sheet first. (Print grid output is not rendered yet.)');
       return;
     }
     window.print();
-  }
-
-  // ---------- Scale sync ----------
-  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-  function syncScaleFromNumber() {
-    let v = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
-    els.scalePct.value = v;
-    els.scaleRange.value = String(v);
-  }
-  function syncScaleFromRange() {
-    let v = clamp(parseInt(els.scaleRange.value, 10) || 100, 50, 140);
-    els.scalePct.value = v;
-    els.scaleRange.value = String(v);
   }
 
   // ---------- Events ----------
@@ -547,45 +524,46 @@ Dark Ritual
       els.cards.innerHTML = '';
       els.empty.hidden = false;
       setStatus('');
-      LAST_ITEMS = [];
-      LAST_NAME_TO_CARD = new Map();
+      ITEMS = [];
+      KEY_TO_CARD = new Map();
+      PRINT_CACHE.clear();
     });
 
-    els.scalePct.addEventListener('change', syncScaleFromNumber);
-    els.scaleRange.addEventListener('input', syncScaleFromRange);
     els.scaleDown.addEventListener('click', () => {
-      els.scalePct.value = String((parseInt(els.scalePct.value, 10) || 100) - 1);
-      syncScaleFromNumber();
+      els.scalePct.value = String(clamp((parseInt(els.scalePct.value, 10) || 100) - 1, 50, 140));
     });
     els.scaleUp.addEventListener('click', () => {
-      els.scalePct.value = String((parseInt(els.scalePct.value, 10) || 100) + 1);
-      syncScaleFromNumber();
+      els.scalePct.value = String(clamp((parseInt(els.scalePct.value, 10) || 100) + 1, 50, 140));
+    });
+    els.scalePct.addEventListener('change', () => {
+      els.scalePct.value = String(clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140));
     });
 
     els.buildBtn.addEventListener('click', buildPrintSheet);
     els.printBtn.addEventListener('click', doPrint);
 
-    // Delegate tile actions
     els.cards.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-action]');
+      const btn = e.target.closest('button[data-action="art"]');
       if (!btn) return;
-      const act = btn.getAttribute('data-action');
-      const name = btn.getAttribute('data-name');
-      if (act === 'art') openArtModal(name);
+      const k = btn.getAttribute('data-key');
+      openArtModalFor(k);
     });
 
     els.artClose.addEventListener('click', closeArtModal);
-    els.artBackdrop.addEventListener('click', (e) => {
-      if (e.target === els.artBackdrop) closeArtModal();
-    });
+    els.artBackdrop.addEventListener('click', (e) => { if (e.target === els.artBackdrop) closeArtModal(); });
 
-    // Initialize scale UI
-    syncScaleFromNumber();
+    // Click a print tile -> select
+    els.artBody.addEventListener('click', (e) => {
+      const tile = e.target.closest('.print-tile');
+      if (!tile || !MODAL_KEY) return;
+      const pid = tile.getAttribute('data-print-id');
+      const img = tile.getAttribute('data-img');
+      applySelectedPrintToItem(MODAL_KEY, pid, img);
+    });
   });
 </script>
 
 <script>
-  // Background video logic (same as your existing pages)
   document.addEventListener('DOMContentLoaded', () => {
     const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
@@ -596,10 +574,7 @@ Dark Ritual
     const vid  = document.getElementById('bgVideoEl');
     if (!wrap || !vid) return;
 
-    if (!allowVideo) {
-      wrap.style.display = 'none';
-      return;
-    }
+    if (!allowVideo) { wrap.style.display = 'none'; return; }
 
     vid.src = '/assets/Blackhole_Animtation.mp4';
 
@@ -616,7 +591,6 @@ Dark Ritual
 </script>
 
 <script>
-  // Partials loader (same pattern as your Analyzer page)
   (async () => {
     try {
       async function loadPartial(url) {
