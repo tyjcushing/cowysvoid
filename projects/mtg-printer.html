@@ -4,163 +4,112 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Print Sheet Builder — Cowy’s Void</title>
-  <meta name="description" content="Paste card names, pick arts, export a print-ready PDF." />
+  <meta name="description" content="Paste a list of Magic cards, select specific prints, and generate a print-ready PDF." />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
   <link rel="stylesheet" href="/assets/css/void.css">
-
   <style>
-    .controls-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; }
-    .controls-row .control { display:flex; gap:8px; align-items:center; }
-    .inline-hint code { font-size: .95em; }
+    /* Page-specific styling while respecting your existing tokens */
+    .controls-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+    .control { display:flex; gap:8px; align-items:center; }
+    .control select, .control input[type="number"] { min-height: 38px; }
+    .pill-lite { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+    .status-box { margin-top:10px; white-space:pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; opacity: .95; }
+    .cards-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top:12px; }
+    .card-tile { display:flex; flex-direction:column; gap:10px; padding: 12px; border-radius: 14px; border:1px solid rgba(255,255,255,.12); background: rgba(10,10,16,.55); box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .card-top { display:flex; gap:10px; align-items:flex-start; }
+    .card-meta { flex: 1; min-width: 0; }
+    .card-meta .name { font-weight: 700; line-height:1.15; }
+    .card-meta .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .qty-badge { align-self:flex-start; padding: 4px 10px; border-radius: 999px; font-weight: 700; background: rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.14); }
+    .img-wrap { display:flex; justify-content:center; }
+    .img-wrap img { width: 100%; max-width: 320px; height: auto; border-radius: 12px; border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.25); }
+    .tile-actions { display:flex; gap:10px; align-items:center; justify-content:space-between; }
+    .mini { font-size: 12px; color: var(--muted); }
+    .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
 
-    .btn-group { display:flex; gap:10px; align-items:center; }
-
-    /* Picklist = white text, black bg */
-    .select {
-      appearance: none;
-      background: #000;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,.18);
+    /* White text + black background picklist (your request) */
+    select.pick-black {
+      background: #000 !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,.20);
       border-radius: 12px;
-      padding: 10px 12px;
-      line-height: 1;
-      font: inherit;
+      padding: 8px 10px;
+      min-height: 40px;
     }
-    .select:focus { outline: 2px solid rgba(255,255,255,.22); outline-offset: 2px; }
-
-    .card-list {
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .card-tile {
-      display:flex;
-      gap:12px;
-      align-items:flex-start;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.20);
-      backdrop-filter: blur(6px);
-    }
-
-    .thumb {
-      width: 96px;
-      height: auto;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
-      flex: 0 0 auto;
-    }
-
-    .tile-meta { min-width: 0; flex: 1 1 auto; }
-    .tile-meta .name { font-weight: 750; }
-    .tile-meta .sub { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
-    .tile-actions { margin-top: 10px; display:flex; gap:10px; flex-wrap:wrap; }
-
-    .status {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.18);
-      color: var(--muted);
-      white-space: pre-wrap;
-    }
-
-    .empty { padding: 18px 14px; border-radius: 16px; border: 1px dashed rgba(255,255,255,.18); color: var(--muted); margin-top: 12px; }
-
-    .spinner { display:inline-flex; align-items:center; gap:8px; color: var(--muted); }
-    .spin-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: var(--accent);
-      display:inline-block;
-      animation: pulse 1s infinite ease-in-out;
-    }
-    @keyframes pulse { 0%,100%{ transform: scale(.8); opacity:.6 } 50%{ transform: scale(1.2); opacity:1 } }
+    select.pick-black option { background:#000; color:#fff; }
 
     /* Modal */
     .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
+      position: fixed; inset: 0;
       background: rgba(0,0,0,.65);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 9999;
       padding: 16px;
     }
-    .modal-backdrop.open { display:flex; }
-
     .modal {
-      width: min(980px, 100%);
-      max-height: min(86vh, 860px);
+      width: min(980px, 96vw);
+      max-height: min(90vh, 900px);
       overflow: hidden;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.82);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(10,10,16,.92);
+      box-shadow: 0 30px 80px rgba(0,0,0,.6);
       display:flex;
-      flex-direction: column;
+      flex-direction:column;
     }
-
-    .modal-head {
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 12px 14px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
+    .modal-header {
       position: sticky;
       top: 0;
-      background: rgba(0,0,0,.86);
       z-index: 2;
+      display:flex;
+      gap: 12px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      background: rgba(10,10,16,.96);
     }
-    .modal-title { font-weight: 750; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
+    .modal-title { font-weight: 800; }
     .modal-body {
-      padding: 12px;
-      overflow: auto;
+      padding: 12px 14px 14px;
+      overflow:auto;
     }
-
-    .print-grid {
+    .prints-grid {
       display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
     }
-
     .print-tile {
-      border-radius: 14px;
-      border: 2px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.05);
+      border-radius: 12px;
+      border: 2px solid transparent;
+      background: rgba(255,255,255,.04);
       padding: 8px;
       cursor: pointer;
-      transition: transform .08s ease, border-color .08s ease, box-shadow .08s ease;
+      transition: transform .08s ease, border-color .08s ease, background .08s ease;
       user-select: none;
     }
-    .print-tile:hover { transform: translateY(-1px); }
-    .print-tile.selected {
-      border-color: rgba(255,255,255,.90);
-      box-shadow: 0 0 0 2px rgba(255,255,255,.18) inset, 0 10px 24px rgba(0,0,0,.35);
-    }
+    .print-tile:hover { transform: translateY(-1px); background: rgba(255,255,255,.06); }
+    .print-tile.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,0,0,.35) inset; }
     .print-tile img {
       width: 100%;
       height: auto;
       border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
       display:block;
     }
-    .print-tile .cap {
+    .print-cap {
       margin-top: 6px;
+      font-size: 11px;
       color: var(--muted);
-      font-size: 12px;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
+      line-height: 1.2;
     }
+
+    /* helper */
+    .hidden { display:none !important; }
   </style>
 </head>
 
@@ -176,18 +125,18 @@
       <section class="panel page-panel solid-surface">
         <header class="page">
           <h1>Print Sheet Builder</h1>
-          <p class="sub">
-            Paste card names (qty optional). Choose alternate arts per card, then click <strong>Print</strong> to generate a clean, print-ready <strong>PDF</strong>.
-          </p>
+          <p class="sub">Paste cards, choose specific art, then generate a print-ready PDF.</p>
         </header>
 
         <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
           <label class="input input-solid solid-input" style="align-items:start">
-            <textarea id="cardInput" class="textarea" placeholder="Examples:
+            <textarea id="deckInput" class="textarea" placeholder="Examples:
 1 Sol Ring
-2x Dark Ritual
+3x Dark Ritual
 Arcane Signet
-..."></textarea>
+Commander: Alela, Artful Provocateur
+
+(Quantities supported; comments with # or // ignored)"></textarea>
           </label>
         </div>
 
@@ -195,610 +144,709 @@ Arcane Signet
           <button id="loadBtn" class="btn">Load Cards</button>
           <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
 
-          <span class="control">
-            <label for="gapSel"><strong>Bleed / gap</strong></label>
-            <select id="gapSel" class="select">
+          <span id="spinner" class="spinner" hidden>
+            <span class="spin-dot" aria-hidden="true"></span>
+            <span class="inline-hint">Loading…</span>
+          </span>
+
+          <span class="pill-lite">
+            <strong>Scale</strong>
+            <span class="control" style="display:inline-flex; gap:6px; margin-left:8px;">
+              <button id="scaleDown" class="btn ghost solid-ghost-btn" type="button" aria-label="Decrease scale">−</button>
+              <input id="scalePct" type="number" min="50" max="140" step="1" value="100"
+                     style="width:84px; text-align:center; border-radius:12px;"
+                     aria-label="Scale percent">
+              <button id="scaleUp" class="btn ghost solid-ghost-btn" type="button" aria-label="Increase scale">+</button>
+            </span>
+          </span>
+
+          <span class="pill-lite control" title="Gap / bleed between cards on the PDF sheet">
+            <label for="gapMm"><strong>Gap</strong></label>
+            <select id="gapMm" class="pick-black" aria-label="Gap setting">
               <option value="0">No gap (0mm)</option>
-              <option value="0.2">0.2mm</option>
+              <option value="0.2" selected>0.2mm</option>
               <option value="3">3mm</option>
             </select>
           </span>
 
-          <div class="btn-group">
+          <span class="pill-lite control">
+            <label for="layout"><strong>Layout</strong></label>
+            <select id="layout" class="pick-black" aria-label="Print layout">
+              <option value="A4_3x3" selected>A4 · 3×3</option>
+              <option value="LETTER_3x3">US Letter · 3×3</option>
+              <option value="A4_3x4">A4 · 3×4 (tight)</option>
+              <option value="LETTER_3x4">US Letter · 3×4 (tight)</option>
+            </select>
+          </span>
+
+          <!-- Combined: build + print -->
+          <span class="pill-lite control">
             <button id="printBtn" class="btn">Print</button>
-            <span id="spinner" class="spinner" hidden>
-              <span class="spin-dot" aria-hidden="true"></span>
-              <span class="inline-hint">Working…</span>
-            </span>
-          </div>
+          </span>
         </div>
 
-        <div class="inline-hint">
-          Case-insensitive loading (Scryfall <code>/cards/named?fuzzy=</code>): <code>Sol Ring</code> and <code>sol ring</code> both work.
+        <div class="inline-hint" style="margin-top:8px">
+          Tip: If PDF generation is blank, it usually means the image bytes can’t be fetched (CORS). This version uses a Cloudflare Pages Function proxy.
         </div>
 
-        <div id="status" class="status" hidden></div>
-        <div id="empty" class="empty">Paste some cards and click <strong>Load Cards</strong>.</div>
+        <div id="status" class="status-box"></div>
+      </section>
 
-        <div id="cards" class="card-list" aria-label="Loaded cards"></div>
+      <section class="panel solid-surface">
+        <h2>Cards</h2>
+        <div id="empty" class="empty">Paste cards and click Load Cards.</div>
+        <div id="cards" class="cards-grid"></div>
       </section>
     </main>
   </div>
 
-  <!-- Art Picker Modal -->
-  <div id="artBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="artTitle">
+  <!-- Art Modal -->
+  <div id="artBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Choose alternate art">
     <div class="modal">
-      <div class="modal-head">
-        <div id="artTitle" class="modal-title">Choose print</div>
-        <button id="artClose" class="btn ghost solid-ghost-btn" type="button">Close</button>
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="artTitle">Choose Art</div>
+          <div class="inline-hint" id="artSub" style="margin-top:4px">Click an image to select.</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button id="artClose" class="btn ghost solid-ghost-btn" type="button">Close</button>
+        </div>
       </div>
-      <div id="artBody" class="modal-body">
-        <div class="inline-hint">Loading prints…</div>
+      <div class="modal-body">
+        <div id="artBody" class="prints-grid"></div>
       </div>
     </div>
   </div>
 
-<script>
-/* =========================================================
-   Print Sheet Builder — single-file
-   - Robust load: /cards/named?fuzzy= (case-insensitive)
-   - Art swap: oracleid prints search
-   - Print: generates a real PDF via pdf-lib (no browser headers/footers)
-   ========================================================= */
+  <script>
+    // ---------- Constants ----------
+    const SCRY_COLLECTION = 'https://api.scryfall.com/cards/collection';
+    const SCRY_SEARCH_PRINTS = (oracleId) =>
+      `https://api.scryfall.com/cards/search?order=released&q=oracleid%3A${encodeURIComponent(oracleId)}&unique=prints`;
 
-/** FIX: esc() now safely handles non-strings (numbers/null/etc.) */
-function esc(v) {
-  const s = (v == null) ? '' : String(v);
-  return s.replace(/[&<>\"']/g, m => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[m]));
-}
+    // Use "normal" for UI and "png" for PDF embedding if available
+    const UI_IMG = (card) => card?.image_uris?.normal || card?.card_faces?.[0]?.image_uris?.normal || '';
+    const PDF_IMG = (card) => card?.image_uris?.png || card?.image_uris?.large || card?.image_uris?.normal ||
+                               card?.card_faces?.[0]?.image_uris?.png || card?.card_faces?.[0]?.image_uris?.large || card?.card_faces?.[0]?.image_uris?.normal || '';
 
-function normalizeName(s = '') {
-  return String(s).normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
-}
+    // Your proxy endpoint (Cloudflare Pages Function) to defeat CORS for image byte fetch
+    const PROXY_IMG = (url) => `/img?url=${encodeURIComponent(url)}`;
 
-function stripNameAnnotations(s = '') {
-  s = String(s).trim();
-  const cuts = [s.indexOf('['), s.indexOf('{'), s.indexOf('('), s.indexOf('^^')].filter(i => i >= 0);
-  if (!cuts.length) return s;
-  return s.slice(0, Math.min(...cuts)).trim();
-}
+    const els = {
+      input: document.getElementById('deckInput'),
+      loadBtn: document.getElementById('loadBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      spinner: document.getElementById('spinner'),
+      cards: document.getElementById('cards'),
+      empty: document.getElementById('empty'),
+      status: document.getElementById('status'),
 
-function parseCardText(text) {
-  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
-  const items = [];
-  for (let raw of lines) {
-    let line = String(raw || '').trim();
-    if (!line) continue;
-    line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
-    if (!line) continue;
+      scaleDown: document.getElementById('scaleDown'),
+      scaleUp: document.getElementById('scaleUp'),
+      scalePct: document.getElementById('scalePct'),
+      gapMm: document.getElementById('gapMm'),
+      layout: document.getElementById('layout'),
+      printBtn: document.getElementById('printBtn'),
 
-    let m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
-    if (m) {
-      items.push({ qty: parseInt(m[1], 10), name: stripNameAnnotations(m[2]) });
-      continue;
+      artBackdrop: document.getElementById('artBackdrop'),
+      artTitle: document.getElementById('artTitle'),
+      artSub: document.getElementById('artSub'),
+      artBody: document.getElementById('artBody'),
+      artClose: document.getElementById('artClose'),
+    };
+
+    // ---------- Safe helpers ----------
+    function esc(v) {
+      const s = (v == null) ? '' : String(v);
+      return s.replace(/[&<>\"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[m]));
     }
-    items.push({ qty: 1, name: stripNameAnnotations(line) });
-  }
-  return items;
-}
+    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+    function setStatus(msg) { els.status.textContent = msg || ''; }
 
-function getFrontImage(card) {
-  if (card?.image_uris?.normal) return card.image_uris.normal;
-  if (Array.isArray(card?.card_faces) && card.card_faces[0]?.image_uris?.normal) return card.card_faces[0].image_uris.normal;
-  return null;
-}
-
-function mmToPt(mm) { return mm * 72 / 25.4; }
-
-const els = {
-  input: document.getElementById('cardInput'),
-  loadBtn: document.getElementById('loadBtn'),
-  clearBtn: document.getElementById('clearBtn'),
-  gapSel: document.getElementById('gapSel'),
-  printBtn: document.getElementById('printBtn'),
-  cards: document.getElementById('cards'),
-  empty: document.getElementById('empty'),
-  status: document.getElementById('status'),
-  spinner: document.getElementById('spinner'),
-
-  artBackdrop: document.getElementById('artBackdrop'),
-  artTitle: document.getElementById('artTitle'),
-  artBody: document.getElementById('artBody'),
-  artClose: document.getElementById('artClose')
-};
-
-function setStatus(msg) {
-  els.status.hidden = !msg;
-  els.status.textContent = msg || '';
-}
-
-let ITEMS = [];              // [{ key, name, qty, card, selectedPrint:{id,img} }]
-let PRINT_CACHE = new Map(); // oracleId -> prints[]
-let MODAL_KEY = null;
-
-function itemKey(name) { return normalizeName(name); }
-
-/* ----------------------------
-   Scryfall: robust card resolve
-   Uses /cards/named?fuzzy=
----------------------------- */
-
-async function fetchNamedFuzzy(name) {
-  const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`;
-  const r = await fetch(url);
-  if (!r.ok) return null;
-  const j = await r.json();
-  if (j && j.object === 'card') return j;
-  return null;
-}
-
-async function resolveUniqueCards(names) {
-  const uniqNorm = [...new Set(names.map(n => normalizeName(n)).filter(Boolean))];
-  const normToOriginal = new Map();
-  for (const n of names) {
-    const k = normalizeName(n);
-    if (k && !normToOriginal.has(k)) normToOriginal.set(k, n);
-  }
-
-  const out = new Map(); // norm -> card
-  const MAX = 6;
-  let idx = 0;
-
-  async function worker() {
-    while (idx < uniqNorm.length) {
-      const i = idx++;
-      const norm = uniqNorm[i];
-      const original = normToOriginal.get(norm) || norm;
-      const card = await fetchNamedFuzzy(original);
-      if (card) out.set(norm, card);
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(MAX, uniqNorm.length) }, worker));
-  return out;
-}
-
-/* ----------------------------
-   Prints (alt arts)
----------------------------- */
-
-async function fetchPrintsForOracle(oracleId) {
-  if (!oracleId) return [];
-  if (PRINT_CACHE.has(oracleId)) return PRINT_CACHE.get(oracleId);
-
-  const all = [];
-  let url = `https://api.scryfall.com/cards/search?order=released&q=oracleid%3A${encodeURIComponent(oracleId)}&unique=prints`;
-  while (url) {
-    const r = await fetch(url);
-    if (!r.ok) break;
-    const j = await r.json();
-    (j.data || []).forEach(c => all.push(c));
-    url = j.has_more ? j.next_page : null;
-  }
-
-  all.sort((a,b) => String(b.released_at || '').localeCompare(String(a.released_at || '')));
-  PRINT_CACHE.set(oracleId, all);
-  return all;
-}
-
-/* ----------------------------
-   Render main list
----------------------------- */
-
-function renderCards() {
-  const list = ITEMS.map(it => {
-    const card = it.card;
-    const img = it.selectedPrint?.img || getFrontImage(card);
-
-    return `
-      <article class="card-tile">
-        <img class="thumb" src="${esc(img || '')}" alt="${esc(it.name)}" loading="lazy" referrerpolicy="no-referrer"
-          onerror="this.style.opacity='.3';">
-        <div class="tile-meta">
-          <div class="name">${esc(it.qty)}× ${esc(it.name)}</div>
-          <div class="sub">${card ? esc(card.type_line || '') : 'Not found'}</div>
-          <div class="tile-actions">
-            <button class="btn ghost solid-ghost-btn" type="button" data-action="art" data-key="${esc(it.key)}" ${card ? '' : 'disabled'}>
-              Swap art
-            </button>
-          </div>
-        </div>
-      </article>
-    `;
-  }).join('');
-
-  els.cards.innerHTML = list;
-  els.empty.hidden = ITEMS.length > 0;
-}
-
-/* ----------------------------
-   Modal
----------------------------- */
-
-async function openArtModalFor(key) {
-  const it = ITEMS.find(x => x.key === key);
-  if (!it || !it.card) return;
-
-  MODAL_KEY = key;
-  els.artTitle.textContent = `Choose print — ${it.name}`;
-  els.artBody.innerHTML = `<div class="inline-hint">Loading prints…</div>`;
-  els.artBackdrop.classList.add('open');
-
-  try {
-    const prints = await fetchPrintsForOracle(it.card.oracle_id);
-    if (!prints.length) {
-      els.artBody.innerHTML = `<div class="inline-hint">No alternate prints found.</div>`;
-      return;
+    function stripNameAnnotations(s = '') {
+      s = String(s || '').trim();
+      const cuts = [s.indexOf('['), s.indexOf('{'), s.indexOf('('), s.indexOf('^^')].filter(i => i >= 0);
+      if (!cuts.length) return s;
+      return s.slice(0, Math.min(...cuts)).trim();
     }
 
-    const selectedId = it.selectedPrint?.id || it.card.id;
+    function parseDeckText(text) {
+      const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
+      const items = [];
+      let section = 'Deck';
 
-    const tiles = prints.map(p => {
-      const img = getFrontImage(p);
-      const cap = `${String(p.set || '').toUpperCase()} · #${p.collector_number || ''} · ${p.released_at || ''}`;
-      const isSel = p.id === selectedId;
-      return `
-        <div class="print-tile ${isSel ? 'selected' : ''}" role="button" tabindex="0"
-             data-print-id="${esc(p.id)}" data-img="${esc(img || '')}">
-          <img src="${esc(img || '')}" alt="${esc(p.name)}" loading="lazy" referrerpolicy="no-referrer"
-            onerror="this.style.opacity='.3'">
-          <div class="cap">${esc(cap)}</div>
-        </div>
-      `;
-    }).join('');
+      for (let raw of lines) {
+        let line = String(raw || '').trim();
+        if (!line) continue;
+        line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
+        if (!line) continue;
 
-    els.artBody.innerHTML = `<div class="print-grid">${tiles}</div>`;
-  } catch (e) {
-    console.warn(e);
-    els.artBody.innerHTML = `<div class="inline-hint">Failed to load prints.</div>`;
-  }
-}
+        if (/^commander:?$/i.test(line))   { section = 'Commander'; continue; }
+        if (/^companion:?$/i.test(line))   { section = 'Companion'; continue; }
+        if (/^deck:?$/i.test(line))        { section = 'Deck';      continue; }
+        if (/^sideboard:?$/i.test(line))   { section = 'Sideboard'; continue; }
+        if (/^maybeboard:?$/i.test(line))  { section = 'Maybeboard';continue; }
 
-function closeArtModal() {
-  MODAL_KEY = null;
-  els.artBackdrop.classList.remove('open');
-}
+        let m = line.match(/^commander:\s*(.+)$/i);
+        if (m) { items.push({ qty: 1, name: stripNameAnnotations(m[1]), section: 'Commander' }); continue; }
 
-function applySelectedPrintToItem(key, printId, imgUrl) {
-  const it = ITEMS.find(x => x.key === key);
-  if (!it) return;
-  it.selectedPrint = { id: printId, img: imgUrl };
-  renderCards();
-}
+        m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
+        if (m) { items.push({ qty: parseInt(m[1], 10), name: stripNameAnnotations(m[2]), section }); continue; }
 
-/* ----------------------------
-   PDF generation (pdf-lib)
-   This avoids browser headers/footers entirely.
----------------------------- */
-
-async function loadPdfLib() {
-  if (window.PDFLib) return true;
-
-  const s = document.createElement('script');
-  s.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
-  s.async = true;
-
-  const ok = await new Promise(resolve => {
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
-    document.head.appendChild(s);
-  });
-
-  return ok && !!window.PDFLib;
-}
-
-async function fetchAsBytes(url) {
-  const r = await fetch(url, { mode: 'cors' });
-  if (!r.ok) throw new Error('Image fetch failed: ' + r.status);
-  return new Uint8Array(await r.arrayBuffer());
-}
-
-async function buildPdfBlob() {
-  const pageW = 612; // 8.5 * 72
-  const pageH = 792; // 11 * 72
-
-  // MTG card size in mm (63x88)
-  const cardWpt = mmToPt(63);
-  const cardHpt = mmToPt(88);
-
-  const gapMm = parseFloat(els.gapSel.value || '0');
-  const gapPt = mmToPt(gapMm);
-
-  // 3x3 grid per letter
-  const cols = 3, rows = 3;
-  const perPage = cols * rows;
-
-  const totalW = cols * cardWpt + (cols - 1) * gapPt;
-  const totalH = rows * cardHpt + (rows - 1) * gapPt;
-
-  const marginX = (pageW - totalW) / 2;
-  const marginY = (pageH - totalH) / 2;
-
-  const imgs = [];
-  for (const it of ITEMS) {
-    if (!it.card) continue;
-    const img = it.selectedPrint?.img || getFrontImage(it.card);
-    if (!img) continue;
-    for (let i = 0; i < (it.qty || 1); i++) imgs.push(img);
-  }
-
-  if (!imgs.length) throw new Error('No printable images.');
-
-  const { PDFDocument } = window.PDFLib;
-  const pdfDoc = await PDFDocument.create();
-
-  const bytesCache = new Map(); // url -> Uint8Array
-  const embedCache = new Map(); // url -> embedded image
-
-  for (let i = 0; i < imgs.length; i += perPage) {
-    const page = pdfDoc.addPage([pageW, pageH]);
-    const slice = imgs.slice(i, i + perPage);
-
-    for (let n = 0; n < perPage; n++) {
-      const url = slice[n];
-      if (!url) continue;
-
-      let emb = embedCache.get(url);
-      if (!emb) {
-        let bytes = bytesCache.get(url);
-        if (!bytes) {
-          bytes = await fetchAsBytes(url);
-          bytesCache.set(url, bytes);
-        }
-
-        const isPng = /\.png(\?|$)/i.test(url);
-        emb = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
-        embedCache.set(url, emb);
+        items.push({ qty: 1, name: stripNameAnnotations(line), section });
       }
-
-      const c = n % cols;
-      const r = Math.floor(n / cols);
-
-      // pdf-lib origin is bottom-left
-      const x = marginX + c * (cardWpt + gapPt);
-      const y = pageH - marginY - cardHpt - r * (cardHpt + gapPt);
-
-      page.drawImage(emb, { x, y, width: cardWpt, height: cardHpt });
-    }
-  }
-
-  const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: 'application/pdf' });
-}
-
-async function printPdf() {
-  els.spinner.hidden = false;
-  setStatus('');
-
-  // Open tab synchronously to avoid popup blockers
-  const w = window.open('', '_blank');
-  if (!w) {
-    setStatus('Popup blocked.\nAllow popups for this site, then click Print again.');
-    els.spinner.hidden = true;
-    return;
-  }
-
-  try {
-    const ok = await loadPdfLib();
-    if (!ok) {
-      w.document.write('<!doctype html><title>PDF error</title><body style="font-family:sans-serif">Failed to load PDF library (pdf-lib). Check CSP/script-src.</body>');
-      w.document.close();
-      setStatus('Failed to load pdf-lib. If you use CSP, allow https://unpkg.com in script-src.');
-      return;
+      return items;
     }
 
-    const blob = await buildPdfBlob();
-    const url = URL.createObjectURL(blob);
-    w.location.replace(url);
-
-    setStatus('PDF generated and opened in a new tab.\nPrint from that tab.');
-  } catch (e) {
-    console.warn(e);
-    w.document.write('<!doctype html><title>PDF error</title><body style="font-family:sans-serif">PDF generation failed. Check console.</body>');
-    w.document.close();
-    setStatus('PDF generation failed: ' + (e?.message || String(e)));
-  } finally {
-    els.spinner.hidden = true;
-  }
-}
-
-/* ----------------------------
-   Load / Clear
----------------------------- */
-
-async function load() {
-  els.spinner.hidden = false;
-  setStatus('');
-
-  try {
-    const parsed = parseCardText(els.input.value);
-    if (!parsed.length) {
-      ITEMS = [];
-      renderCards();
-      setStatus('No cards found in input.');
-      return;
+    function countByName(items) {
+      const m = new Map();
+      for (const it of items) {
+        if (!it?.name) continue;
+        const k = it.name;
+        m.set(k, (m.get(k) || 0) + (it.qty || 1));
+      }
+      return m;
     }
 
-    const temp = parsed.map(it => ({
-      key: itemKey(it.name),
-      name: it.name,
-      qty: it.qty || 1,
-      card: null,
-      selectedPrint: null
-    }));
+    // ---------- State (keyed by oracle_id to fix capitalization and multi-prints) ----------
+    // ITEM = { oracle_id, name, qty, chosen_print_id, chosen_img_ui, chosen_img_pdf }
+    let ITEMS = [];
+    const ORACLE_TO_CARD = new Map();       // oracle_id -> canonical card object (from collection)
+    const ORACLE_TO_PRINTS = new Map();     // oracle_id -> array of prints (search results)
+    const PRINT_CACHE = new Map();          // printId -> print card object
+    let MODAL_ORACLE = null;
 
-    const normToCard = await resolveUniqueCards(temp.map(x => x.name));
-    for (const it of temp) it.card = normToCard.get(it.key) || null;
+    // ---------- Scryfall ----------
+    async function fetchCollectionByNames(names) {
+      const CHUNK = 70;
+      const uniq = [...new Set(names.filter(Boolean))];
+      const out = [];
 
-    ITEMS = temp;
-    renderCards();
+      for (let i = 0; i < uniq.length; i += CHUNK) {
+        const slice = uniq.slice(i, i + CHUNK);
+        const body = { identifiers: slice.map(n => ({ name: n })) };
 
-    const missing = ITEMS.filter(it => !it.card).map(it => it.name);
-    if (missing.length) {
-      setStatus(
-        `Loaded ${ITEMS.length} line item(s).\n` +
-        `Not found (${missing.length}):\n- ${missing.slice(0, 14).join('\n- ')}${missing.length > 14 ? `\n… +${missing.length - 14} more` : ''}`
-      );
-    } else {
-      setStatus(`Loaded ${ITEMS.length} line item(s).`);
-    }
-  } catch (e) {
-    console.warn(e);
-    setStatus('Load failed. Check console for details.');
-  } finally {
-    els.spinner.hidden = true;
-  }
-}
-
-function clearAll() {
-  els.input.value = '';
-  els.cards.innerHTML = '';
-  els.empty.hidden = false;
-  setStatus('');
-  ITEMS = [];
-  PRINT_CACHE.clear();
-}
-
-/* ----------------------------
-   Events
----------------------------- */
-
-document.addEventListener('DOMContentLoaded', () => {
-  els.loadBtn.addEventListener('click', load);
-  els.clearBtn.addEventListener('click', clearAll);
-
-  els.printBtn.addEventListener('click', () => {
-    if (!ITEMS.length) {
-      setStatus('No cards loaded. Click "Load Cards" first.');
-      return;
-    }
-    printPdf();
-  });
-
-  els.cards.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-action="art"]');
-    if (!btn || btn.disabled) return;
-    openArtModalFor(btn.getAttribute('data-key'));
-  });
-
-  els.artClose.addEventListener('click', closeArtModal);
-  els.artBackdrop.addEventListener('click', (e) => {
-    if (e.target === els.artBackdrop) closeArtModal();
-  });
-
-  // Click a print tile -> select (with border)
-  els.artBody.addEventListener('click', (e) => {
-    const tile = e.target.closest('.print-tile');
-    if (!tile || !MODAL_KEY) return;
-
-    els.artBody.querySelectorAll('.print-tile.selected').forEach(n => n.classList.remove('selected'));
-    tile.classList.add('selected');
-
-    applySelectedPrintToItem(
-      MODAL_KEY,
-      tile.getAttribute('data-print-id'),
-      tile.getAttribute('data-img')
-    );
-  });
-
-  els.artBody.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const tile = e.target.closest('.print-tile');
-    if (!tile || !MODAL_KEY) return;
-    e.preventDefault();
-    tile.click();
-  });
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
-  const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
-  const allowVideo = isFast && isWifiLike;
-
-  const wrap = document.getElementById('bgVideo');
-  const vid  = document.getElementById('bgVideoEl');
-  if (!wrap || !vid) return;
-
-  if (!allowVideo) {
-    wrap.style.display = 'none';
-    return;
-  }
-
-  vid.src = '/assets/Blackhole_Animtation.mp4';
-
-  const onReady = () => {
-    wrap.classList.add('ready');
-    const p = vid.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {});
-  };
-
-  vid.addEventListener('canplay', onReady, { once: true });
-  vid.addEventListener('loadeddata', onReady, { once: true });
-  vid.addEventListener('loadedmetadata', () => {
-    wrap.classList.add('ready');
-  }, { once: true });
-});
-</script>
-
-<script>
-(async () => {
-  try {
-    async function loadPartial(url) {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) return null;
-      const html = await res.text();
-      const tpl = document.createElement('template');
-      tpl.innerHTML = html.trim();
-      tpl.content.querySelectorAll('style').forEach(st => {
-        document.head.appendChild(st.cloneNode(true));
-        st.remove();
-      });
-      return tpl.content.firstElementChild || null;
-    }
-
-    const header = document.getElementById('site-header');
-    const navEl = await loadPartial('/partials/nav.html');
-    if (header && navEl) {
-      header.innerHTML = '';
-      header.appendChild(navEl);
-      initNav(header);
-    }
-
-    const discordEl = await loadPartial('/partials/discord.html');
-    if (discordEl) document.body.appendChild(discordEl);
-
-    const footerEl = await loadPartial('/partials/footer.html');
-    if (footerEl) document.body.appendChild(footerEl);
-
-    function initNav(scope) {
-      const btn = scope.querySelector('.menu-toggle');
-      const panel = scope.querySelector('#nav-panel');
-      if (btn && panel) {
-        btn.addEventListener('click', () => {
-          const open = panel.classList.toggle('open');
-          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        const r = await fetch(SCRY_COLLECTION, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
         });
-      }
-      const here = location.pathname.toLowerCase().replace(/\/+$/, '');
-      scope.querySelectorAll('.nav-link').forEach(a => {
-        let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
-        if (href === '/blog/') href = '/blog';
-        if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
-          a.setAttribute('aria-current', 'page');
+
+        if (!r.ok) {
+          console.warn('Scryfall collection error', r.status);
+          continue;
         }
-        if (here.includes('/projects')) a.setAttribute('aria-current', 'page');
-        if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+        const j = await r.json();
+        (j.data || []).forEach(c => out.push(c));
+      }
+      return out;
+    }
+
+    async function fetchPrintsForOracle(oracleId) {
+      if (ORACLE_TO_PRINTS.has(oracleId)) return ORACLE_TO_PRINTS.get(oracleId);
+
+      const url = SCRY_SEARCH_PRINTS(oracleId);
+      const r = await fetch(url);
+      if (!r.ok) {
+        ORACLE_TO_PRINTS.set(oracleId, []);
+        return [];
+      }
+      const j = await r.json();
+      const prints = (j.data || []);
+      ORACLE_TO_PRINTS.set(oracleId, prints);
+
+      for (const p of prints) {
+        if (p?.id) PRINT_CACHE.set(p.id, p);
+      }
+      return prints;
+    }
+
+    // ---------- Render ----------
+    function renderCards() {
+      els.cards.innerHTML = '';
+      els.empty.hidden = ITEMS.length > 0;
+
+      const html = ITEMS.map(it => {
+        const img = it.chosen_img_ui || UI_IMG(ORACLE_TO_CARD.get(it.oracle_id)) || '';
+        const subtitle = (ORACLE_TO_CARD.get(it.oracle_id)?.set_name)
+          ? ORACLE_TO_CARD.get(it.oracle_id).set_name
+          : '—';
+
+        return `
+          <article class="card-tile" data-oracle="${esc(it.oracle_id)}">
+            <div class="card-top">
+              <div class="card-meta">
+                <div class="name">${esc(it.name)}</div>
+                <div class="sub">${esc(subtitle)}</div>
+              </div>
+              <div class="qty-badge">×${it.qty}</div>
+            </div>
+
+            <div class="img-wrap">
+              ${img
+                ? `<img loading="lazy" src="${esc(img)}" alt="${esc(it.name)}">`
+                : `<div class="inline-hint">No image available.</div>`
+              }
+            </div>
+
+            <div class="tile-actions">
+              <div class="mini">Selected: ${it.chosen_print_id ? 'Alt art' : 'Default'}</div>
+              <div class="btn-row">
+                <button class="btn ghost solid-ghost-btn" type="button" data-action="art" data-oracle="${esc(it.oracle_id)}">Swap Art</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      els.cards.innerHTML = html;
+    }
+
+    function openArtModalFor(oracleId) {
+      MODAL_ORACLE = oracleId;
+      const it = ITEMS.find(x => x.oracle_id === oracleId);
+      els.artTitle.textContent = it ? `Choose Art — ${it.name}` : 'Choose Art';
+      els.artSub.textContent = 'Click an image to select. Close stays visible.';
+      els.artBody.innerHTML = `<div class="inline-hint">Loading prints…</div>`;
+      els.artBackdrop.style.display = 'flex';
+
+      // Always visible close: header is sticky; button is in header.
+      fetchPrintsForOracle(oracleId).then(prints => {
+        const currentPrintId = it?.chosen_print_id || null;
+
+        if (!prints.length) {
+          els.artBody.innerHTML = `<div class="inline-hint">No alternate prints found.</div>`;
+          return;
+        }
+
+        els.artBody.innerHTML = prints.map(p => {
+          const ui = UI_IMG(p);
+          const set = p?.set_name || p?.set || '';
+          const cn = p?.collector_number || '';
+          const selected = (currentPrintId && p.id === currentPrintId) ? 'selected' : '';
+          return `
+            <div class="print-tile ${selected}" data-print-id="${esc(p.id)}" data-oracle="${esc(oracleId)}" data-ui="${esc(ui)}">
+              ${ui ? `<img loading="lazy" src="${esc(ui)}" alt="${esc(p.name)}">` : `<div class="inline-hint">No image</div>`}
+              <div class="print-cap">${esc(set)} · ${esc(cn)}</div>
+            </div>
+          `;
+        }).join('');
+      }).catch(err => {
+        console.error(err);
+        els.artBody.innerHTML = `<div class="inline-hint">Failed to load prints.</div>`;
       });
     }
-  } catch (e) {
-    console.warn('Partial load failed:', e);
-  }
-})();
-</script>
+
+    function closeArtModal() {
+      MODAL_ORACLE = null;
+      els.artBackdrop.style.display = 'none';
+      els.artBody.innerHTML = '';
+    }
+
+    function applySelectedPrint(oracleId, printId) {
+      const it = ITEMS.find(x => x.oracle_id === oracleId);
+      const p = PRINT_CACHE.get(printId);
+      if (!it || !p) return;
+
+      it.chosen_print_id = printId;
+      it.chosen_img_ui = UI_IMG(p);
+      it.chosen_img_pdf = PDF_IMG(p);
+      renderCards();
+    }
+
+    // ---------- PDF ----------
+    async function loadPdfLib() {
+      // If already loaded, return
+      if (window.PDFLib) return window.PDFLib;
+
+      // Load pdf-lib from unpkg (CSP must allow script-src https://unpkg.com)
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load pdf-lib'));
+        document.head.appendChild(s);
+      });
+
+      if (!window.PDFLib) throw new Error('pdf-lib loaded but PDFLib is missing');
+      return window.PDFLib;
+    }
+
+    async function fetchAsBytes(url) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`Fetch failed: ${r.status}`);
+      const buf = await r.arrayBuffer();
+      return new Uint8Array(buf);
+    }
+
+    function layoutSpec(value) {
+      // NOTE: real MTG card (poker-ish) = 63mm × 88mm
+      // We'll place images at (cardW * scale) and (cardH * scale).
+      // Page sizes in mm:
+      const A4 = { w: 210, h: 297 };
+      const LETTER = { w: 215.9, h: 279.4 };
+
+      switch (value) {
+        case 'LETTER_3x3': return { page: LETTER, cols: 3, rows: 3 };
+        case 'A4_3x4':     return { page: A4, cols: 3, rows: 4 };
+        case 'LETTER_3x4': return { page: LETTER, cols: 3, rows: 4 };
+        case 'A4_3x3':
+        default:           return { page: A4, cols: 3, rows: 3 };
+      }
+    }
+
+    function mmToPt(mm) {
+      // PDF points: 72 pt/in; 25.4 mm/in
+      return mm * (72 / 25.4);
+    }
+
+    async function buildPdf() {
+      const PDFLib = await loadPdfLib();
+      const { PDFDocument } = PDFLib;
+
+      const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
+      const scale = scalePct / 100;
+
+      const gapMm = parseFloat(els.gapMm.value);
+      const layout = layoutSpec(els.layout.value);
+
+      // Card size in mm
+      const cardWmm = 63 * scale;
+      const cardHmm = 88 * scale;
+
+      const gap = (isFinite(gapMm) ? gapMm : 0);
+
+      // Compute usable region (centered grid)
+      const pageW = layout.page.w;
+      const pageH = layout.page.h;
+
+      const gridW = layout.cols * cardWmm + (layout.cols - 1) * gap;
+      const gridH = layout.rows * cardHmm + (layout.rows - 1) * gap;
+
+      // Center
+      const startXmm = (pageW - gridW) / 2;
+      const startYmm = (pageH - gridH) / 2;
+
+      // Expand items by qty
+      const expanded = [];
+      for (const it of ITEMS) {
+        for (let i = 0; i < (it.qty || 1); i++) expanded.push(it);
+      }
+      if (!expanded.length) throw new Error('No cards to print.');
+
+      const perPage = layout.cols * layout.rows;
+      const pagesCount = Math.ceil(expanded.length / perPage);
+
+      const pdf = await PDFDocument.create();
+
+      // Fetch+embed images as we go (cache by chosen print id or oracle id)
+      const imageBytesCache = new Map(); // key -> bytes
+      const embedCache = new Map();      // key -> embedded image object
+
+      for (let pi = 0; pi < pagesCount; pi++) {
+        const page = pdf.addPage([mmToPt(pageW), mmToPt(pageH)]);
+
+        const slice = expanded.slice(pi * perPage, (pi + 1) * perPage);
+
+        for (let idx = 0; idx < slice.length; idx++) {
+          const it = slice[idx];
+
+          const row = Math.floor(idx / layout.cols);
+          const col = idx % layout.cols;
+
+          const xMm = startXmm + col * (cardWmm + gap);
+          // PDF origin is bottom-left; our startYmm is from top-left concept, so invert:
+          const yTopMm = startYmm + row * (cardHmm + gap);
+          const yMm = (pageH - yTopMm - cardHmm);
+
+          const key = it.chosen_print_id || it.oracle_id;
+
+          // Determine image URL for PDF
+          const chosen = it.chosen_img_pdf || PDF_IMG(ORACLE_TO_CARD.get(it.oracle_id));
+          if (!chosen) continue;
+
+          // Must use proxy to defeat CORS when fetching bytes
+          const proxiedUrl = PROXY_IMG(chosen);
+
+          let bytes = imageBytesCache.get(key);
+          if (!bytes) {
+            bytes = await fetchAsBytes(proxiedUrl);
+            imageBytesCache.set(key, bytes);
+          }
+
+          // Embed
+          let embedded = embedCache.get(key);
+          if (!embedded) {
+            // png vs jpg
+            const isPng = chosen.toLowerCase().includes('.png');
+            embedded = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+            embedCache.set(key, embedded);
+          }
+
+          page.drawImage(embedded, {
+            x: mmToPt(xMm),
+            y: mmToPt(yMm),
+            width: mmToPt(cardWmm),
+            height: mmToPt(cardHmm)
+          });
+        }
+      }
+
+      const pdfBytes = await pdf.save();
+      return new Blob([pdfBytes], { type: 'application/pdf' });
+    }
+
+    async function printPdf() {
+      els.spinner.hidden = false;
+      setStatus('');
+      try {
+        const blob = await buildPdf();
+        const url = URL.createObjectURL(blob);
+
+        // Open PDF in a new tab (browser PDF viewer handles printing cleanly)
+        const w = window.open(url, '_blank', 'noopener,noreferrer');
+        if (!w) {
+          // Popup blocked: fall back to download link
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'mtg-print-sheet.pdf';
+          a.click();
+          setStatus('Popup blocked. Downloaded PDF instead.');
+          return;
+        }
+
+        // Status
+        const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
+        setStatus(`Opened PDF in a new tab.\nScale: ${scalePct}% · Gap: ${els.gapMm.value}mm · Layout: ${els.layout.value}`);
+      } catch (e) {
+        console.error(e);
+        setStatus(`ERROR: ${e?.message || e}`);
+      } finally {
+        els.spinner.hidden = true;
+      }
+    }
+
+    // ---------- Load flow ----------
+    async function load() {
+      els.spinner.hidden = false;
+      setStatus('');
+      try {
+        const itemsRaw = parseDeckText(els.input.value);
+
+        // flatten and count by raw name
+        const counts = countByName(itemsRaw);
+        const rawNames = [...counts.keys()];
+
+        if (!rawNames.length) {
+          ITEMS = [];
+          ORACLE_TO_CARD.clear();
+          renderCards();
+          return;
+        }
+
+        // Fetch canonical card objects (Scryfall collection is case-insensitive on name matching)
+        const cards = await fetchCollectionByNames(rawNames);
+
+        // Build a map of "best match" from returned data:
+        // We'll map by oracle_id and merge quantities from any capitalization variants.
+        ORACLE_TO_CARD.clear();
+
+        // Scryfall returns card.name with canonical capitalization.
+        // We'll make a name->oracle lookup from response, then build ITEMS keyed by oracle_id.
+        const nameToOracle = new Map();
+        for (const c of cards) {
+          if (c?.name && c?.oracle_id) {
+            nameToOracle.set(String(c.name).toLowerCase(), c.oracle_id);
+            ORACLE_TO_CARD.set(c.oracle_id, c);
+          }
+        }
+
+        // Merge counts into oracle buckets
+        const oracleCounts = new Map(); // oracle_id -> qty
+        const oracleDisplayName = new Map(); // oracle_id -> canonical name
+
+        for (const [rawName, qty] of counts.entries()) {
+          const key = String(rawName || '').toLowerCase();
+          // Try direct match by lowercased name to the canonical response names
+          // If not found, try to find a card in 'cards' with case reminded; as fallback, skip.
+          let oracleId = nameToOracle.get(key);
+          if (!oracleId) {
+            // last resort: try fuzzy match among returned cards by lowercased name
+            const found = cards.find(c => String(c?.name || '').toLowerCase() === key);
+            oracleId = found?.oracle_id;
+            if (oracleId && found) {
+              ORACLE_TO_CARD.set(oracleId, found);
+              oracleDisplayName.set(oracleId, found.name);
+            }
+          }
+          if (!oracleId) continue;
+
+          oracleCounts.set(oracleId, (oracleCounts.get(oracleId) || 0) + qty);
+          const c = ORACLE_TO_CARD.get(oracleId);
+          if (c?.name) oracleDisplayName.set(oracleId, c.name);
+        }
+
+        // Build ITEMS
+        ITEMS = [...oracleCounts.entries()].map(([oracleId, qty]) => {
+          const c = ORACLE_TO_CARD.get(oracleId);
+          return {
+            oracle_id: oracleId,
+            name: oracleDisplayName.get(oracleId) || c?.name || 'Unknown',
+            qty,
+            chosen_print_id: null,
+            chosen_img_ui: null,
+            chosen_img_pdf: null
+          };
+        }).sort((a,b) => a.name.localeCompare(b.name));
+
+        renderCards();
+      } finally {
+        els.spinner.hidden = true;
+      }
+    }
+
+    // ---------- Events ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      els.loadBtn.addEventListener('click', load);
+
+      els.clearBtn.addEventListener('click', () => {
+        els.input.value = '';
+        els.cards.innerHTML = '';
+        els.empty.hidden = false;
+        setStatus('');
+        ITEMS = [];
+        ORACLE_TO_CARD.clear();
+        ORACLE_TO_PRINTS.clear();
+        PRINT_CACHE.clear();
+      });
+
+      els.scaleDown.addEventListener('click', () => {
+        els.scalePct.value = String(clamp((parseInt(els.scalePct.value, 10) || 100) - 1, 50, 140));
+      });
+      els.scaleUp.addEventListener('click', () => {
+        els.scalePct.value = String(clamp((parseInt(els.scalePct.value, 10) || 100) + 1, 50, 140));
+      });
+      els.scalePct.addEventListener('change', () => {
+        els.scalePct.value = String(clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140));
+      });
+
+      els.printBtn.addEventListener('click', printPdf);
+
+      // open modal
+      els.cards.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action="art"]');
+        if (!btn) return;
+        const oracleId = btn.getAttribute('data-oracle');
+        if (!oracleId) return;
+        openArtModalFor(oracleId);
+      });
+
+      // close modal (always visible)
+      els.artClose.addEventListener('click', closeArtModal);
+      els.artBackdrop.addEventListener('click', (e) => {
+        if (e.target === els.artBackdrop) closeArtModal();
+      });
+
+      // select print tile
+      els.artBody.addEventListener('click', (e) => {
+        const tile = e.target.closest('.print-tile');
+        if (!tile || !MODAL_ORACLE) return;
+
+        const pid = tile.getAttribute('data-print-id');
+        if (!pid) return;
+
+        // border highlight
+        els.artBody.querySelectorAll('.print-tile.selected').forEach(n => n.classList.remove('selected'));
+        tile.classList.add('selected');
+
+        applySelectedPrint(MODAL_ORACLE, pid);
+      });
+    });
+  </script>
+
+  <!-- Background video logic (same pattern you used) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) { wrap.style.display = 'none'; return; }
+
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+      const onReady = () => {
+        wrap.classList.add('ready');
+        const p = vid.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      };
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => { wrap.classList.add('ready'); }, { once: true });
+    });
+  </script>
+
+  <!-- Partials loader (same as your analyzer) -->
+  <script>
+    (async () => {
+      try {
+        async function loadPartial(url) {
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) return null;
+          const html = await res.text();
+          const tpl = document.createElement('template');
+          tpl.innerHTML = html.trim();
+          tpl.content.querySelectorAll('style').forEach(st => {
+            document.head.appendChild(st.cloneNode(true));
+            st.remove();
+          });
+          return tpl.content.firstElementChild || null;
+        }
+
+        const header = document.getElementById('site-header');
+        const navEl = await loadPartial('/partials/nav.html');
+        if (header && navEl) {
+          header.innerHTML = '';
+          header.appendChild(navEl);
+          initNav(header);
+        }
+
+        const discordEl = await loadPartial('/partials/discord.html');
+        if (discordEl) document.body.appendChild(discordEl);
+
+        const footerEl = await loadPartial('/partials/footer.html');
+        if (footerEl) document.body.appendChild(footerEl);
+
+        function initNav(scope) {
+          const btn = scope.querySelector('.menu-toggle');
+          const panel = scope.querySelector('#nav-panel');
+          if (btn && panel) {
+            btn.addEventListener('click', () => {
+              const open = panel.classList.toggle('open');
+              btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+          }
+          const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+          scope.querySelectorAll('.nav-link').forEach(a => {
+            let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+            if (href === '/blog/') href = '/blog';
+            if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
+              a.setAttribute('aria-current', 'page');
+            }
+            if (here.includes('/projects')) a.setAttribute('aria-current', 'page');
+            if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+          });
+        }
+      } catch (e) {
+        console.warn('Partial load failed:', e);
+      }
+    })();
+  </script>
 </body>
 </html>
