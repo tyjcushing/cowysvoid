@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Print Sheet Builder — Cowy’s Void</title>
-  <meta name="description" content="Paste a list of cards, pick arts, set print scale/bleed, and generate a print-ready sheet." />
+  <meta name="description" content="Paste a list of cards, swap arts, then print a formatted sheet." />
 
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
@@ -89,6 +89,46 @@
       color: #fff;
       font-size: 12px;
     }
+
+    /* Print preview overlay (no popups) */
+    #printPreview {
+      position: fixed;
+      inset: 0;
+      background: #fff;
+      color: #000;
+      display: none;
+      z-index: 10000;
+      overflow: auto;
+    }
+    #printPreview.open { display: block; }
+    #printPreview .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0,0,0,.15);
+    }
+    #printPreview .topbar strong { font-size: 14px; }
+    #printPreview .topbar .btn {
+      background: #000 !important;
+      color: #fff !important;
+      border: 1px solid #000 !important;
+    }
+    #printPreview .pages { padding: 12px; display: grid; gap: 14px; justify-content: center; }
+
+    /* Print-only rendering: hide site, show preview */
+    @media print {
+      body > *:not(#printPreview) { display: none !important; }
+      #printPreview { display: block !important; position: static !important; inset: auto !important; }
+      #printPreview .topbar { display: none !important; }
+      #printPreview .pages { padding: 0 !important; gap: 0 !important; }
+    }
   </style>
 </head>
 
@@ -104,7 +144,7 @@
       <section class="panel page-panel solid-surface">
         <header class="page">
           <h1>Print Sheet Builder</h1>
-          <p class="sub">Paste card names. Load → swap art per card → Print opens a new tab with the formatted sheet.</p>
+          <p class="sub">Paste card names. Load → swap art per card → Print formats the sheet and prints.</p>
         </header>
 
         <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
@@ -126,11 +166,6 @@ Dark Ritual
             <span class="spin-dot" aria-hidden="true"></span>
             <span class="inline-hint">Loading…</span>
           </span>
-
-          <label class="control" title="Logs raw Scryfall response to the console">
-            <input id="debug" type="checkbox">
-            Debug JSON
-          </label>
         </div>
 
         <div class="inline-hint">
@@ -190,6 +225,18 @@ Dark Ritual
     </div>
   </div>
 
+  <!-- Print Preview (no popup) -->
+  <div id="printPreview" aria-label="Print preview">
+    <div class="topbar">
+      <strong>Print Preview</strong>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span id="printPreviewHint" style="font-size:12px;color:#333">Loading images…</span>
+        <button id="closePreview" class="btn" type="button">Back</button>
+      </div>
+    </div>
+    <div id="printPages" class="pages"></div>
+  </div>
+
 <script>
   // ---------- Helpers ----------
   function esc(s) {
@@ -205,13 +252,11 @@ Dark Ritual
     return s.slice(0, Math.min(...cuts)).trim();
   }
 
-  // canonical key for case-insensitive matching + whitespace normalization
   function keyName(s='') {
     return stripNameAnnotations(s).toLowerCase().replace(/\s+/g,' ').trim();
   }
 
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-  function mm(n) { return `${n}mm`; }
 
   function parseCardLines(text) {
     const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
@@ -260,15 +305,8 @@ Dark Ritual
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
-      if (!r.ok) {
-        console.warn('Scryfall collection error', r.status);
-        continue;
-      }
+      if (!r.ok) continue;
       const j = await r.json();
-      if (document.getElementById('debug')?.checked) {
-        console.log('[DEBUG] /cards/collection JSON:', j);
-        console.log('[DEBUG] /cards/collection JSON.stringify:', JSON.stringify(j));
-      }
       for (const card of (j.data || [])) out.set(keyName(card.name), card);
     }
     return out;
@@ -328,7 +366,12 @@ Dark Ritual
     artBackdrop: document.getElementById('artModalBackdrop'),
     artClose: document.getElementById('artModalClose'),
     artTitle: document.getElementById('artModalTitle'),
-    artBody: document.getElementById('artModalBody')
+    artBody: document.getElementById('artModalBody'),
+
+    preview: document.getElementById('printPreview'),
+    previewPages: document.getElementById('printPages'),
+    previewHint: document.getElementById('printPreviewHint'),
+    closePreview: document.getElementById('closePreview')
   };
 
   function setStatus(msg='') { els.status.textContent = msg; }
@@ -367,7 +410,7 @@ Dark Ritual
               data-key="${esc(it.nameKey)}">Change Art</button>
           </div>
           <div class="inline-hint" style="margin-top:8px; opacity:.9">
-            ${it.selectedPrintId ? `Selected print: <code>${esc(it.selectedPrintId)}</code>` : `Using default print.`}
+            ${it.selectedPrintId ? `Selected print set.` : `Using default print.`}
           </div>
         </div>
       `;
@@ -502,11 +545,34 @@ Dark Ritual
     if (idx < 0) return;
     ITEMS[idx].selectedPrintId = printId;
     ITEMS[idx].selectedImg = imgUrl;
+
+    // ensure that selected print is cached for printing at high res
+    const base = KEY_TO_CARD.get(nameKey);
+    if (base?.oracle_id && !PRINT_CACHE.has(base.oracle_id)) {
+      // non-blocking; modal already fetched in most cases
+      fetchPrintsForOracle(base.oracle_id).then(p => PRINT_CACHE.set(base.oracle_id, p)).catch(() => {});
+    }
+
     renderCards();
   }
 
-  // ---------- Print Sheet (new tab) ----------
-  const PAGE = { w: 215.9, h: 279.4 }; // letter in mm
+  // ---------- Print Preview (no popup) ----------
+  const PAGE_MM = { w: 215.9, h: 279.4 }; // US Letter in mm
+
+  function computeLayout(scalePct, gapMm, paddingMm = 6) {
+    const scale = scalePct / 100;
+    const cardW = 63 * scale;
+    const cardH = 88 * scale;
+
+    const availW = PAGE_MM.w - (paddingMm * 2);
+    const availH = PAGE_MM.h - (paddingMm * 2);
+
+    const cols = Math.max(1, Math.floor((availW + gapMm) / (cardW + gapMm)));
+    const rows = Math.max(1, Math.floor((availH + gapMm) / (cardH + gapMm)));
+    const perPage = Math.max(1, cols * rows);
+
+    return { cardW, cardH, cols, rows, perPage, gapMm, paddingMm };
+  }
 
   function getSelectedPrintCardForItem(item) {
     if (!item) return null;
@@ -530,122 +596,13 @@ Dark Ritual
     return out;
   }
 
-  function computeLayout(scalePct, gapMm, paddingMm = 6) {
-    const scale = scalePct / 100;
-    const cardW = 63 * scale;
-    const cardH = 88 * scale;
-
-    const availW = PAGE.w - (paddingMm * 2);
-    const availH = PAGE.h - (paddingMm * 2);
-
-    const cols = Math.max(1, Math.floor((availW + gapMm) / (cardW + gapMm)));
-    const rows = Math.max(1, Math.floor((availH + gapMm) / (cardH + gapMm)));
-    const perPage = Math.max(1, cols * rows);
-
-    return { cardW, cardH, cols, rows, perPage, gapMm, paddingMm };
-  }
-
   function chunk(arr, size) {
     const out = [];
     for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
     return out;
   }
 
-  function buildPrintHtml(pages, layout) {
-    const pageSections = pages.map(cards => {
-      const cardsHtml = cards.map(c => `
-        <div class="card">
-          <img src="${esc(c.url)}" alt="${esc(c.name)}" loading="eager" referrerpolicy="no-referrer" crossorigin="anonymous">
-        </div>
-      `).join('');
-
-      return `
-        <section class="page">
-          <div class="grid" style="
-            grid-template-columns: repeat(${layout.cols}, ${mm(layout.cardW)});
-            grid-auto-rows: ${mm(layout.cardH)};
-            gap: ${mm(layout.gapMm)};
-            padding: ${mm(layout.paddingMm)};
-          ">
-            ${cardsHtml}
-          </div>
-        </section>
-      `;
-    }).join('');
-
-    return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Print Sheet</title>
-  <style>
-    @page { size: letter; margin: 0; }
-    html, body { margin: 0; padding: 0; background: #fff; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-
-    .page {
-      width: ${mm(PAGE.w)};
-      height: ${mm(PAGE.h)};
-      margin: 0;
-      page-break-after: always;
-      background: #fff;
-      overflow: hidden;
-    }
-
-    .grid {
-      width: 100%;
-      height: 100%;
-      display: grid;
-      justify-content: center;
-      align-content: start;
-      box-sizing: border-box;
-    }
-
-    .card {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      outline: 0.2mm solid #000;
-      box-sizing: border-box;
-      background: #fff;
-    }
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-
-    .hint {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,.75);
-      color: #fff;
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-size: 12px;
-      z-index: 9999;
-    }
-
-    @media print {
-      .hint { display: none; }
-      body { background: #fff; }
-    }
-  </style>
-</head>
-<body>
-  <div class="hint">Tip: Disable “Headers and footers” for clean pages.</div>
-  ${pageSections}
-</body>
-</html>`;
-  }
-
-  function openPrintTab() {
+  function openPrintPreview() {
     if (!ITEMS.length) { setStatus('Load cards first.'); return; }
 
     const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
@@ -653,50 +610,125 @@ Dark Ritual
     els.scalePct.value = String(scalePct);
 
     const copies = expandToCopies();
-    if (!copies.length) { setStatus('No printable images found.'); return; }
+    if (!copies.length) { setStatus('No hookup for printable images.'); return; }
 
     const layout = computeLayout(scalePct, gapMm, 6);
     const pages = chunk(copies, layout.perPage);
 
-    const w = window.open('', '_blank', 'noopener,noreferrer');
-    if (!w) { setStatus('Popup blocked. Allow popups to open the print sheet tab.'); return; }
+    // Build preview DOM
+    els.previewPages.innerHTML = '';
+    els.previewHint.textContent = 'Loading images…';
+    els.preview.classList.add('open');
 
-    const html = buildPrintHtml(pages, layout);
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    const style = document.createElement('style');
+    style.id = 'printPageStyle';
+    style.textContent = `
+      .print-page {
+        width: ${PAGE_MM.w}mm;
+        height: ${PAGE_MM.h}mm;
+        background: #fff;
+        box-shadow: 0 10px 30px rgba(0,0,0,.18);
+        overflow: hidden;
+      }
+      .print-grid {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        justify-content: center;
+        align-content: start;
+        box-sizing: border-box;
+        padding: ${layout.paddingMm}mm;
+        gap: ${layout.gapMm}mm;
+        grid-template-columns: repeat(${layout.cols}, ${layout.cardW}mm);
+        grid-auto-rows: ${layout.cardH}mm;
+      }
+      .print-card {
+        width: 100%;
+        height: 100%;
+        outline: 0.2mm solid #000;
+        box-sizing: border-box;
+        overflow: hidden;
+        background: #fff;
+      }
+      .print-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    `;
+    // Replace if exists
+    const old = document.getElementById('printPageStyle');
+    if (old) old.remove();
+    document.head.appendChild(style);
 
-    // IMPORTANT: attach printing logic from parent, not inside the child HTML string
-    const kick = () => {
-      try {
-        const imgs = Array.from(w.document.images || []);
-        let pending = imgs.length;
-        if (!pending) { w.print(); return; }
+    const imgs = [];
 
-        const done = () => {
-          pending--;
-          if (pending <= 0) setTimeout(() => w.print(), 50);
-        };
+    for (const page of pages) {
+      const pageEl = document.createElement('div');
+      pageEl.className = 'print-page';
 
-        imgs.forEach(img => {
-          if (img.complete) return done();
-          img.addEventListener('load', done, { once: true });
-          img.addEventListener('error', done, { once: true });
-        });
-      } catch (e) {
-        // fallback
-        try { w.print(); } catch (_) {}
+      const grid = document.createElement('div');
+      grid.className = 'print-grid';
+
+      page.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'print-card';
+
+        const img = document.createElement('img');
+        img.src = c.url;
+        img.alt = c.name;
+        img.loading = 'eager';
+        img.referrerPolicy = 'no-referrer';
+        img.crossOrigin = 'anonymous';
+
+        imgs.push(img);
+
+        card.appendChild(img);
+        grid.appendChild(card);
+      });
+
+      pageEl.appendChild(grid);
+      els.previewPages.appendChild(pageEl);
+    }
+
+    // Wait for images then print
+    let pending = imgs.length;
+    if (!pending) {
+      els.previewHint.textContent = 'Ready.';
+      window.print();
+      return;
+    }
+
+    const done = () => {
+      pending--;
+      if (pending <= 0) {
+        els.previewHint.textContent = 'Ready. Opening print dialog…';
+        setTimeout(() => window.print(), 80);
+      } else {
+        els.previewHint.textContent = `Loading images… (${pending} left)`;
       }
     };
 
-    // Wait for the new document to fully exist
-    w.addEventListener('load', kick, { once: true });
+    imgs.forEach(img => {
+      if (img.complete) return done();
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+    });
 
     setStatus(
-      `Opened print sheet in a new tab.\n` +
+      `Print preview built.\n` +
       `Layout: ${layout.cols}×${layout.rows} (${layout.perPage}/page)\n` +
       `Scale: ${scalePct}% · Gap: ${gapMm}mm · Pages: ${pages.length}`
     );
+  }
+
+  function closePrintPreview() {
+    els.preview.classList.remove('open');
+    els.previewPages.innerHTML = '';
+    els.previewHint.textContent = '';
   }
 
   // ---------- Events ----------
@@ -711,6 +743,7 @@ Dark Ritual
       ITEMS = [];
       KEY_TO_CARD = new Map();
       PRINT_CACHE.clear();
+      closePrintPreview();
     });
 
     els.scaleDown.addEventListener('click', () => {
@@ -723,7 +756,8 @@ Dark Ritual
       els.scalePct.value = String(clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140));
     });
 
-    els.printBtn.addEventListener('click', openPrintTab);
+    els.printBtn.addEventListener('click', openPrintPreview);
+    els.closePreview.addEventListener('click', closePrintPreview);
 
     els.cards.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-action="art"]');
