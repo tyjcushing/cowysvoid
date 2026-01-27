@@ -16,7 +16,7 @@
 
     .btn-group { display:flex; gap:10px; align-items:center; }
 
-    /* Your request: picklist = white text, black bg */
+    /* Picklist = white text, black bg */
     .select {
       appearance: none;
       background: #000;
@@ -214,7 +214,7 @@ Arcane Signet
         </div>
 
         <div class="inline-hint">
-          This loader is <strong>case-insensitive</strong> (uses Scryfall <code>/cards/named?fuzzy=</code> so <code>sol ring</code> works).
+          Case-insensitive loading (Scryfall <code>/cards/named?fuzzy=</code>): <code>Sol Ring</code> and <code>sol ring</code> both work.
         </div>
 
         <div id="status" class="status" hidden></div>
@@ -240,34 +240,36 @@ Arcane Signet
 
 <script>
 /* =========================================================
-   Print Sheet Builder — single-file “full class”
+   Print Sheet Builder — single-file
    - Robust load: /cards/named?fuzzy= (case-insensitive)
    - Art swap: oracleid prints search
-   - Print: generates a real PDF (no browser headers/footers)
+   - Print: generates a real PDF via pdf-lib (no browser headers/footers)
    ========================================================= */
 
-function esc(s) {
-  return (s || '').replace(/[&<>\"']/g, m => ({
+/** FIX: esc() now safely handles non-strings (numbers/null/etc.) */
+function esc(v) {
+  const s = (v == null) ? '' : String(v);
+  return s.replace(/[&<>\"']/g, m => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[m]));
 }
 
 function normalizeName(s = '') {
-  return s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+  return String(s).normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 function stripNameAnnotations(s = '') {
-  s = s.trim();
+  s = String(s).trim();
   const cuts = [s.indexOf('['), s.indexOf('{'), s.indexOf('('), s.indexOf('^^')].filter(i => i >= 0);
   if (!cuts.length) return s;
   return s.slice(0, Math.min(...cuts)).trim();
 }
 
 function parseCardText(text) {
-  const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
   const items = [];
   for (let raw of lines) {
-    let line = raw.trim();
+    let line = String(raw || '').trim();
     if (!line) continue;
     line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
     if (!line) continue;
@@ -312,7 +314,7 @@ function setStatus(msg) {
   els.status.textContent = msg || '';
 }
 
-let ITEMS = [];           // [{ key, name, qty, card, selectedPrint:{id,img} }]
+let ITEMS = [];              // [{ key, name, qty, card, selectedPrint:{id,img} }]
 let PRINT_CACHE = new Map(); // oracleId -> prints[]
 let MODAL_KEY = null;
 
@@ -327,16 +329,17 @@ async function fetchNamedFuzzy(name) {
   const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`;
   const r = await fetch(url);
   if (!r.ok) return null;
-  return await r.json();
+  const j = await r.json();
+  if (j && j.object === 'card') return j;
+  return null;
 }
 
 async function resolveUniqueCards(names) {
-  // limit concurrency so we don’t slam Scryfall
-  const uniq = [...new Set(names.map(n => normalizeName(n)))];
+  const uniqNorm = [...new Set(names.map(n => normalizeName(n)).filter(Boolean))];
   const normToOriginal = new Map();
   for (const n of names) {
     const k = normalizeName(n);
-    if (!normToOriginal.has(k)) normToOriginal.set(k, n);
+    if (k && !normToOriginal.has(k)) normToOriginal.set(k, n);
   }
 
   const out = new Map(); // norm -> card
@@ -344,17 +347,16 @@ async function resolveUniqueCards(names) {
   let idx = 0;
 
   async function worker() {
-    while (idx < uniq.length) {
+    while (idx < uniqNorm.length) {
       const i = idx++;
-      const norm = uniq[i];
+      const norm = uniqNorm[i];
       const original = normToOriginal.get(norm) || norm;
       const card = await fetchNamedFuzzy(original);
-      if (card && card.object === 'card') out.set(norm, card);
+      if (card) out.set(norm, card);
     }
   }
 
-  const workers = Array.from({ length: Math.min(MAX, uniq.length) }, () => worker());
-  await Promise.all(workers);
+  await Promise.all(Array.from({ length: Math.min(MAX, uniqNorm.length) }, worker));
   return out;
 }
 
@@ -398,7 +400,9 @@ function renderCards() {
           <div class="name">${esc(it.qty)}× ${esc(it.name)}</div>
           <div class="sub">${card ? esc(card.type_line || '') : 'Not found'}</div>
           <div class="tile-actions">
-            <button class="btn ghost solid-ghost-btn" type="button" data-action="art" data-key="${esc(it.key)}">Swap art</button>
+            <button class="btn ghost solid-ghost-btn" type="button" data-action="art" data-key="${esc(it.key)}" ${card ? '' : 'disabled'}>
+              Swap art
+            </button>
           </div>
         </div>
       </article>
@@ -472,7 +476,6 @@ function applySelectedPrintToItem(key, printId, imgUrl) {
 async function loadPdfLib() {
   if (window.PDFLib) return true;
 
-  // Load from CDN (works well on Cloudflare Pages, with CSP allowing it)
   const s = document.createElement('script');
   s.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
   s.async = true;
@@ -493,11 +496,10 @@ async function fetchAsBytes(url) {
 }
 
 async function buildPdfBlob() {
-  // Letter size in points
   const pageW = 612; // 8.5 * 72
   const pageH = 792; // 11 * 72
 
-  // MTG card size in mm
+  // MTG card size in mm (63x88)
   const cardWpt = mmToPt(63);
   const cardHpt = mmToPt(88);
 
@@ -514,7 +516,6 @@ async function buildPdfBlob() {
   const marginX = (pageW - totalW) / 2;
   const marginY = (pageH - totalH) / 2;
 
-  // Flatten images by qty
   const imgs = [];
   for (const it of ITEMS) {
     if (!it.card) continue;
@@ -528,8 +529,7 @@ async function buildPdfBlob() {
   const { PDFDocument } = window.PDFLib;
   const pdfDoc = await PDFDocument.create();
 
-  // Basic cache so repeats don’t refetch / re-embed
-  const bytesCache = new Map();
+  const bytesCache = new Map(); // url -> Uint8Array
   const embedCache = new Map(); // url -> embedded image
 
   for (let i = 0; i < imgs.length; i += perPage) {
@@ -548,7 +548,6 @@ async function buildPdfBlob() {
           bytesCache.set(url, bytes);
         }
 
-        // Scryfall "normal" is jpg; but just in case:
         const isPng = /\.png(\?|$)/i.test(url);
         emb = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
         embedCache.set(url, emb);
@@ -573,13 +572,10 @@ async function printPdf() {
   els.spinner.hidden = false;
   setStatus('');
 
-  // Must open tab synchronously to avoid popup blocking
+  // Open tab synchronously to avoid popup blockers
   const w = window.open('', '_blank');
   if (!w) {
-    setStatus(
-      'Popup blocked.\n' +
-      'Allow popups for this site, then click Print again.'
-    );
+    setStatus('Popup blocked.\nAllow popups for this site, then click Print again.');
     els.spinner.hidden = true;
     return;
   }
@@ -595,14 +591,9 @@ async function printPdf() {
 
     const blob = await buildPdfBlob();
     const url = URL.createObjectURL(blob);
-
-    // Navigate the already-opened tab to the PDF blob URL
     w.location.replace(url);
 
-    setStatus(
-      'PDF generated and opened in a new tab.\n' +
-      'Print from that tab (no browser headers/footers are embedded in the PDF).'
-    );
+    setStatus('PDF generated and opened in a new tab.\nPrint from that tab.');
   } catch (e) {
     console.warn(e);
     w.document.write('<!doctype html><title>PDF error</title><body style="font-family:sans-serif">PDF generation failed. Check console.</body>');
@@ -630,7 +621,6 @@ async function load() {
       return;
     }
 
-    // Build items + resolve unique cards via fuzzy
     const temp = parsed.map(it => ({
       key: itemKey(it.name),
       name: it.name,
@@ -640,10 +630,7 @@ async function load() {
     }));
 
     const normToCard = await resolveUniqueCards(temp.map(x => x.name));
-
-    for (const it of temp) {
-      it.card = normToCard.get(it.key) || null;
-    }
+    for (const it of temp) it.card = normToCard.get(it.key) || null;
 
     ITEMS = temp;
     renderCards();
@@ -692,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   els.cards.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action="art"]');
-    if (!btn) return;
+    if (!btn || btn.disabled) return;
     openArtModalFor(btn.getAttribute('data-key'));
   });
 
@@ -701,15 +688,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === els.artBackdrop) closeArtModal();
   });
 
+  // Click a print tile -> select (with border)
   els.artBody.addEventListener('click', (e) => {
     const tile = e.target.closest('.print-tile');
     if (!tile || !MODAL_KEY) return;
 
-    // show selected border
     els.artBody.querySelectorAll('.print-tile.selected').forEach(n => n.classList.remove('selected'));
     tile.classList.add('selected');
 
-    // apply art
     applySelectedPrintToItem(
       MODAL_KEY,
       tile.getAttribute('data-print-id'),
