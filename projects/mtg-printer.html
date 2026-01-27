@@ -9,7 +9,6 @@
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
   <link rel="stylesheet" href="/assets/css/void.css">
   <style>
-    /* Page-specific styling while respecting your existing tokens */
     .controls-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
     .control { display:flex; gap:8px; align-items:center; }
     .control select, .control input[type="number"] { min-height: 38px; }
@@ -28,7 +27,7 @@
     .mini { font-size: 12px; color: var(--muted); }
     .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
 
-    /* White text + black background picklist (your request) */
+    /* White text + black background picklist */
     select.pick-black {
       background: #000 !important;
       color: #fff !important;
@@ -107,9 +106,6 @@
       color: var(--muted);
       line-height: 1.2;
     }
-
-    /* helper */
-    .hidden { display:none !important; }
   </style>
 </head>
 
@@ -164,29 +160,28 @@ Commander: Alela, Artful Provocateur
             <label for="gapMm"><strong>Gap</strong></label>
             <select id="gapMm" class="pick-black" aria-label="Gap setting">
               <option value="0">No gap (0mm)</option>
-              <option value="0.2" selected>0.2mm</option>
-              <option value="3">3mm</option>
+              <option value="0.2">0.2mm</option>
+              <option value="3" selected>3mm (default)</option>
             </select>
           </span>
 
           <span class="pill-lite control">
             <label for="layout"><strong>Layout</strong></label>
             <select id="layout" class="pick-black" aria-label="Print layout">
-              <option value="A4_3x3" selected>A4 · 3×3</option>
-              <option value="LETTER_3x3">US Letter · 3×3</option>
+              <option value="LETTER_3x3" selected>US Letter (8.5×11) · 3×3 (default)</option>
+              <option value="LETTER_3x4">US Letter (8.5×11) · 3×4 (tight)</option>
+              <option value="A4_3x3">A4 · 3×3</option>
               <option value="A4_3x4">A4 · 3×4 (tight)</option>
-              <option value="LETTER_3x4">US Letter · 3×4 (tight)</option>
             </select>
           </span>
 
-          <!-- Combined: build + print -->
           <span class="pill-lite control">
             <button id="printBtn" class="btn">Print</button>
           </span>
         </div>
 
         <div class="inline-hint" style="margin-top:8px">
-          Tip: If PDF generation is blank, it usually means the image bytes can’t be fetched (CORS). This version uses a Cloudflare Pages Function proxy.
+          This generates a PDF (no popups needed beyond opening a new tab). If it fails, it’s usually the image proxy/CSP.
         </div>
 
         <div id="status" class="status-box"></div>
@@ -224,12 +219,12 @@ Commander: Alela, Artful Provocateur
     const SCRY_SEARCH_PRINTS = (oracleId) =>
       `https://api.scryfall.com/cards/search?order=released&q=oracleid%3A${encodeURIComponent(oracleId)}&unique=prints`;
 
-    // Use "normal" for UI and "png" for PDF embedding if available
     const UI_IMG = (card) => card?.image_uris?.normal || card?.card_faces?.[0]?.image_uris?.normal || '';
-    const PDF_IMG = (card) => card?.image_uris?.png || card?.image_uris?.large || card?.image_uris?.normal ||
-                               card?.card_faces?.[0]?.image_uris?.png || card?.card_faces?.[0]?.image_uris?.large || card?.card_faces?.[0]?.image_uris?.normal || '';
+    const PDF_IMG = (card) =>
+      card?.image_uris?.png || card?.image_uris?.large || card?.image_uris?.normal ||
+      card?.card_faces?.[0]?.image_uris?.png || card?.card_faces?.[0]?.image_uris?.large || card?.card_faces?.[0]?.image_uris?.normal || '';
 
-    // Your proxy endpoint (Cloudflare Pages Function) to defeat CORS for image byte fetch
+    // Proxy endpoint (Cloudflare Pages Function) to bypass CORS when fetching bytes
     const PROXY_IMG = (url) => `/img?url=${encodeURIComponent(url)}`;
 
     const els = {
@@ -310,11 +305,10 @@ Commander: Alela, Artful Provocateur
       return m;
     }
 
-    // ---------- State (keyed by oracle_id to fix capitalization and multi-prints) ----------
-    // ITEM = { oracle_id, name, qty, chosen_print_id, chosen_img_ui, chosen_img_pdf }
+    // ---------- State (keyed by oracle_id to fix capitalization & multi-prints) ----------
     let ITEMS = [];
-    const ORACLE_TO_CARD = new Map();       // oracle_id -> canonical card object (from collection)
-    const ORACLE_TO_PRINTS = new Map();     // oracle_id -> array of prints (search results)
+    const ORACLE_TO_CARD = new Map();       // oracle_id -> canonical card object
+    const ORACLE_TO_PRINTS = new Map();     // oracle_id -> array of prints
     const PRINT_CACHE = new Map();          // printId -> print card object
     let MODAL_ORACLE = null;
 
@@ -334,10 +328,7 @@ Commander: Alela, Artful Provocateur
           body: JSON.stringify(body)
         });
 
-        if (!r.ok) {
-          console.warn('Scryfall collection error', r.status);
-          continue;
-        }
+        if (!r.ok) continue;
         const j = await r.json();
         (j.data || []).forEach(c => out.push(c));
       }
@@ -368,7 +359,7 @@ Commander: Alela, Artful Provocateur
       els.cards.innerHTML = '';
       els.empty.hidden = ITEMS.length > 0;
 
-      const html = ITEMS.map(it => {
+      els.cards.innerHTML = ITEMS.map(it => {
         const img = it.chosen_img_ui || UI_IMG(ORACLE_TO_CARD.get(it.oracle_id)) || '';
         const subtitle = (ORACLE_TO_CARD.get(it.oracle_id)?.set_name)
           ? ORACLE_TO_CARD.get(it.oracle_id).set_name
@@ -400,19 +391,16 @@ Commander: Alela, Artful Provocateur
           </article>
         `;
       }).join('');
-
-      els.cards.innerHTML = html;
     }
 
     function openArtModalFor(oracleId) {
       MODAL_ORACLE = oracleId;
       const it = ITEMS.find(x => x.oracle_id === oracleId);
       els.artTitle.textContent = it ? `Choose Art — ${it.name}` : 'Choose Art';
-      els.artSub.textContent = 'Click an image to select. Close stays visible.';
+      els.artSub.textContent = 'Click an image to select.';
       els.artBody.innerHTML = `<div class="inline-hint">Loading prints…</div>`;
       els.artBackdrop.style.display = 'flex';
 
-      // Always visible close: header is sticky; button is in header.
       fetchPrintsForOracle(oracleId).then(prints => {
         const currentPrintId = it?.chosen_print_id || null;
 
@@ -427,14 +415,13 @@ Commander: Alela, Artful Provocateur
           const cn = p?.collector_number || '';
           const selected = (currentPrintId && p.id === currentPrintId) ? 'selected' : '';
           return `
-            <div class="print-tile ${selected}" data-print-id="${esc(p.id)}" data-oracle="${esc(oracleId)}" data-ui="${esc(ui)}">
+            <div class="print-tile ${selected}" data-print-id="${esc(p.id)}">
               ${ui ? `<img loading="lazy" src="${esc(ui)}" alt="${esc(p.name)}">` : `<div class="inline-hint">No image</div>`}
               <div class="print-cap">${esc(set)} · ${esc(cn)}</div>
             </div>
           `;
         }).join('');
-      }).catch(err => {
-        console.error(err);
+      }).catch(() => {
         els.artBody.innerHTML = `<div class="inline-hint">Failed to load prints.</div>`;
       });
     }
@@ -458,10 +445,8 @@ Commander: Alela, Artful Provocateur
 
     // ---------- PDF ----------
     async function loadPdfLib() {
-      // If already loaded, return
       if (window.PDFLib) return window.PDFLib;
 
-      // Load pdf-lib from unpkg (CSP must allow script-src https://unpkg.com)
       await new Promise((resolve, reject) => {
         const s = document.createElement('script');
         s.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
@@ -477,29 +462,45 @@ Commander: Alela, Artful Provocateur
     async function fetchAsBytes(url) {
       const r = await fetch(url);
       if (!r.ok) throw new Error(`Fetch failed: ${r.status}`);
+      const ct = (r.headers.get('content-type') || '').toLowerCase();
       const buf = await r.arrayBuffer();
-      return new Uint8Array(buf);
+      return { bytes: new Uint8Array(buf), contentType: ct };
     }
 
     function layoutSpec(value) {
-      // NOTE: real MTG card (poker-ish) = 63mm × 88mm
-      // We'll place images at (cardW * scale) and (cardH * scale).
-      // Page sizes in mm:
       const A4 = { w: 210, h: 297 };
-      const LETTER = { w: 215.9, h: 279.4 };
+      const LETTER = { w: 215.9, h: 279.4 }; // 8.5 x 11
 
       switch (value) {
-        case 'LETTER_3x3': return { page: LETTER, cols: 3, rows: 3 };
-        case 'A4_3x4':     return { page: A4, cols: 3, rows: 4 };
         case 'LETTER_3x4': return { page: LETTER, cols: 3, rows: 4 };
-        case 'A4_3x3':
-        default:           return { page: A4, cols: 3, rows: 3 };
+        case 'A4_3x3':     return { page: A4, cols: 3, rows: 3 };
+        case 'A4_3x4':     return { page: A4, cols: 3, rows: 4 };
+        case 'LETTER_3x3':
+        default:           return { page: LETTER, cols: 3, rows: 3 };
       }
     }
 
-    function mmToPt(mm) {
-      // PDF points: 72 pt/in; 25.4 mm/in
-      return mm * (72 / 25.4);
+    function mmToPt(mm) { return mm * (72 / 25.4); }
+
+    async function embedImageSmart(pdf, bytes, contentType, originalUrlHint) {
+      // Prefer content-type; fall back to URL hint; then try both.
+      const hint = String(originalUrlHint || '').toLowerCase();
+
+      const preferPng = contentType.includes('png') || hint.includes('.png');
+      const preferJpg = contentType.includes('jpeg') || contentType.includes('jpg') || hint.includes('.jpg') || hint.includes('.jpeg');
+
+      if (preferPng) {
+        try { return await pdf.embedPng(bytes); } catch (_) {}
+        try { return await pdf.embedJpg(bytes); } catch (_) {}
+      }
+      if (preferJpg) {
+        try { return await pdf.embedJpg(bytes); } catch (_) {}
+        try { return await pdf.embedPng(bytes); } catch (_) {}
+      }
+
+      // Unknown / incorrect headers: brute force
+      try { return await pdf.embedPng(bytes); } catch (_) {}
+      return await pdf.embedJpg(bytes);
     }
 
     async function buildPdf() {
@@ -510,26 +511,23 @@ Commander: Alela, Artful Provocateur
       const scale = scalePct / 100;
 
       const gapMm = parseFloat(els.gapMm.value);
+      const gap = (isFinite(gapMm) ? gapMm : 3); // safety: default to 3mm if weird
+
       const layout = layoutSpec(els.layout.value);
 
-      // Card size in mm
+      // Real card size
       const cardWmm = 63 * scale;
       const cardHmm = 88 * scale;
 
-      const gap = (isFinite(gapMm) ? gapMm : 0);
-
-      // Compute usable region (centered grid)
       const pageW = layout.page.w;
       const pageH = layout.page.h;
 
       const gridW = layout.cols * cardWmm + (layout.cols - 1) * gap;
       const gridH = layout.rows * cardHmm + (layout.rows - 1) * gap;
 
-      // Center
       const startXmm = (pageW - gridW) / 2;
       const startYmm = (pageH - gridH) / 2;
 
-      // Expand items by qty
       const expanded = [];
       for (const it of ITEMS) {
         for (let i = 0; i < (it.qty || 1); i++) expanded.push(it);
@@ -541,47 +539,39 @@ Commander: Alela, Artful Provocateur
 
       const pdf = await PDFDocument.create();
 
-      // Fetch+embed images as we go (cache by chosen print id or oracle id)
-      const imageBytesCache = new Map(); // key -> bytes
-      const embedCache = new Map();      // key -> embedded image object
+      const imageBytesCache = new Map(); // key -> {bytes, ct, urlHint}
+      const embedCache = new Map();      // key -> embedded image
 
       for (let pi = 0; pi < pagesCount; pi++) {
         const page = pdf.addPage([mmToPt(pageW), mmToPt(pageH)]);
-
         const slice = expanded.slice(pi * perPage, (pi + 1) * perPage);
 
         for (let idx = 0; idx < slice.length; idx++) {
           const it = slice[idx];
-
           const row = Math.floor(idx / layout.cols);
           const col = idx % layout.cols;
 
           const xMm = startXmm + col * (cardWmm + gap);
-          // PDF origin is bottom-left; our startYmm is from top-left concept, so invert:
           const yTopMm = startYmm + row * (cardHmm + gap);
           const yMm = (pageH - yTopMm - cardHmm);
 
           const key = it.chosen_print_id || it.oracle_id;
 
-          // Determine image URL for PDF
-          const chosen = it.chosen_img_pdf || PDF_IMG(ORACLE_TO_CARD.get(it.oracle_id));
-          if (!chosen) continue;
+          const chosenUrl = it.chosen_img_pdf || PDF_IMG(ORACLE_TO_CARD.get(it.oracle_id));
+          if (!chosenUrl) continue;
 
-          // Must use proxy to defeat CORS when fetching bytes
-          const proxiedUrl = PROXY_IMG(chosen);
+          const proxiedUrl = PROXY_IMG(chosenUrl);
 
-          let bytes = imageBytesCache.get(key);
-          if (!bytes) {
-            bytes = await fetchAsBytes(proxiedUrl);
-            imageBytesCache.set(key, bytes);
+          let payload = imageBytesCache.get(key);
+          if (!payload) {
+            payload = await fetchAsBytes(proxiedUrl);
+            payload.urlHint = chosenUrl;
+            imageBytesCache.set(key, payload);
           }
 
-          // Embed
           let embedded = embedCache.get(key);
           if (!embedded) {
-            // png vs jpg
-            const isPng = chosen.toLowerCase().includes('.png');
-            embedded = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+            embedded = await embedImageSmart(pdf, payload.bytes, payload.contentType, payload.urlHint);
             embedCache.set(key, embedded);
           }
 
@@ -604,22 +594,21 @@ Commander: Alela, Artful Provocateur
       try {
         const blob = await buildPdf();
         const url = URL.createObjectURL(blob);
-
-        // Open PDF in a new tab (browser PDF viewer handles printing cleanly)
         const w = window.open(url, '_blank', 'noopener,noreferrer');
+
+        const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
+        const gapMm = parseFloat(els.gapMm.value);
+
         if (!w) {
-          // Popup blocked: fall back to download link
           const a = document.createElement('a');
           a.href = url;
           a.download = 'mtg-print-sheet.pdf';
           a.click();
-          setStatus('Popup blocked. Downloaded PDF instead.');
+          setStatus(`Popup blocked. Downloaded PDF instead.\nScale: ${scalePct}% · Gap: ${gapMm}mm · Layout: ${els.layout.value}`);
           return;
         }
 
-        // Status
-        const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
-        setStatus(`Opened PDF in a new tab.\nScale: ${scalePct}% · Gap: ${els.gapMm.value}mm · Layout: ${els.layout.value}`);
+        setStatus(`Opened PDF in a new tab.\nScale: ${scalePct}% · Gap: ${gapMm}mm · Layout: ${els.layout.value}`);
       } catch (e) {
         console.error(e);
         setStatus(`ERROR: ${e?.message || e}`);
@@ -634,8 +623,6 @@ Commander: Alela, Artful Provocateur
       setStatus('');
       try {
         const itemsRaw = parseDeckText(els.input.value);
-
-        // flatten and count by raw name
         const counts = countByName(itemsRaw);
         const rawNames = [...counts.keys()];
 
@@ -646,15 +633,9 @@ Commander: Alela, Artful Provocateur
           return;
         }
 
-        // Fetch canonical card objects (Scryfall collection is case-insensitive on name matching)
         const cards = await fetchCollectionByNames(rawNames);
 
-        // Build a map of "best match" from returned data:
-        // We'll map by oracle_id and merge quantities from any capitalization variants.
         ORACLE_TO_CARD.clear();
-
-        // Scryfall returns card.name with canonical capitalization.
-        // We'll make a name->oracle lookup from response, then build ITEMS keyed by oracle_id.
         const nameToOracle = new Map();
         for (const c of cards) {
           if (c?.name && c?.oracle_id) {
@@ -663,17 +644,14 @@ Commander: Alela, Artful Provocateur
           }
         }
 
-        // Merge counts into oracle buckets
-        const oracleCounts = new Map(); // oracle_id -> qty
-        const oracleDisplayName = new Map(); // oracle_id -> canonical name
+        const oracleCounts = new Map();
+        const oracleDisplayName = new Map();
 
         for (const [rawName, qty] of counts.entries()) {
           const key = String(rawName || '').toLowerCase();
-          // Try direct match by lowercased name to the canonical response names
-          // If not found, try to find a card in 'cards' with case reminded; as fallback, skip.
           let oracleId = nameToOracle.get(key);
+
           if (!oracleId) {
-            // last resort: try fuzzy match among returned cards by lowercased name
             const found = cards.find(c => String(c?.name || '').toLowerCase() === key);
             oracleId = found?.oracle_id;
             if (oracleId && found) {
@@ -688,7 +666,6 @@ Commander: Alela, Artful Provocateur
           if (c?.name) oracleDisplayName.set(oracleId, c.name);
         }
 
-        // Build ITEMS
         ITEMS = [...oracleCounts.entries()].map(([oracleId, qty]) => {
           const c = ORACLE_TO_CARD.get(oracleId);
           return {
@@ -709,6 +686,10 @@ Commander: Alela, Artful Provocateur
 
     // ---------- Events ----------
     document.addEventListener('DOMContentLoaded', () => {
+      // Ensure defaults (in case browser rehydrates cached values)
+      els.gapMm.value = '3';
+      els.layout.value = 'LETTER_3x3';
+
       els.loadBtn.addEventListener('click', load);
 
       els.clearBtn.addEventListener('click', () => {
@@ -734,7 +715,6 @@ Commander: Alela, Artful Provocateur
 
       els.printBtn.addEventListener('click', printPdf);
 
-      // open modal
       els.cards.addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-action="art"]');
         if (!btn) return;
@@ -743,13 +723,11 @@ Commander: Alela, Artful Provocateur
         openArtModalFor(oracleId);
       });
 
-      // close modal (always visible)
       els.artClose.addEventListener('click', closeArtModal);
       els.artBackdrop.addEventListener('click', (e) => {
         if (e.target === els.artBackdrop) closeArtModal();
       });
 
-      // select print tile
       els.artBody.addEventListener('click', (e) => {
         const tile = e.target.closest('.print-tile');
         if (!tile || !MODAL_ORACLE) return;
@@ -757,7 +735,6 @@ Commander: Alela, Artful Provocateur
         const pid = tile.getAttribute('data-print-id');
         if (!pid) return;
 
-        // border highlight
         els.artBody.querySelectorAll('.print-tile.selected').forEach(n => n.classList.remove('selected'));
         tile.classList.add('selected');
 
@@ -766,7 +743,7 @@ Commander: Alela, Artful Provocateur
     });
   </script>
 
-  <!-- Background video logic (same pattern you used) -->
+  <!-- Background video logic -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -792,7 +769,7 @@ Commander: Alela, Artful Provocateur
     });
   </script>
 
-  <!-- Partials loader (same as your analyzer) -->
+  <!-- Partials loader -->
   <script>
     (async () => {
       try {
