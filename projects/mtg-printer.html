@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proxy Printer — Cowy’s Void</title>
+  <meta name="description" content="Paste card names, pick arts, and generate print-ready MTG proxy sheets." />
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
+  <link rel="stylesheet" href="/assets/css/void.css">
+
+  <style>
+    /* ---- Local UI additions (keeps your void.css look) ---- */
+    .controls-row { flex-wrap: wrap; gap: 10px; align-items: center; }
+    .control.inline { display: inline-flex; align-items: center; gap: 8px; }
+    .control.inline input[type="number"] { width: 90px; }
+    .divider { height: 1px; background: rgba(255,255,255,.12); margin: 14px 0; }
+
+    .card-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 12px; }
+    .card-row {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      overflow: hidden;
+    }
+    .card-thumb {
+      width: 88px;
+      height: 122px;
+      border-radius: 10px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.12);
+      overflow: hidden;
+    }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .card-meta { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .card-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .card-title strong { font-size: 14px; }
+    .card-title .muted { color: var(--muted); font-size: 12px; }
+    .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .chip {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--text);
+      font-size: 12px;
+      user-select: none;
+    }
+
+    /* ---- Modal ---- */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 18px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: min(1100px, 96vw);
+      max-height: min(86vh, 900px);
+      overflow: hidden;
+      border-radius: 18px;
+      background: rgba(10,10,18,.92);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      gap: 10px;
+    }
+    .modal-header .title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .modal-header .title strong { font-size: 14px; }
+    .modal-header .title span { font-size: 12px; color: var(--muted); }
+    .modal-controls {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .modal-controls input {
+      width: 260px;
+      max-width: 100%;
+    }
+    .prints-grid {
+      padding: 12px 14px;
+      overflow: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .print-opt {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      cursor: pointer;
+      transition: transform .08s ease, border-color .08s ease;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      min-height: 210px;
+    }
+    .print-opt:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.20); }
+    .print-opt img { width: 100%; height: 180px; object-fit: cover; display: block; background: rgba(0,0,0,.2); }
+    .print-opt .cap {
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .print-opt .cap strong { color: var(--text); font-size: 12px; }
+    .print-opt.selected { border-color: rgba(255,255,255,.35); box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+
+    /* ---- Print layout preview area ---- */
+    .print-panel { margin-top: 12px; }
+    .print-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    .sheet-wrap {
+      margin-top: 12px;
+      display: grid;
+      gap: 14px;
+    }
+    .print-page {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      overflow: hidden;
+      padding: 10px;
+    }
+    .print-page .page-label {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 4px 6px 10px 6px;
+    }
+
+    /* Print grid uses CSS variables set by JS */
+    .print-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), var(--cardOuterW));
+      grid-auto-rows: var(--cardOuterH);
+      gap: 0;
+      justify-content: start;
+      align-content: start;
+      width: max-content;
+      max-width: 100%;
+      overflow: auto;
+      padding: var(--pad);
+      background: rgba(0,0,0,.18);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .print-card {
+      position: relative;
+      width: var(--cardOuterW);
+      height: var(--cardOuterH);
+      overflow: hidden;
+      background: rgba(0,0,0,.25);
+    }
+    .print-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* Cut line inside bleed */
+    .print-card .cutline {
+      position: absolute;
+      left: var(--bleed);
+      top: var(--bleed);
+      width: var(--cardCutW);
+      height: var(--cardCutH);
+      border: 0.25mm solid rgba(255,255,255,.45);
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    /* ---- Print styles ---- */
+    @media print {
+      body { background: #fff !important; }
+      .app-layer, #bgVideo { display: none !important; }
+      .print-only { display: block !important; }
+      .no-print { display: none !important; }
+    }
+    .print-only { display: none; }
+
+    /* Print sheet pages */
+    .print-sheet {
+      /* JS will set --pageW/--pageH and --padMM */
+      width: var(--pageW);
+      min-height: var(--pageH);
+      padding: var(--padMM);
+      box-sizing: border-box;
+      page-break-after: always;
+      background: #fff;
+    }
+    .print-sheet:last-child { page-break-after: auto; }
+
+    .print-sheet .print-grid {
+      border: none;
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+      overflow: visible;
+    }
+    .print-sheet .print-card { background: transparent; }
+    .print-sheet .cutline { border-color: rgba(0,0,0,.55); }
+  </style>
+</head>
+
+<body>
+  <div id="bgVideo" class="bg-video" aria-hidden="true">
+    <video id="bgVideoEl" playsinline muted autoplay loop preload="metadata" poster="/assets/Blackhole_Poster.jpg"></video>
+  </div>
+
+  <div class="app-layer no-print">
+    <header id="site-header" aria-label="Primary"></header>
+
+    <main class="container">
+      <section class="panel page-panel solid-surface">
+        <header class="page">
+          <h1>Proxy Printer</h1>
+          <p class="sub">Paste a card list, choose your preferred art per card, then generate a print-ready sheet sized for MTG cards.</p>
+        </header>
+
+        <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
+          <label class="input input-solid solid-input" style="align-items:start">
+            <textarea id="cardsInput" class="textarea" placeholder="Examples:
+3x Sol Ring
+1 Command Tower [cmm]
+2 Island
+Arcane Signet
+
+Hints:
+- [setcode] optionally picks a default printing (e.g. [neo], [cmm]).
+- Comments with # or // are ignored."></textarea>
+          </label>
+        </div>
+
+        <div class="controls-row">
+          <button id="loadBtn" class="btn">Load Cards</button>
+          <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
+
+          <span class="control inline">
+            <strong>Scale</strong>
+            <button id="scaleDown" class="btn ghost solid-ghost-btn" type="button" aria-label="Scale down">−</button>
+            <input id="scalePct" type="number" min="50" max="140" step="1" value="100" />
+            <span class="muted">%</span>
+            <button id="scaleUp" class="btn ghost solid-ghost-btn" type="button" aria-label="Scale up">+</button>
+          </span>
+
+          <span class="control inline" title="Bleed expands the printed image beyond the cut line. With multiple cards on one sheet, bleed also creates a 'cut gap' between cut lines (2× bleed).">
+            <label for="bleedMm"><strong>Bleed</strong></label>
+            <select id="bleedMm">
+              <option value="0" selected>0mm</option>
+              <option value="0.2">0.2mm</option>
+              <option value="3">3mm</option>
+            </select>
+          </span>
+
+          <span class="control inline">
+            <label for="pageSize"><strong>Page</strong></label>
+            <select id="pageSize">
+              <option value="letter" selected>Letter (8.5×11)</option>
+              <option value="a4">A4</option>
+            </select>
+          </span>
+
+          <span id="spinner" class="spinner" hidden>
+            <span class="spin-dot" aria-hidden="true"></span>
+            <span class="inline-hint">Loading…</span>
+          </span>
+        </div>
+
+        <div class="inline-hint">
+          MTG cut size is treated as <code>63×88mm</code>. For best accuracy: in your browser print dialog, disable “Fit to page” / “Scale to fit” and print at 100%.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="print-actions">
+          <button id="buildSheetBtn" class="btn" type="button">Build Print Sheet</button>
+          <button id="printBtn" class="btn ghost solid-ghost-btn" type="button">Print</button>
+          <span class="inline-hint" id="fitHint"></span>
+        </div>
+      </section>
+
+      <section class="panel solid-surface">
+        <h2>Card List</h2>
+        <div id="cardList" class="card-list"></div>
+        <div id="empty" class="empty" hidden>Paste some cards and click Load Cards.</div>
+      </section>
+
+      <section class="panel solid-surface print-panel">
+        <h2>Sheet Preview</h2>
+        <div class="inline-hint">This preview is for sanity-checking. Actual printing uses a dedicated print-only layout below.</div>
+        <div id="sheetPreview" class="sheet-wrap"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Print-only output (what actually prints) -->
+  <div id="printRoot" class="print-only"></div>
+
+  <!-- Modal -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modal-header">
+        <div class="title">
+          <strong id="modalTitle">Choose art</strong>
+          <span id="modalSub">Loading printings…</span>
+        </div>
+        <button id="modalClose" class="btn ghost solid-ghost-btn" type="button">Close</button>
+      </div>
+
+      <div class="modal-controls">
+        <input id="modalFilter" class="input" placeholder="Filter (set code, artist, collector #, etc.)" />
+        <span class="chip" id="modalCount">—</span>
+        <span class="inline-hint" id="modalHint"></span>
+      </div>
+
+      <div id="printsGrid" class="prints-grid"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Scryfall helpers ----------
+    async function fetchCollectionByNames(names) {
+      const CHUNK = 70;
+      const uniq = [...new Set(names.filter(Boolean))];
+      const out = new Map();
+
+      for (let i = 0; i < uniq.length; i += CHUNK) {
+        const slice = uniq.slice(i, i + CHUNK);
+        const body = { identifiers: slice.map(n => ({ name: n })) };
+        const r = await fetch('https://api.scryfall.com/cards/collection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!r.ok) {
+          console.warn('Scryfall collection error', r.status);
+          continue;
+        }
+        const j = await r.json();
+        for (const card of (j.data || [])) out.set(card.name, card);
+      }
+      return out;
+    }
+
+    async function fetchAllPages(uri, hardCap = 1200) {
+      const all = [];
+      let next = uri;
+      while (next && all.length < hardCap) {
+        const r = await fetch(next);
+        if (!r.ok) break;
+        const j = await r.json();
+        const data = j.data || [];
+        all.push(...data);
+        next = j.has_more ? j.next_page : null;
+      }
+      return all;
+    }
+
+    function getFrontImage(card, kind = 'png') {
+      // kind can be: png | normal | small | border_crop
+      if (!card) return null;
+
+      const iu = card.image_uris;
+      if (iu && iu[kind]) return iu[kind];
+
+      const faces = card.card_faces;
+      if (Array.isArray(faces) && faces.length && faces[0].image_uris && faces[0].image_uris[kind]) {
+        return faces[0].image_uris[kind];
+      }
+
+      return null;
+    }
+
+    // ---------- Parsing ----------
+    function stripComments(line) {
+      return (line || '').replace(/\s*\/\/.*$/, '').replace(/\s*#.*$/, '').trim();
+    }
+
+    function parseLine(line) {
+      // supports:
+      //  3x Name
+      //  3 Name
+      //  Name
+      // optional set hint:
+      //  Name [neo]
+      //  Name [set:neo]
+      //  Name [set=neo]
+      // optional collector hint (basic):
+      //  Name {123}
+      let raw = stripComments(line);
+      if (!raw) return null;
+
+      let qty = 1;
+      let namePart = raw;
+
+      const mQty = raw.match(/^(\d+)\s*x?\s+(.+)$/i);
+      if (mQty) {
+        qty = parseInt(mQty[1], 10) || 1;
+        namePart = (mQty[2] || '').trim();
+      }
+
+      // collector hint {123}
+      let collector = null;
+      const mCol = namePart.match(/^(.*)\{(\d+)\}\s*$/);
+      if (mCol) {
+        namePart = (mCol[1] || '').trim();
+        collector = mCol[2];
+      }
+
+      // set hint [neo] or [set:neo]
+      let setHint = null;
+      const mSet = namePart.match(/^(.*)\[(.+)\]\s*$/);
+      if (mSet) {
+        namePart = (mSet[1] || '').trim();
+        const tag = (mSet[2] || '').trim();
+        const mTag = tag.match(/^(?:set\s*[:=]\s*)?([a-z0-9]{2,6})$/i);
+        if (mTag) setHint = mTag[1].toLowerCase();
+      }
+
+      const name = namePart.trim();
+      if (!name) return null;
+
+      return { qty, name, setHint, collector };
+    }
+
+    function parseInput(text) {
+      const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
+      const items = [];
+      for (const l of lines) {
+        const it = parseLine(l);
+        if (it) items.push(it);
+      }
+      return items;
+    }
+
+    // ---------- Print geometry ----------
+    const CUT_W_MM = 63;
+    const CUT_H_MM = 88;
+
+    function pageDimsMM(size) {
+      // returns { w, h } in mm
+      if (size === 'a4') return { w: 210, h: 297 };
+      // letter
+      return { w: 215.9, h: 279.4 };
+    }
+
+    function clamp(n, a, b) {
+      return Math.max(a, Math.min(b, n));
+    }
+
+    // ---------- State ----------
+    let LAST_ITEMS = [];
+    let NAME_TO_CARD = new Map();      // name -> canonical card object
+    let SELECTED_PRINT = new Map();    // name -> selected print card object
+    let PRINTS_CACHE = new Map();      // oracle-ish key -> print list (array of card objects)
+
+    const els = {
+      input: document.getElementById('cardsInput'),
+      loadBtn: document.getElementById('loadBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      spinner: document.getElementById('spinner'),
+      list: document.getElementById('cardList'),
+      empty: document.getElementById('empty'),
+      scalePct: document.getElementById('scalePct'),
+      scaleDown: document.getElementById('scaleDown'),
+      scaleUp: document.getElementById('scaleUp'),
+      bleedMm: document.getElementById('bleedMm'),
+      pageSize: document.getElementById('pageSize'),
+      buildSheetBtn: document.getElementById('buildSheetBtn'),
+      printBtn: document.getElementById('printBtn'),
+      fitHint: document.getElementById('fitHint'),
+      sheetPreview: document.getElementById('sheetPreview'),
+      printRoot: document.getElementById('printRoot'),
+
+      modalBackdrop: document.getElementById('modalBackdrop'),
+      modalClose: document.getElementById('modalClose'),
+      modalTitle: document.getElementById('modalTitle'),
+      modalSub: document.getElementById('modalSub'),
+      modalFilter: document.getElementById('modalFilter'),
+      printsGrid: document.getElementById('printsGrid'),
+      modalCount: document.getElementById('modalCount'),
+      modalHint: document.getElementById('modalHint'),
+    };
+
+    // ---------- Rendering (card list) ----------
+    function renderCardList() {
+      if (!LAST_ITEMS.length) {
+        els.list.innerHTML = '';
+        els.empty.hidden = false;
+        return;
+      }
+      els.empty.hidden = true;
+
+      const uniqByName = new Map();
+      for (const it of LAST_ITEMS) {
+        uniqByName.set(it.name, {
+          name: it.name,
+          qty: (uniqByName.get(it.name)?.qty || 0) + (it.qty || 1),
+          setHint: it.setHint || uniqByName.get(it.name)?.setHint || null,
+          collector: it.collector || uniqByName.get(it.name)?.collector || null
+        });
+      }
+
+      const rows = [];
+      for (const it of uniqByName.values()) {
+        const base = NAME_TO_CARD.get(it.name);
+        const chosen = SELECTED_PRINT.get(it.name) || base;
+        const thumb = getFrontImage(chosen, 'normal') || getFrontImage(chosen, 'small') || '';
+        const chosenMeta = chosen
+          ? `${(chosen.set || '').toUpperCase()} · #${chosen.collector_number || '—'} · ${chosen.artist || '—'}`
+          : '—';
+        const hintText = it.setHint ? `Default hint: [${it.setHint}]` : 'No set hint';
+
+        rows.push(`
+          <div class="card-row">
+            <div class="card-thumb">
+              ${thumb ? `<img src="${thumb}" alt="${esc(it.name)}">` : `<div class="inline-hint" style="padding:8px">No image</div>`}
+            </div>
+            <div class="card-meta">
+              <div class="card-title">
+                <strong>${esc(it.name)}</strong>
+                <span class="chip">Qty <strong>${it.qty}</strong></span>
+              </div>
+              <div class="muted" style="font-size:12px; line-height:1.25">
+                <div><span class="chip">Selected</span> ${esc(chosenMeta)}</div>
+                <div class="inline-hint" style="margin-top:4px">${esc(hintText)}</div>
+              </div>
+              <div class="card-actions">
+                <button class="btn" type="button" data-action="choose-art" data-name="${escAttr(it.name)}">Choose Art</button>
+                <button class="btn ghost solid-ghost-btn" type="button" data-action="reset-art" data-name="${escAttr(it.name)}">Reset</button>
+              </div>
+            </div>
+          </div>
+        `);
+      }
+
+      els.list.innerHTML = rows.join('');
+    }
+
+    // ---------- Modal (choose art) ----------
+    let MODAL_ACTIVE_NAME = null;
+    let MODAL_PRINTS = [];
+    let MODAL_SELECTED_ID = null;
+
+    function openModalFor(name) {
+      MODAL_ACTIVE_NAME = name;
+      els.modalFilter.value = '';
+      els.modalHint.textContent = 'Tip: huge lists are normal for staples. Filter by set (e.g. “cmm”), artist, or collector #.';
+      els.modalTitle.textContent = `Choose art — ${name}`;
+      els.modalSub.textContent = 'Loading printings…';
+      els.printsGrid.innerHTML = '';
+      els.modalCount.textContent = '—';
+      els.modalBackdrop.classList.add('open');
+      els.modalBackdrop.setAttribute('aria-hidden', 'false');
+
+      loadPrintsFor(name).catch(err => {
+        console.error(err);
+        els.modalSub.textContent = 'Failed to load printings.';
+      });
+    }
+
+    function closeModal() {
+      els.modalBackdrop.classList.remove('open');
+      els.modalBackdrop.setAttribute('aria-hidden', 'true');
+      MODAL_ACTIVE_NAME = null;
+      MODAL_PRINTS = [];
+      MODAL_SELECTED_ID = null;
+    }
+
+    async function loadPrintsFor(name) {
+      const base = NAME_TO_CARD.get(name);
+      if (!base) {
+        els.modalSub.textContent = 'Card not found in Scryfall results.';
+        return;
+      }
+
+      // Use prints_search_uri to get all printings.
+      // Cache by prints_search_uri (good-enough stable key).
+      const key = base.prints_search_uri || base.oracle_id || base.id || name;
+      let prints = PRINTS_CACHE.get(key);
+      if (!prints) {
+        prints = await fetchAllPages(base.prints_search_uri);
+        PRINTS_CACHE.set(key, prints);
+      }
+
+      // Prefer printings that actually have images
+      prints = (prints || []).filter(p => !!getFrontImage(p, 'normal') || !!getFrontImage(p, 'small'));
+
+      MODAL_PRINTS = prints;
+      const current = SELECTED_PRINT.get(name) || base;
+      MODAL_SELECTED_ID = current?.id || null;
+
+      els.modalSub.textContent = `${prints.length.toLocaleString()} printings`;
+      renderModalGrid();
+    }
+
+    function renderModalGrid() {
+      const q = (els.modalFilter.value || '').trim().toLowerCase();
+      const name = MODAL_ACTIVE_NAME;
+      if (!name) return;
+
+      const base = NAME_TO_CARD.get(name);
+      const selectedId = MODAL_SELECTED_ID;
+
+      let prints = MODAL_PRINTS.slice();
+      if (q) {
+        prints = prints.filter(p => {
+          const hay = [
+            p.set, p.set_name, p.collector_number, p.artist, p.released_at,
+            p.frame, p.border_color, p.finishes?.join(','), p.lang
+          ].filter(Boolean).join(' ').toLowerCase();
+          return hay.includes(q);
+        });
+      }
+
+      els.modalCount.textContent = `${prints.length.toLocaleString()} shown`;
+
+      // Render
+      const html = prints.map(p => {
+        const img = getFrontImage(p, 'small') || getFrontImage(p, 'normal') || '';
+        const cap1 = `${(p.set || '').toUpperCase()} · #${p.collector_number || '—'}`;
+        const cap2 = `${p.artist || '—'} · ${p.released_at || '—'}`;
+        const sel = (p.id === selectedId) ? 'selected' : '';
+        return `
+          <div class="print-opt ${sel}" data-action="pick-print" data-id="${escAttr(p.id)}">
+            ${img ? `<img src="${img}" alt="${esc(p.name)}">` : `<div class="inline-hint" style="padding:10px">No image</div>`}
+            <div class="cap">
+              <strong>${esc(cap1)}</strong>
+              <span>${esc(cap2)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      els.printsGrid.innerHTML = html || `<div class="inline-hint">No matches.</div>`;
+    }
+
+    function pickPrintingById(id) {
+      const name = MODAL_ACTIVE_NAME;
+      if (!name) return;
+
+      const p = MODAL_PRINTS.find(x => x.id === id);
+      if (!p) return;
+
+      SELECTED_PRINT.set(name, p);
+      MODAL_SELECTED_ID = id;
+
+      renderCardList();
+      rebuildSheets(); // keep preview + print output in sync
+      closeModal();
+    }
+
+    // ---------- Print sheet generation ----------
+    function buildCopiesFromItems() {
+      // Expand quantities into an array of card names (one per printed card)
+      const byName = new Map();
+      for (const it of LAST_ITEMS) {
+        byName.set(it.name, (byName.get(it.name) || 0) + (it.qty || 1));
+      }
+
+      const copies = [];
+      for (const [name, qty] of byName.entries()) {
+        for (let i = 0; i < qty; i++) copies.push(name);
+      }
+      return copies;
+    }
+
+    function currentSettings() {
+      const scalePct = clamp(parseFloat(els.scalePct.value || '100'), 50, 140);
+      const scale = scalePct / 100;
+      const bleed = Math.max(0, parseFloat(els.bleedMm.value || '0')) || 0;
+      const page = els.pageSize.value || 'letter';
+      return { scalePct, scale, bleed, page };
+    }
+
+    function computeFit(copiesCount) {
+      const { scale, bleed, page } = currentSettings();
+      const { w: pageW, h: pageH } = pageDimsMM(page);
+
+      // Pad to avoid printer non-printable margins; still printable if borderless.
+      // You can change this to 0 if you always print borderless.
+      const pad = 5; // mm
+
+      const outerW = (CUT_W_MM + 2 * bleed) * scale;
+      const outerH = (CUT_H_MM + 2 * bleed) * scale;
+
+      const usableW = pageW - 2 * pad;
+      const usableH = pageH - 2 * pad;
+
+      const cols = Math.max(1, Math.floor(usableW / outerW));
+      const rows = Math.max(1, Math.floor(usableH / outerH));
+      const perPage = cols * rows;
+
+      const pages = perPage ? Math.ceil(copiesCount / perPage) : 0;
+
+      return { pageW, pageH, pad, outerW, outerH, cols, rows, perPage, pages };
+    }
+
+    function rebuildSheets() {
+      const copies = buildCopiesFromItems();
+      const fit = computeFit(copies.length);
+
+      els.fitHint.textContent =
+        copies.length
+          ? `Fit: ${fit.cols}×${fit.rows} (${fit.perPage} per page). Total ${fit.pages} page(s).`
+          : '';
+
+      renderSheetPreview(copies, fit);
+      renderPrintOnly(copies, fit);
+    }
+
+    function cardImageForName(name, kind = 'png') {
+      const chosen = SELECTED_PRINT.get(name) || NAME_TO_CARD.get(name);
+      // For printing, PNG is best (largest); for preview normal is fine
+      return getFrontImage(chosen, kind) || getFrontImage(chosen, 'normal') || getFrontImage(chosen, 'small') || '';
+    }
+
+    function renderSheetPreview(copies, fit) {
+      els.sheetPreview.innerHTML = '';
+      if (!copies.length) return;
+
+      const { cols, rows, perPage, pages, bleed } = fit;
+      const { scale, page } = currentSettings();
+
+      // CSS variables in mm (preview box uses same grid but inside panels)
+      const cardOuterW = `${fit.outerW.toFixed(3)}mm`;
+      const cardOuterH = `${fit.outerH.toFixed(3)}mm`;
+      const cardCutW   = `${(CUT_W_MM * scale).toFixed(3)}mm`;
+      const cardCutH   = `${(CUT_H_MM * scale).toFixed(3)}mm`;
+      const bleedMM    = `${(bleed * scale).toFixed(3)}mm`;
+      const padMM      = `${(fit.pad).toFixed(3)}mm`;
+
+      for (let p = 0; p < pages; p++) {
+        const start = p * perPage;
+        const slice = copies.slice(start, start + perPage);
+
+        const cards = slice.map(n => {
+          const img = cardImageForName(n, 'normal');
+          return `
+            <div class="print-card" title="${esc(n)}">
+              ${img ? `<img src="${img}" alt="${esc(n)}">` : ''}
+              <div class="cutline"></div>
+            </div>
+          `;
+        }).join('');
+
+        const pageLabel = page === 'a4' ? 'A4' : 'Letter';
+        const el = document.createElement('div');
+        el.className = 'print-page';
+        el.innerHTML = `
+          <div class="page-label">Preview page ${p + 1} · ${pageLabel} · ${cols}×${rows} · Bleed ${fit.pad ? '' : ''}${(parseFloat(els.bleedMm.value)||0)}mm · Scale ${Math.round(scale*100)}%</div>
+          <div class="print-grid" style="
+            --cols:${cols};
+            --cardOuterW:${cardOuterW};
+            --cardOuterH:${cardOuterH};
+            --cardCutW:${cardCutW};
+            --cardCutH:${cardCutH};
+            --bleed:${bleedMM};
+            --pad:${padMM};
+          ">
+            ${cards}
+          </div>
+        `;
+        els.sheetPreview.appendChild(el);
+      }
+    }
+
+    function renderPrintOnly(copies, fit) {
+      els.printRoot.innerHTML = '';
+      if (!copies.length) return;
+
+      const { cols, rows, perPage, pages, pageW, pageH, pad } = fit;
+      const { scale, bleed, page } = currentSettings();
+
+      const cardOuterW = `${fit.outerW.toFixed(3)}mm`;
+      const cardOuterH = `${fit.outerH.toFixed(3)}mm`;
+      const cardCutW   = `${(CUT_W_MM * scale).toFixed(3)}mm`;
+      const cardCutH   = `${(CUT_H_MM * scale).toFixed(3)}mm`;
+      const bleedMM    = `${(bleed * scale).toFixed(3)}mm`;
+
+      const pageWmm = `${pageW}mm`;
+      const pageHmm = `${pageH}mm`;
+      const padMM   = `${pad}mm`;
+
+      // Note: Some browsers respect @page size best when printing from a separate doc,
+      // but this works well enough for Chromium-based browsers.
+      // We include a style tag inside printRoot to lock @page size per selection.
+      const style = document.createElement('style');
+      style.textContent = `
+        @page { size: ${page === 'a4' ? 'A4' : 'Letter'}; margin: 0; }
+      `;
+      els.printRoot.appendChild(style);
+
+      for (let p = 0; p < pages; p++) {
+        const start = p * perPage;
+        const slice = copies.slice(start, start + perPage);
+
+        const cards = slice.map(n => {
+          const img = cardImageForName(n, 'png'); // best for printing
+          return `
+            <div class="print-card">
+              ${img ? `<img src="${img}" alt="${esc(n)}">` : ''}
+              <div class="cutline"></div>
+            </div>
+          `;
+        }).join('');
+
+        const sheet = document.createElement('div');
+        sheet.className = 'print-sheet';
+        sheet.style.cssText = `
+          --pageW:${pageWmm};
+          --pageH:${pageHmm};
+          --padMM:${padMM};
+        `;
+        sheet.innerHTML = `
+          <div class="print-grid" style="
+            --cols:${cols};
+            --cardOuterW:${cardOuterW};
+            --cardOuterH:${cardOuterH};
+            --cardCutW:${cardCutW};
+            --cardCutH:${cardCutH};
+            --bleed:${bleedMM};
+            --pad:0mm;
+          ">
+            ${cards}
+          </div>
+        `;
+        els.printRoot.appendChild(sheet);
+      }
+    }
+
+    // ---------- Load / default art selection ----------
+    async function loadCards() {
+      els.spinner.hidden = false;
+      try {
+        const items = parseInput(els.input.value);
+        LAST_ITEMS = items;
+
+        if (!items.length) {
+          NAME_TO_CARD = new Map();
+          SELECTED_PRINT = new Map();
+          renderCardList();
+          rebuildSheets();
+          return;
+        }
+
+        const names = [...new Set(items.map(x => x.name))];
+        const nameToCard = await fetchCollectionByNames(names);
+        NAME_TO_CARD = nameToCard;
+
+        // Default selection:
+        // - if the line has [setcode], pick first printing from that set (only when needed)
+        // - otherwise just use the base card from /collection
+        SELECTED_PRINT = new Map();
+
+        // Group hints by name (prefer first provided hint)
+        const hintByName = new Map();
+        for (const it of items) {
+          if (!hintByName.has(it.name)) hintByName.set(it.name, { setHint: it.setHint, collector: it.collector });
+        }
+
+        // Apply set-hint defaults (lazy: fetch prints only for hinted cards)
+        for (const [name, hint] of hintByName.entries()) {
+          const base = NAME_TO_CARD.get(name);
+          if (!base) continue;
+
+          if (hint?.setHint) {
+            const key = base.prints_search_uri || base.oracle_id || base.id || name;
+            let prints = PRINTS_CACHE.get(key);
+            if (!prints) {
+              prints = await fetchAllPages(base.prints_search_uri);
+              PRINTS_CACHE.set(key, prints);
+            }
+            const match = (prints || []).find(p => (p.set || '').toLowerCase() === hint.setHint.toLowerCase());
+            if (match) SELECTED_PRINT.set(name, match);
+          }
+        }
+
+        renderCardList();
+        rebuildSheets();
+      } finally {
+        els.spinner.hidden = true;
+      }
+    }
+
+    function clearAll() {
+      els.input.value = '';
+      LAST_ITEMS = [];
+      NAME_TO_CARD = new Map();
+      SELECTED_PRINT = new Map();
+      // keep PRINTS_CACHE (nice for UX)
+      renderCardList();
+      els.sheetPreview.innerHTML = '';
+      els.printRoot.innerHTML = '';
+      els.fitHint.textContent = '';
+      els.empty.hidden = false;
+    }
+
+    // ---------- UI helpers ----------
+    function esc(s) {
+      return (s || '').replace(/[&<>\"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[m]));
+    }
+    function escAttr(s) {
+      // safe enough for data-attrs
+      return esc(s).replace(/"/g, '&quot;');
+    }
+
+    function bumpScale(delta) {
+      const v = clamp(parseInt(els.scalePct.value || '100', 10) + delta, 50, 140);
+      els.scalePct.value = String(v);
+      rebuildSheets();
+    }
+
+    // ---------- Events ----------
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button,[data-action]');
+      if (!btn) return;
+
+      const action = btn.getAttribute('data-action');
+      if (action === 'choose-art') {
+        const name = btn.getAttribute('data-name');
+        openModalFor(name);
+      }
+      if (action === 'reset-art') {
+        const name = btn.getAttribute('data-name');
+        SELECTED_PRINT.delete(name);
+        renderCardList();
+        rebuildSheets();
+      }
+      if (action === 'pick-print') {
+        const id = btn.getAttribute('data-id');
+        pickPrintingById(id);
+      }
+    });
+
+    els.modalClose.addEventListener('click', closeModal);
+    els.modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === els.modalBackdrop) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && els.modalBackdrop.classList.contains('open')) closeModal();
+    });
+    els.modalFilter.addEventListener('input', renderModalGrid);
+
+    els.loadBtn.addEventListener('click', loadCards);
+    els.clearBtn.addEventListener('click', clearAll);
+
+    els.scaleDown.addEventListener('click', () => bumpScale(-1));
+    els.scaleUp.addEventListener('click', () => bumpScale(+1));
+    els.scalePct.addEventListener('input', () => rebuildSheets());
+    els.bleedMm.addEventListener('change', () => rebuildSheets());
+    els.pageSize.addEventListener('change', () => rebuildSheets());
+
+    els.buildSheetBtn.addEventListener('click', () => rebuildSheets());
+    els.printBtn.addEventListener('click', () => {
+      // ensure print-only output is current before printing
+      rebuildSheets();
+      window.print();
+    });
+
+    // ---------- Background video + partial loader (copied pattern) ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+      const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+      const allowVideo = isFast && isWifiLike;
+
+      const wrap = document.getElementById('bgVideo');
+      const vid  = document.getElementById('bgVideoEl');
+      if (!wrap || !vid) return;
+
+      if (!allowVideo) {
+        wrap.style.display = 'none';
+        return;
+      }
+
+      vid.src = '/assets/Blackhole_Animtation.mp4';
+
+      const onReady = () => {
+        wrap.classList.add('ready');
+        const p = vid.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      };
+
+      vid.addEventListener('canplay', onReady, { once: true });
+      vid.addEventListener('loadeddata', onReady, { once: true });
+      vid.addEventListener('loadedmetadata', () => {
+        wrap.classList.add('ready');
+      }, { once: true });
+    });
+
+    (async () => {
+      try {
+        async function loadPartial(url) {
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) return null;
+          const html = await res.text();
+          const tpl = document.createElement('template');
+          tpl.innerHTML = html.trim();
+          tpl.content.querySelectorAll('style').forEach(st => {
+            document.head.appendChild(st.cloneNode(true));
+            st.remove();
+          });
+          return tpl.content.firstElementChild || null;
+        }
+
+        const header = document.getElementById('site-header');
+        const navEl = await loadPartial('/partials/nav.html');
+        if (header && navEl) {
+          header.innerHTML = '';
+          header.appendChild(navEl);
+          initNav(header);
+        }
+
+        const discordEl = await loadPartial('/partials/discord.html');
+        if (discordEl) document.body.appendChild(discordEl);
+
+        const footerEl = await loadPartial('/partials/footer.html');
+        if (footerEl) document.body.appendChild(footerEl);
+
+        function initNav(scope) {
+          const btn = scope.querySelector('.menu-toggle');
+          const panel = scope.querySelector('#nav-panel');
+          if (btn && panel) {
+            btn.addEventListener('click', () => {
+              const open = panel.classList.toggle('open');
+              btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+          }
+          const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+          scope.querySelectorAll('.nav-link').forEach(a => {
+            let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+            if (href === '/blog/') href = '/blog';
+            if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
+              a.setAttribute('aria-current', 'page');
+            }
+            if (here.includes('/projects')) a.setAttribute('aria-current', 'page');
+            if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+          });
+        }
+      } catch (e) {
+        console.warn('Partial load failed:', e);
+      }
+    })();
+
+    // initial empty state
+    els.empty.hidden = false;
+  </script>
+</body>
+</html>

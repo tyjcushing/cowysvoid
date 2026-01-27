@@ -1,25 +1,13 @@
 [
   {
-    "slug": "qr-code-generator",
-    "title": "QR Code Generator",
-    "subtitle": "Fast, offline, custom colors & logo overlays",
-    "url": "/projects/qr-code-generator.html",
-    "blurb": "Generate QR codes with color, size, error correction.",
-    "tags": ["Tool", "Web", "Utility"],
-    "tech": ["HTML", "JS", "Canvas"],
-    "image": "/assets/projects/qr-thumb.png",
-    "updated": "2025-09-29"
-  },
-  {
-    "slug": "deck-stats",
-    "title": "Deck Stats Visualizer",
-    "subtitle": "Mana curve & color pie for MTG decks",
-    "url": "/projects/deck-stats.html",
-    "blurb": "Paste in a decklist, get instant charts for curve, colors, and types.",
-    "tags": ["MTG", "Data Viz"],
-    "tech": ["JS", "D3"],
-    "image": "/assets/projects/deck-stats-thumb.jpg",
-    "updated": "2025-08-12"
+    "title": "Check Lists",
+    "subtitle": "xyz",
+    "blurb": "xyz",
+    "tags": ["Utility", "Tracker"],
+    "tech": ["JavaScript", "JSON"],
+    "image": "/assets/projects/xyzx.png",
+    "url": "/projects/checklists.html",
+    "updated": "2025-10-21"
   },
   {
   "title": "Character Counter",
@@ -42,15 +30,37 @@
     "updated": "2025-10-02"
   },
   {
-    "title": "Check Lists",
-    "subtitle": "xyz",
-    "blurb": "xyz",
-    "tags": ["Utility", "Tracker"],
-    "tech": ["JavaScript", "JSON"],
-    "image": "/assets/projects/xyzx.png",
-    "url": "/projects/checklists.html",
-    "updated": "2025-10-21"
+    "slug": "qr-code-generator",
+    "title": "QR Code Generator",
+    "subtitle": "Fast, offline, custom colors & logo overlays",
+    "url": "/projects/qr-code-generator.html",
+    "blurb": "Generate QR codes with color, size, error correction.",
+    "tags": ["Tool", "Web", "Utility"],
+    "tech": ["HTML", "JS", "Canvas"],
+    "image": "/assets/projects/qr-thumb.png",
+    "updated": "2025-09-29"
+  },
+  {
+    "slug": "deck-stats",
+    "title": "Deck Stats Visualizer",
+    "subtitle": "Mana curve & color pie for MTG decks",
+    "url": "/projects/deck-stats.html",
+    "blurb": "Paste in a decklist, get instant charts for curve, colors, and types.",
+    "tags": ["MTG", "Data Viz"],
+    "tech": ["JS", "D3"],
+    "image": "/assets/projects/deck-stats-thumb.jpg",
+    "updated": "2025-08-12"
+  },
+  {
+    "slug": "mtg-printer",
+    "title": "MTG Proxy formatter",
+    "subtitle": "Paste in a list of card, choose your arts and print settings, and get output list of correctly formatted magic cards.",
+    "url": "/projects/mtg-printer.html",
+    "blurb": "Generate Magic card proxeis in correct print sizes.",
+    "tags": ["Tool", "MTG", "Utility"],
+    "tech": ["HTML", "JS", "Canvas"],
+    "image": "/assets/projects/holy-cow.jpg",
+    "updated": "2026-01-27"
   }
-
 
 ]
