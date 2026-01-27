@@ -27,7 +27,6 @@
     .mini { font-size: 12px; color: var(--muted); }
     .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
 
-    /* White text + black background picklist */
     select.pick-black {
       background: #000 !important;
       color: #fff !important;
@@ -38,7 +37,6 @@
     }
     select.pick-black option { background:#000; color:#fff; }
 
-    /* Modal */
     .modal-backdrop {
       position: fixed; inset: 0;
       background: rgba(0,0,0,.65);
@@ -195,7 +193,6 @@ Commander: Alela, Artful Provocateur
     </main>
   </div>
 
-  <!-- Art Modal -->
   <div id="artBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Choose alternate art">
     <div class="modal">
       <div class="modal-header">
@@ -214,7 +211,6 @@ Commander: Alela, Artful Provocateur
   </div>
 
   <script>
-    // ---------- Constants ----------
     const SCRY_COLLECTION = 'https://api.scryfall.com/cards/collection';
     const SCRY_SEARCH_PRINTS = (oracleId) =>
       `https://api.scryfall.com/cards/search?order=released&q=oracleid%3A${encodeURIComponent(oracleId)}&unique=prints`;
@@ -224,7 +220,6 @@ Commander: Alela, Artful Provocateur
       card?.image_uris?.png || card?.image_uris?.large || card?.image_uris?.normal ||
       card?.card_faces?.[0]?.image_uris?.png || card?.card_faces?.[0]?.image_uris?.large || card?.card_faces?.[0]?.image_uris?.normal || '';
 
-    // Proxy endpoint (Cloudflare Pages Function) to bypass CORS when fetching bytes
     const PROXY_IMG = (url) => `/img?url=${encodeURIComponent(url)}`;
 
     const els = {
@@ -250,7 +245,6 @@ Commander: Alela, Artful Provocateur
       artClose: document.getElementById('artClose'),
     };
 
-    // ---------- Safe helpers ----------
     function esc(v) {
       const s = (v == null) ? '' : String(v);
       return s.replace(/[&<>\"']/g, m => ({
@@ -305,14 +299,12 @@ Commander: Alela, Artful Provocateur
       return m;
     }
 
-    // ---------- State (keyed by oracle_id to fix capitalization & multi-prints) ----------
     let ITEMS = [];
-    const ORACLE_TO_CARD = new Map();       // oracle_id -> canonical card object
-    const ORACLE_TO_PRINTS = new Map();     // oracle_id -> array of prints
-    const PRINT_CACHE = new Map();          // printId -> print card object
+    const ORACLE_TO_CARD = new Map();
+    const ORACLE_TO_PRINTS = new Map();
+    const PRINT_CACHE = new Map();
     let MODAL_ORACLE = null;
 
-    // ---------- Scryfall ----------
     async function fetchCollectionByNames(names) {
       const CHUNK = 70;
       const uniq = [...new Set(names.filter(Boolean))];
@@ -354,7 +346,6 @@ Commander: Alela, Artful Provocateur
       return prints;
     }
 
-    // ---------- Render ----------
     function renderCards() {
       els.cards.innerHTML = '';
       els.empty.hidden = ITEMS.length > 0;
@@ -443,7 +434,6 @@ Commander: Alela, Artful Provocateur
       renderCards();
     }
 
-    // ---------- PDF ----------
     async function loadPdfLib() {
       if (window.PDFLib) return window.PDFLib;
 
@@ -459,17 +449,9 @@ Commander: Alela, Artful Provocateur
       return window.PDFLib;
     }
 
-    async function fetchAsBytes(url) {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`Fetch failed: ${r.status}`);
-      const ct = (r.headers.get('content-type') || '').toLowerCase();
-      const buf = await r.arrayBuffer();
-      return { bytes: new Uint8Array(buf), contentType: ct };
-    }
-
     function layoutSpec(value) {
       const A4 = { w: 210, h: 297 };
-      const LETTER = { w: 215.9, h: 279.4 }; // 8.5 x 11
+      const LETTER = { w: 215.9, h: 279.4 };
 
       switch (value) {
         case 'LETTER_3x4': return { page: LETTER, cols: 3, rows: 4 };
@@ -482,25 +464,98 @@ Commander: Alela, Artful Provocateur
 
     function mmToPt(mm) { return mm * (72 / 25.4); }
 
-    async function embedImageSmart(pdf, bytes, contentType, originalUrlHint) {
-      // Prefer content-type; fall back to URL hint; then try both.
-      const hint = String(originalUrlHint || '').toLowerCase();
+    function sniffImageKind(u8) {
+      if (!u8 || u8.length < 12) return 'unknown';
 
-      const preferPng = contentType.includes('png') || hint.includes('.png');
-      const preferJpg = contentType.includes('jpeg') || contentType.includes('jpg') || hint.includes('.jpg') || hint.includes('.jpeg');
+      const isPng =
+        u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4E && u8[3] === 0x47 &&
+        u8[4] === 0x0D && u8[5] === 0x0A && u8[6] === 0x1A && u8[7] === 0x0A;
 
-      if (preferPng) {
-        try { return await pdf.embedPng(bytes); } catch (_) {}
-        try { return await pdf.embedJpg(bytes); } catch (_) {}
+      const isJpg = u8[0] === 0xFF && u8[1] === 0xD8 && u8[2] === 0xFF;
+
+      const isWebp =
+        u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46 &&
+        u8[8] === 0x57 && u8[9] === 0x45 && u8[10] === 0x42 && u8[11] === 0x50;
+
+      const isHtml =
+        u8[0] === 0x3C && (u8[1] === 0x21 || u8[1] === 0x68 || u8[1] === 0x48);
+
+      const ascii = (i) => String.fromCharCode(u8[i] || 0);
+      const head = `${ascii(0)}${ascii(1)}${ascii(2)}${ascii(3)}${ascii(4)}${ascii(5)}${ascii(6)}${ascii(7)}${ascii(8)}${ascii(9)}${ascii(10)}${ascii(11)}${ascii(12)}${ascii(13)}${ascii(14)}${ascii(15)}`;
+      const isBmff = head.includes('ftyp');
+
+      if (isPng) return 'png';
+      if (isJpg) return 'jpg';
+      if (isWebp) return 'webp';
+      if (isHtml) return 'html';
+      if (isBmff) return 'bmff';
+      return 'unknown';
+    }
+
+    async function blobToUint8(blob) {
+      const buf = await blob.arrayBuffer();
+      return new Uint8Array(buf);
+    }
+
+    async function convertBlobToPngBytes(blob) {
+      const bmp = await createImageBitmap(blob);
+      const canvas = document.createElement('canvas');
+      canvas.width = bmp.width;
+      canvas.height = bmp.height;
+
+      const ctx = canvas.getContext('2d', { alpha: true });
+      ctx.drawImage(bmp, 0, 0);
+      bmp.close?.();
+
+      const pngBlob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/png');
+      });
+
+      return await blobToUint8(pngBlob);
+    }
+
+    async function fetchAsImageBytes(url, originalUrlHint) {
+      const r = await fetch(url, { cache: 'no-store' });
+
+      if (!r.ok) {
+        const txt = await r.text().catch(() => '');
+        throw new Error(`Image fetch failed (${r.status}) for ${originalUrlHint || url}\n${txt.slice(0, 200)}`);
       }
-      if (preferJpg) {
-        try { return await pdf.embedJpg(bytes); } catch (_) {}
-        try { return await pdf.embedPng(bytes); } catch (_) {}
+
+      const ct = (r.headers.get('content-type') || '').toLowerCase();
+      const blob = await r.blob();
+
+      const raw = await blobToUint8(blob);
+      const kind = sniffImageKind(raw);
+
+      if (kind === 'png') return { bytes: raw, kind: 'png', contentType: ct };
+      if (kind === 'jpg') return { bytes: raw, kind: 'jpg', contentType: ct };
+
+      if (kind === 'html' || ct.includes('text/html') || ct.includes('application/json') || ct.startsWith('text/')) {
+        const txt = await blob.text().catch(() => '');
+        throw new Error(
+          `Proxy did not return an image for ${originalUrlHint || url}\n` +
+          `content-type: ${ct || '(missing)'}\n` +
+          `${txt.slice(0, 240)}`
+        );
       }
 
-      // Unknown / incorrect headers: brute force
-      try { return await pdf.embedPng(bytes); } catch (_) {}
-      return await pdf.embedJpg(bytes);
+      try {
+        const pngBytes = await convertBlobToPngBytes(blob);
+        return { bytes: pngBytes, kind: 'png', contentType: 'image/png' };
+      } catch (e) {
+        throw new Error(
+          `Unsupported/corrupt image format for ${originalUrlHint || url}\n` +
+          `content-type: ${ct || '(missing)'} kind: ${kind}\n` +
+          `convert failed: ${e?.message || e}`
+        );
+      }
+    }
+
+    async function embedImageSmart(pdf, payload) {
+      if (payload.kind === 'png') return await pdf.embedPng(payload.bytes);
+      if (payload.kind === 'jpg') return await pdf.embedJpg(payload.bytes);
+      throw new Error(`Unsupported embedded kind: ${payload.kind}`);
     }
 
     async function buildPdf() {
@@ -511,11 +566,10 @@ Commander: Alela, Artful Provocateur
       const scale = scalePct / 100;
 
       const gapMm = parseFloat(els.gapMm.value);
-      const gap = (isFinite(gapMm) ? gapMm : 3); // safety: default to 3mm if weird
+      const gap = (isFinite(gapMm) ? gapMm : 3);
 
       const layout = layoutSpec(els.layout.value);
 
-      // Real card size
       const cardWmm = 63 * scale;
       const cardHmm = 88 * scale;
 
@@ -539,8 +593,9 @@ Commander: Alela, Artful Provocateur
 
       const pdf = await PDFDocument.create();
 
-      const imageBytesCache = new Map(); // key -> {bytes, ct, urlHint}
-      const embedCache = new Map();      // key -> embedded image
+      const imageBytesCache = new Map();
+      const embedCache = new Map();
+      const errors = [];
 
       for (let pi = 0; pi < pagesCount; pi++) {
         const page = pdf.addPage([mmToPt(pageW), mmToPt(pageH)]);
@@ -562,29 +617,47 @@ Commander: Alela, Artful Provocateur
 
           const proxiedUrl = PROXY_IMG(chosenUrl);
 
-          let payload = imageBytesCache.get(key);
-          if (!payload) {
-            payload = await fetchAsBytes(proxiedUrl);
-            payload.urlHint = chosenUrl;
-            imageBytesCache.set(key, payload);
-          }
+          try {
+            let payload = imageBytesCache.get(key);
+            if (!payload) {
+              payload = await fetchAsImageBytes(proxiedUrl, chosenUrl);
+              imageBytesCache.set(key, payload);
+            }
 
-          let embedded = embedCache.get(key);
-          if (!embedded) {
-            embedded = await embedImageSmart(pdf, payload.bytes, payload.contentType, payload.urlHint);
-            embedCache.set(key, embedded);
-          }
+            let embedded = embedCache.get(key);
+            if (!embedded) {
+              embedded = await embedImageSmart(pdf, payload);
+              embedCache.set(key, embedded);
+            }
 
-          page.drawImage(embedded, {
-            x: mmToPt(xMm),
-            y: mmToPt(yMm),
-            width: mmToPt(cardWmm),
-            height: mmToPt(cardHmm)
-          });
+            page.drawImage(embedded, {
+              x: mmToPt(xMm),
+              y: mmToPt(yMm),
+              width: mmToPt(cardWmm),
+              height: mmToPt(cardHmm)
+            });
+          } catch (err) {
+            errors.push(`${it.name}: ${err?.message || err}`);
+            page.drawRectangle({
+              x: mmToPt(xMm),
+              y: mmToPt(yMm),
+              width: mmToPt(cardWmm),
+              height: mmToPt(cardHmm),
+              borderWidth: 0.75
+            });
+          }
         }
       }
 
       const pdfBytes = await pdf.save();
+
+      if (errors.length) {
+        setStatus(
+          `Built PDF with ${errors.length} image issue(s).\n` +
+          `First few:\n- ${errors.slice(0, 6).join('\n- ')}${errors.length > 6 ? '\n…' : ''}`
+        );
+      }
+
       return new Blob([pdfBytes], { type: 'application/pdf' });
     }
 
@@ -608,7 +681,9 @@ Commander: Alela, Artful Provocateur
           return;
         }
 
-        setStatus(`Opened PDF in a new tab.\nScale: ${scalePct}% · Gap: ${gapMm}mm · Layout: ${els.layout.value}`);
+        if (!els.status.textContent) {
+          setStatus(`Opened PDF in a new tab.\nScale: ${scalePct}% · Gap: ${gapMm}mm · Layout: ${els.layout.value}`);
+        }
       } catch (e) {
         console.error(e);
         setStatus(`ERROR: ${e?.message || e}`);
@@ -617,7 +692,6 @@ Commander: Alela, Artful Provocateur
       }
     }
 
-    // ---------- Load flow ----------
     async function load() {
       els.spinner.hidden = false;
       setStatus('');
@@ -684,9 +758,7 @@ Commander: Alela, Artful Provocateur
       }
     }
 
-    // ---------- Events ----------
     document.addEventListener('DOMContentLoaded', () => {
-      // Ensure defaults (in case browser rehydrates cached values)
       els.gapMm.value = '3';
       els.layout.value = 'LETTER_3x3';
 
@@ -743,7 +815,6 @@ Commander: Alela, Artful Provocateur
     });
   </script>
 
-  <!-- Background video logic -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -769,7 +840,6 @@ Commander: Alela, Artful Provocateur
     });
   </script>
 
-  <!-- Partials loader -->
   <script>
     (async () => {
       try {
