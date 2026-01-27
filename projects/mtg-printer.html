@@ -37,6 +37,7 @@
     }
     select.pick-black option { background:#000; color:#fff; }
 
+    /* Modal */
     .modal-backdrop {
       position: fixed; inset: 0;
       background: rgba(0,0,0,.65);
@@ -70,15 +71,8 @@
       background: rgba(10,10,16,.96);
     }
     .modal-title { font-weight: 800; }
-    .modal-body {
-      padding: 12px 14px 14px;
-      overflow:auto;
-    }
-    .prints-grid {
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 12px;
-    }
+    .modal-body { padding: 12px 14px 14px; overflow:auto; }
+    .prints-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
     .print-tile {
       border-radius: 12px;
       border: 2px solid transparent;
@@ -90,19 +84,63 @@
     }
     .print-tile:hover { transform: translateY(-1px); background: rgba(255,255,255,.06); }
     .print-tile.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,0,0,.35) inset; }
-    .print-tile img {
-      width: 100%;
-      height: auto;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.25);
-      display:block;
+    .print-tile img { width: 100%; height: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.25); display:block; }
+    .print-cap { margin-top: 6px; font-size: 11px; color: var(--muted); line-height: 1.2; }
+
+    /* ---------------- PRINT SHEET ---------------- */
+    #printRoot { display:none; }
+
+    @media print {
+      /* Hide the app UI */
+      body { background: #fff !important; }
+      .bg-video, .app-layer { display:none !important; }
+
+      /* Show print root */
+      #printRoot { display:block !important; }
+
+      /* Remove any default margins */
+      @page { margin: 0; }
     }
-    .print-cap {
-      margin-top: 6px;
-      font-size: 11px;
-      color: var(--muted);
-      line-height: 1.2;
+
+    /* These vars get set in JS right before printing */
+    #printRoot {
+      --page-w-mm: 215.9;
+      --page-h-mm: 279.4;
+      --cols: 3;
+      --rows: 3;
+      --gap-mm: 3;
+      --card-w-mm: 63;
+      --card-h-mm: 88;
+    }
+
+    .print-page {
+      width: calc(var(--page-w-mm) * 1mm);
+      height: calc(var(--page-h-mm) * 1mm);
+      page-break-after: always;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+    }
+    .print-grid {
+      display:grid;
+      grid-template-columns: repeat(var(--cols), calc(var(--card-w-mm) * 1mm));
+      grid-template-rows: repeat(var(--rows), calc(var(--card-h-mm) * 1mm));
+      gap: calc(var(--gap-mm) * 1mm);
+      align-content:center;
+      justify-content:center;
+    }
+    .print-cell {
+      width: calc(var(--card-w-mm) * 1mm);
+      height: calc(var(--card-h-mm) * 1mm);
+      overflow:hidden;
+      background:#fff;
+    }
+    .print-cell img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display:block;
     }
   </style>
 </head>
@@ -176,14 +214,10 @@ Commander: Alela, Artful Provocateur
           <span class="pill-lite control">
             <button id="printBtn" class="btn">Print</button>
           </span>
-
-          <span class="pill-lite control" title="Opens the proxied image for the first card (debug)">
-            <button id="debugImgBtn" class="btn ghost solid-ghost-btn" type="button">Debug Image</button>
-          </span>
         </div>
 
         <div class="inline-hint" style="margin-top:8px">
-          If your PDF shows placeholders, check the status output below — it will tell you exactly which image fetch/decode failed.
+          This uses your browser’s Print → Save as PDF. No image proxy required.
         </div>
 
         <div id="status" class="status-box"></div>
@@ -197,6 +231,10 @@ Commander: Alela, Artful Provocateur
     </main>
   </div>
 
+  <!-- PRINT ROOT (hidden until printing) -->
+  <div id="printRoot" aria-hidden="true"></div>
+
+  <!-- Art Modal -->
   <div id="artBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Choose alternate art">
     <div class="modal">
       <div class="modal-header">
@@ -215,16 +253,15 @@ Commander: Alela, Artful Provocateur
   </div>
 
   <script>
+    // ---------- Constants ----------
     const SCRY_COLLECTION = 'https://api.scryfall.com/cards/collection';
     const SCRY_SEARCH_PRINTS = (oracleId) =>
       `https://api.scryfall.com/cards/search?order=released&q=oracleid%3A${encodeURIComponent(oracleId)}&unique=prints`;
 
     const UI_IMG = (card) => card?.image_uris?.normal || card?.card_faces?.[0]?.image_uris?.normal || '';
-    const PDF_IMG = (card) =>
-      card?.image_uris?.png || card?.image_uris?.large || card?.image_uris?.normal ||
-      card?.card_faces?.[0]?.image_uris?.png || card?.card_faces?.[0]?.image_uris?.large || card?.card_faces?.[0]?.image_uris?.normal || '';
-
-    const PROXY_IMG = (url) => `/img?url=${encodeURIComponent(url)}`;
+    const PRINT_IMG = (card) =>
+      card?.image_uris?.large || card?.image_uris?.normal ||
+      card?.card_faces?.[0]?.image_uris?.large || card?.card_faces?.[0]?.image_uris?.normal || '';
 
     const els = {
       input: document.getElementById('deckInput'),
@@ -241,15 +278,17 @@ Commander: Alela, Artful Provocateur
       gapMm: document.getElementById('gapMm'),
       layout: document.getElementById('layout'),
       printBtn: document.getElementById('printBtn'),
-      debugImgBtn: document.getElementById('debugImgBtn'),
 
       artBackdrop: document.getElementById('artBackdrop'),
       artTitle: document.getElementById('artTitle'),
       artSub: document.getElementById('artSub'),
       artBody: document.getElementById('artBody'),
       artClose: document.getElementById('artClose'),
+
+      printRoot: document.getElementById('printRoot'),
     };
 
+    // ---------- Safe helpers ----------
     function esc(v) {
       const s = (v == null) ? '' : String(v);
       return s.replace(/[&<>\"']/g, m => ({
@@ -304,12 +343,14 @@ Commander: Alela, Artful Provocateur
       return m;
     }
 
+    // ---------- State ----------
     let ITEMS = [];
-    const ORACLE_TO_CARD = new Map();
-    const ORACLE_TO_PRINTS = new Map();
-    const PRINT_CACHE = new Map();
+    const ORACLE_TO_CARD = new Map();       // oracle_id -> canonical card object
+    const ORACLE_TO_PRINTS = new Map();     // oracle_id -> array of prints
+    const PRINT_CACHE = new Map();          // printId -> print card object
     let MODAL_ORACLE = null;
 
+    // ---------- Scryfall ----------
     async function fetchCollectionByNames(names) {
       const CHUNK = 70;
       const uniq = [...new Set(names.filter(Boolean))];
@@ -351,6 +392,7 @@ Commander: Alela, Artful Provocateur
       return prints;
     }
 
+    // ---------- Render ----------
     function renderCards() {
       els.cards.innerHTML = '';
       els.empty.hidden = ITEMS.length > 0;
@@ -435,29 +477,14 @@ Commander: Alela, Artful Provocateur
 
       it.chosen_print_id = printId;
       it.chosen_img_ui = UI_IMG(p);
-      it.chosen_img_pdf = PDF_IMG(p);
+      it.chosen_img_print = PRINT_IMG(p);
       renderCards();
     }
 
-    async function loadPdfLib() {
-      if (window.PDFLib) return window.PDFLib;
-
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
-        s.onload = resolve;
-        s.onerror = () => reject(new Error('Failed to load pdf-lib'));
-        document.head.appendChild(s);
-      });
-
-      if (!window.PDFLib) throw new Error('pdf-lib loaded but PDFLib is missing');
-      return window.PDFLib;
-    }
-
+    // ---------- Print layout ----------
     function layoutSpec(value) {
       const A4 = { w: 210, h: 297 };
       const LETTER = { w: 215.9, h: 279.4 };
-
       switch (value) {
         case 'LETTER_3x4': return { page: LETTER, cols: 3, rows: 4 };
         case 'A4_3x3':     return { page: A4, cols: 3, rows: 3 };
@@ -467,234 +494,127 @@ Commander: Alela, Artful Provocateur
       }
     }
 
-    function mmToPt(mm) { return mm * (72 / 25.4); }
-
-    async function blobToUint8(blob) {
-      const buf = await blob.arrayBuffer();
-      return new Uint8Array(buf);
-    }
-
-    async function loadImageFromBlob(blob) {
-      return await new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.decoding = 'async';
-        img.onload = () => {
-          URL.revokeObjectURL(url);
-          const w = img.naturalWidth || img.width;
-          const h = img.naturalHeight || img.height;
-          if (!w || !h) {
-            reject(new Error('Image decoded but has 0x0 dimensions'));
-            return;
-          }
-          resolve(img);
-        };
-        img.onerror = () => {
-          URL.revokeObjectURL(url);
-          reject(new Error('Image decode failed (img.onerror)'));
-        };
-        img.src = url;
-      });
-    }
-
-    async function blobToPngBytes(blob) {
-      const img = await loadImageFromBlob(blob);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
-
-      const ctx = canvas.getContext('2d', { alpha: true });
-      ctx.drawImage(img, 0, 0);
-
-      const pngBlob = await new Promise((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas.toBlob failed'))), 'image/png');
-      });
-
-      return await blobToUint8(pngBlob);
-    }
-
-    async function fetchAsPngBytes(proxiedUrl, originalUrlHint) {
-      const r = await fetch(proxiedUrl, { cache: 'no-store' });
-      const ct = (r.headers.get('content-type') || '').toLowerCase();
-
-      if (!r.ok) {
-        const t = await r.text().catch(() => '');
-        throw new Error(`Fetch ${r.status} for ${originalUrlHint || proxiedUrl}\ncontent-type: ${ct || '(missing)'}\n${t.slice(0, 240)}`);
-      }
-
-      const blob = await r.blob();
-
-      // If proxy is returning an error page, surface it clearly
-      if (ct.includes('text/html') || ct.includes('application/json') || ct.startsWith('text/')) {
-        const t = await blob.text().catch(() => '');
-        throw new Error(
-          `Proxy did not return an image for ${originalUrlHint || proxiedUrl}\n` +
-          `content-type: ${ct || '(missing)'}\n` +
-          `${t.slice(0, 240)}`
-        );
-      }
-
-      // Convert to PNG bytes via reliable <img> decode path
-      try {
-        return await blobToPngBytes(blob);
-      } catch (e) {
-        // One more diagnostic: try to read as text to see if it's actually HTML without correct headers
-        const t = await blob.text().catch(() => '');
-        const head = t.slice(0, 120).replace(/\s+/g, ' ').trim();
-        if (head.startsWith('<') || head.toLowerCase().includes('cloudflare')) {
-          throw new Error(
-            `Image decode failed; response looks like HTML for ${originalUrlHint || proxiedUrl}\n` +
-            `content-type: ${ct || '(missing)'}\n` +
-            `${t.slice(0, 240)}`
-          );
-        }
-        throw new Error(`Image decode failed for ${originalUrlHint || proxiedUrl}\ncontent-type: ${ct || '(missing)'}\n${e?.message || e}`);
-      }
-    }
-
-    async function embedPngFromProxy(pdf, proxiedUrl, originalUrlHint) {
-      const pngBytes = await fetchAsPngBytes(proxiedUrl, originalUrlHint);
-      return await pdf.embedPng(pngBytes);
-    }
-
-    async function buildPdf() {
-      const PDFLib = await loadPdfLib();
-      const { PDFDocument, rgb, StandardFonts } = PDFLib;
-
-      const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
-      const scale = scalePct / 100;
-
-      const gapMm = parseFloat(els.gapMm.value);
-      const gap = (isFinite(gapMm) ? gapMm : 3);
-
-      const layout = layoutSpec(els.layout.value);
-
-      const cardWmm = 63 * scale;
-      const cardHmm = 88 * scale;
-
-      const pageW = layout.page.w;
-      const pageH = layout.page.h;
-
-      const gridW = layout.cols * cardWmm + (layout.cols - 1) * gap;
-      const gridH = layout.rows * cardHmm + (layout.rows - 1) * gap;
-
-      const startXmm = (pageW - gridW) / 2;
-      const startYmm = (pageH - gridH) / 2;
-
+    function buildExpandedItems() {
       const expanded = [];
       for (const it of ITEMS) {
         for (let i = 0; i < (it.qty || 1); i++) expanded.push(it);
       }
+      return expanded;
+    }
+
+    function getPrintUrl(it) {
+      if (it?.chosen_img_print) return it.chosen_img_print;
+      const c = ORACLE_TO_CARD.get(it.oracle_id);
+      return PRINT_IMG(c) || '';
+    }
+
+    async function waitForPrintImages(root) {
+      const imgs = [...root.querySelectorAll('img')];
+      const decodePromises = imgs.map(img => {
+        // If already loaded
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+
+        // Prefer decode() when available
+        if (typeof img.decode === 'function') {
+          return img.decode().catch(() => new Promise((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error('img.onerror'));
+          }));
+        }
+
+        return new Promise((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('img.onerror'));
+        });
+      });
+
+      const results = await Promise.allSettled(decodePromises);
+      const failed = results.filter(r => r.status === 'rejected').length;
+      return { total: imgs.length, failed };
+    }
+
+    function setPrintCssVars(layout, gapMm, scalePct) {
+      const scale = clamp(scalePct, 50, 140) / 100;
+      const cardWmm = 63 * scale;
+      const cardHmm = 88 * scale;
+
+      els.printRoot.style.setProperty('--page-w-mm', String(layout.page.w));
+      els.printRoot.style.setProperty('--page-h-mm', String(layout.page.h));
+      els.printRoot.style.setProperty('--cols', String(layout.cols));
+      els.printRoot.style.setProperty('--rows', String(layout.rows));
+      els.printRoot.style.setProperty('--gap-mm', String(gapMm));
+      els.printRoot.style.setProperty('--card-w-mm', String(cardWmm));
+      els.printRoot.style.setProperty('--card-h-mm', String(cardHmm));
+    }
+
+    function buildPrintDom() {
+      const layout = layoutSpec(els.layout.value);
+
+      const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
+      const gapMm = (isFinite(parseFloat(els.gapMm.value)) ? parseFloat(els.gapMm.value) : 3);
+
+      setPrintCssVars(layout, gapMm, scalePct);
+
+      const expanded = buildExpandedItems();
       if (!expanded.length) throw new Error('No cards to print.');
 
       const perPage = layout.cols * layout.rows;
       const pagesCount = Math.ceil(expanded.length / perPage);
 
-      const pdf = await PDFDocument.create();
-      const font = await pdf.embedFont(StandardFonts.Helvetica);
-
-      const embedCache = new Map(); // key -> embedded png
-      const errors = [];
+      const frag = document.createDocumentFragment();
 
       for (let pi = 0; pi < pagesCount; pi++) {
-        const page = pdf.addPage([mmToPt(pageW), mmToPt(pageH)]);
+        const pageEl = document.createElement('section');
+        pageEl.className = 'print-page';
+
+        const grid = document.createElement('div');
+        grid.className = 'print-grid';
+
         const slice = expanded.slice(pi * perPage, (pi + 1) * perPage);
+        for (const it of slice) {
+          const cell = document.createElement('div');
+          cell.className = 'print-cell';
 
-        for (let idx = 0; idx < slice.length; idx++) {
-          const it = slice[idx];
-          const row = Math.floor(idx / layout.cols);
-          const col = idx % layout.cols;
-
-          const xMm = startXmm + col * (cardWmm + gap);
-          const yTopMm = startYmm + row * (cardHmm + gap);
-          const yMm = (pageH - yTopMm - cardHmm);
-
-          const key = it.chosen_print_id || it.oracle_id;
-
-          const chosenUrl = it.chosen_img_pdf || PDF_IMG(ORACLE_TO_CARD.get(it.oracle_id));
-          if (!chosenUrl) continue;
-
-          const proxiedUrl = PROXY_IMG(chosenUrl);
-
-          try {
-            let embedded = embedCache.get(key);
-            if (!embedded) {
-              embedded = await embedPngFromProxy(pdf, proxiedUrl, chosenUrl);
-              embedCache.set(key, embedded);
-            }
-
-            page.drawImage(embedded, {
-              x: mmToPt(xMm),
-              y: mmToPt(yMm),
-              width: mmToPt(cardWmm),
-              height: mmToPt(cardHmm)
-            });
-          } catch (err) {
-            const msg = `${it.name}: ${err?.message || err}`;
-            errors.push(msg);
-
-            // Placeholder: WHITE fill (not black) + red border + label
-            page.drawRectangle({
-              x: mmToPt(xMm),
-              y: mmToPt(yMm),
-              width: mmToPt(cardWmm),
-              height: mmToPt(cardHmm),
-              color: rgb(1, 1, 1),
-              borderColor: rgb(0.75, 0.15, 0.15),
-              borderWidth: 1
-            });
-
-            const label = 'IMAGE FAILED';
-            page.drawText(label, {
-              x: mmToPt(xMm) + 6,
-              y: mmToPt(yMm) + 6,
-              size: 9,
-              font,
-              color: rgb(0.75, 0.15, 0.15)
-            });
+          const url = getPrintUrl(it);
+          if (url) {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = it.name || 'Card';
+            img.loading = 'eager';
+            cell.appendChild(img);
           }
+
+          grid.appendChild(cell);
         }
+
+        pageEl.appendChild(grid);
+        frag.appendChild(pageEl);
       }
 
-      const pdfBytes = await pdf.save();
-
-      if (errors.length) {
-        setStatus(
-          `Built PDF with ${errors.length} image issue(s).\n` +
-          `First few:\n- ${errors.slice(0, 8).join('\n- ')}${errors.length > 8 ? '\n…' : ''}\n\n` +
-          `If these errors mention HTML/Cloudflare, your /img proxy is not returning image bytes for some URLs.`
-        );
-      }
-
-      return new Blob([pdfBytes], { type: 'application/pdf' });
+      els.printRoot.innerHTML = '';
+      els.printRoot.appendChild(frag);
     }
 
-    async function printPdf() {
+    async function printToPdfViaBrowser() {
       els.spinner.hidden = false;
       setStatus('');
       try {
-        const blob = await buildPdf();
-        const url = URL.createObjectURL(blob);
-        const w = window.open(url, '_blank', 'noopener,noreferrer');
+        buildPrintDom();
 
-        const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
-        const gapMm = parseFloat(els.gapMm.value);
-
-        if (!w) {
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'mtg-print-sheet.pdf';
-          a.click();
-          if (!els.status.textContent) {
-            setStatus(`Popup blocked. Downloaded PDF instead.\nScale: ${scalePct}% · Gap: ${gapMm}mm · Layout: ${els.layout.value}`);
-          }
-          return;
+        // Make sure images actually decode before opening print dialog
+        const { total, failed } = await waitForPrintImages(els.printRoot);
+        if (failed) {
+          setStatus(`Some images failed to load for printing.\nLoaded: ${total - failed}/${total}\nTry again or switch to a different image size (large vs normal).`);
         }
 
-        if (!els.status.textContent) {
-          setStatus(`Opened PDF in a new tab.\nScale: ${scalePct}% · Gap: ${gapMm}mm · Layout: ${els.layout.value}`);
-        }
+        // Cleanup after printing
+        const cleanup = () => {
+          window.removeEventListener('afterprint', cleanup);
+          els.printRoot.innerHTML = '';
+        };
+        window.addEventListener('afterprint', cleanup);
+
+        window.print();
       } catch (e) {
         console.error(e);
         setStatus(`ERROR: ${e?.message || e}`);
@@ -703,23 +623,7 @@ Commander: Alela, Artful Provocateur
       }
     }
 
-    async function debugFirstImage() {
-      setStatus('');
-      if (!ITEMS.length) {
-        setStatus('No cards loaded. Load cards first.');
-        return;
-      }
-      const it = ITEMS[0];
-      const chosenUrl = it.chosen_img_pdf || PDF_IMG(ORACLE_TO_CARD.get(it.oracle_id));
-      if (!chosenUrl) {
-        setStatus('First card has no PDF image URL.');
-        return;
-      }
-      const proxiedUrl = PROXY_IMG(chosenUrl);
-      window.open(proxiedUrl, '_blank', 'noopener,noreferrer');
-      setStatus(`Opened proxied image in new tab:\n${proxiedUrl}\n\nIf this tab shows HTML/error, your /img proxy is the root cause.`);
-    }
-
+    // ---------- Load flow ----------
     async function load() {
       els.spinner.hidden = false;
       setStatus('');
@@ -776,7 +680,7 @@ Commander: Alela, Artful Provocateur
             qty,
             chosen_print_id: null,
             chosen_img_ui: null,
-            chosen_img_pdf: null
+            chosen_img_print: null
           };
         }).sort((a,b) => a.name.localeCompare(b.name));
 
@@ -786,6 +690,7 @@ Commander: Alela, Artful Provocateur
       }
     }
 
+    // ---------- Events ----------
     document.addEventListener('DOMContentLoaded', () => {
       els.gapMm.value = '3';
       els.layout.value = 'LETTER_3x3';
@@ -801,6 +706,7 @@ Commander: Alela, Artful Provocateur
         ORACLE_TO_CARD.clear();
         ORACLE_TO_PRINTS.clear();
         PRINT_CACHE.clear();
+        els.printRoot.innerHTML = '';
       });
 
       els.scaleDown.addEventListener('click', () => {
@@ -813,8 +719,8 @@ Commander: Alela, Artful Provocateur
         els.scalePct.value = String(clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140));
       });
 
-      els.printBtn.addEventListener('click', printPdf);
-      els.debugImgBtn.addEventListener('click', debugFirstImage);
+      // Print now uses browser print → Save as PDF
+      els.printBtn.addEventListener('click', printToPdfViaBrowser);
 
       els.cards.addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-action="art"]');
@@ -844,6 +750,7 @@ Commander: Alela, Artful Provocateur
     });
   </script>
 
+  <!-- Background video logic -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -869,6 +776,7 @@ Commander: Alela, Artful Provocateur
     });
   </script>
 
+  <!-- Partials loader -->
   <script>
     (async () => {
       try {
