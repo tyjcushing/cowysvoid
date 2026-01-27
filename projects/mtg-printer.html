@@ -181,44 +181,43 @@ Commander: Alela, Artful Provocateur
             <span class="inline-hint">Loading…</span>
           </span>
 
-          <span class="pill-lite">
+          <span class="">
             <strong>Scale</strong>
             <span class="control" style="display:inline-flex; gap:6px; margin-left:8px;">
               <button id="scaleDown" class="btn ghost solid-ghost-btn" type="button" aria-label="Decrease scale">−</button>
-              <input id="scalePct" type="number" min="50" max="140" step="1" value="100"
+              <input id="scalePct" type="number" min="50" max="140" step="1" value="101"
                      style="width:84px; text-align:center; border-radius:12px;"
                      aria-label="Scale percent">
               <button id="scaleUp" class="btn ghost solid-ghost-btn" type="button" aria-label="Increase scale">+</button>
             </span>
           </span>
 
-          <span class="pill-lite control" title="Gap / bleed between cards on the PDF sheet">
+          <span class="control" title="Gap / bleed between cards on the PDF sheet">
             <label for="gapMm"><strong>Gap</strong></label>
             <select id="gapMm" class="pick-black" aria-label="Gap setting">
-              <option value="0">No gap (0mm)</option>
+              <option value="0">0mm</option>
               <option value="0.2">0.2mm</option>
-              <option value="3" selected>3mm (default)</option>
+              <option value="3" selected>3mm</option>
             </select>
           </span>
 
-          <span class="pill-lite control">
+          <span class="control">
             <label for="layout"><strong>Layout</strong></label>
             <select id="layout" class="pick-black" aria-label="Print layout">
-              <option value="LETTER_3x3" selected>US Letter (8.5×11) · 3×3 (default)</option>
-              <option value="LETTER_3x4">US Letter (8.5×11) · 3×4 (tight)</option>
+              <option value="LETTER_3x3" selected>US Letter (8.5×11) · 3×3 </option>
+              <option value="LETTER_3x4">US Letter (8.5×11) · 3×4</option>
               <option value="A4_3x3">A4 · 3×3</option>
-              <option value="A4_3x4">A4 · 3×4 (tight)</option>
+              <option value="A4_3x4">A4 · 3×4</option>
             </select>
           </span>
 
-          <span class="pill-lite control">
             <button id="printBtn" class="btn">Print</button>
-          </span>
+
         </div>
 
+        <!--  Under line printing hint goes here.
         <div class="inline-hint" style="margin-top:8px">
-          This uses your browser’s Print → Save as PDF. No image proxy required.
-        </div>
+        </div>-->
 
         <div id="status" class="status-box"></div>
       </section>
