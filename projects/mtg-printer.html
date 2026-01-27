@@ -163,9 +163,10 @@
         <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
           <label class="input input-solid solid-input" style="align-items:start">
             <textarea id="deckInput" class="textarea" placeholder="Examples:
+Fowl Strike
 1 Sol Ring
 3x Dark Ritual
-Arcane Signet
+1 Arcane Signet (SLD) 1492
 Commander: Alela, Artful Provocateur
 
 (Quantities supported; comments with # or // ignored)"></textarea>
@@ -302,35 +303,97 @@ Commander: Alela, Artful Provocateur
       const cuts = [s.indexOf('['), s.indexOf('{'), s.indexOf('('), s.indexOf('^^')].filter(i => i >= 0);
       if (!cuts.length) return s;
       return s.slice(0, Math.min(...cuts)).trim();
+      
     }
+
+    async function fetchCardBySetAndNumber(setCode, collectorNumber) {
+        const set = String(setCode || '').trim().toLowerCase();
+        const cn = String(collectorNumber || '').trim();
+
+        if (!set || !cn) return null;
+
+        const url = `https://api.scryfall.com/cards/${encodeURIComponent(set)}/${encodeURIComponent(cn)}`;
+        const r = await fetch(url);
+        if (!r.ok) return null;
+        return await r.json();
+    }
+
 
     function parseDeckText(text) {
-      const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
-      const items = [];
-      let section = 'Deck';
+        const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
+        const items = [];
+        let section = 'Deck';
 
-      for (let raw of lines) {
-        let line = String(raw || '').trim();
-        if (!line) continue;
-        line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
-        if (!line) continue;
+        for (let raw of lines) {
+            let line = String(raw || '').trim();
+            if (!line) continue;
 
-        if (/^commander:?$/i.test(line))   { section = 'Commander'; continue; }
-        if (/^companion:?$/i.test(line))   { section = 'Companion'; continue; }
-        if (/^deck:?$/i.test(line))        { section = 'Deck';      continue; }
-        if (/^sideboard:?$/i.test(line))   { section = 'Sideboard'; continue; }
-        if (/^maybeboard:?$/i.test(line))  { section = 'Maybeboard';continue; }
+            // strip inline comments
+            line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
+            if (!line) continue;
 
-        let m = line.match(/^commander:\s*(.+)$/i);
-        if (m) { items.push({ qty: 1, name: stripNameAnnotations(m[1]), section: 'Commander' }); continue; }
+            // section headers
+            if (/^commander:?$/i.test(line))   { section = 'Commander'; continue; }
+            if (/^companion:?$/i.test(line))   { section = 'Companion'; continue; }
+            if (/^deck:?$/i.test(line))        { section = 'Deck';      continue; }
+            if (/^sideboard:?$/i.test(line))   { section = 'Sideboard'; continue; }
+            if (/^maybeboard:?$/i.test(line))  { section = 'Maybeboard';continue; }
 
-        m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
-        if (m) { items.push({ qty: parseInt(m[1], 10), name: stripNameAnnotations(m[2]), section }); continue; }
+            // Commander: prefix
+            let m = line.match(/^commander:\s*(.+)$/i);
+            if (m) {
+            const parsed = parseLineWithPrintHints(m[1]);
+            items.push({ qty: 1, section: 'Commander', ...parsed });
+            continue;
+            }
 
-        items.push({ qty: 1, name: stripNameAnnotations(line), section });
-      }
-      return items;
-    }
+            // quantity prefix
+            m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
+            if (m) {
+            const qty = parseInt(m[1], 10);
+            const parsed = parseLineWithPrintHints(m[2]);
+            items.push({ qty, section, ...parsed });
+            continue;
+            }
+
+            // default qty 1
+            const parsed = parseLineWithPrintHints(line);
+            items.push({ qty: 1, section, ...parsed });
+        }
+
+        return items;
+        }
+
+        function parseLineWithPrintHints(line) {
+        // Example: "Cavern of Souls (LCI) 410d *F*"
+        // We want: name="Cavern of Souls", setCode="LCI", collectorNumber="410d"
+
+        let s = String(line || '').trim();
+
+        // Remove trailing *...* tokens like *F* or *E* or *Foil*
+        s = s.replace(/\s+\*[^*]+\*\s*$/g, '').trim();
+
+        // Extract "(SET)" and the next token as collector number
+        // Set codes are typically 3-5 chars, letters/numbers
+        const m = s.match(/^(.*?)(?:\s+\(([A-Za-z0-9]{2,6})\))\s+([0-9]+[A-Za-z]?)\s*$/);
+        if (m) {
+            const nameRaw = m[1];
+            const setCode = m[2];
+            const collectorNumber = m[3];
+            return {
+            name: stripNameAnnotations(nameRaw),
+            setCode: setCode,
+            collectorNumber: collectorNumber
+            };
+        }
+
+        return {
+            name: stripNameAnnotations(s),
+            setCode: null,
+            collectorNumber: null
+        };
+        }
+
 
     function countByName(items) {
       const m = new Map();
@@ -624,70 +687,128 @@ Commander: Alela, Artful Provocateur
 
     // ---------- Load flow ----------
     async function load() {
-      els.spinner.hidden = false;
-      setStatus('');
-      try {
-        const itemsRaw = parseDeckText(els.input.value);
-        const counts = countByName(itemsRaw);
-        const rawNames = [...counts.keys()];
+        els.spinner.hidden = false;
+        setStatus('');
+        try {
+            const itemsRaw = parseDeckText(els.input.value);
 
-        if (!rawNames.length) {
-          ITEMS = [];
-          ORACLE_TO_CARD.clear();
-          renderCards();
-          return;
-        }
-
-        const cards = await fetchCollectionByNames(rawNames);
-
-        ORACLE_TO_CARD.clear();
-        const nameToOracle = new Map();
-        for (const c of cards) {
-          if (c?.name && c?.oracle_id) {
-            nameToOracle.set(String(c.name).toLowerCase(), c.oracle_id);
-            ORACLE_TO_CARD.set(c.oracle_id, c);
-          }
-        }
-
-        const oracleCounts = new Map();
-        const oracleDisplayName = new Map();
-
-        for (const [rawName, qty] of counts.entries()) {
-          const key = String(rawName || '').toLowerCase();
-          let oracleId = nameToOracle.get(key);
-
-          if (!oracleId) {
-            const found = cards.find(c => String(c?.name || '').toLowerCase() === key);
-            oracleId = found?.oracle_id;
-            if (oracleId && found) {
-              ORACLE_TO_CARD.set(oracleId, found);
-              oracleDisplayName.set(oracleId, found.name);
+            if (!itemsRaw.length) {
+            ITEMS = [];
+            ORACLE_TO_CARD.clear();
+            renderCards();
+            return;
             }
-          }
-          if (!oracleId) continue;
 
-          oracleCounts.set(oracleId, (oracleCounts.get(oracleId) || 0) + qty);
-          const c = ORACLE_TO_CARD.get(oracleId);
-          if (c?.name) oracleDisplayName.set(oracleId, c.name);
+            // 1) Resolve exact prints for any lines that specify (SET) CN
+            // We'll build:
+            // - exactPrintByLineKey: nameLower|setLower|cn -> scryfall card print
+            // - nameFallbackList: names to resolve via collection
+            const exactPrintByLineKey = new Map();
+            const nameFallbackCounts = new Map(); // nameLower -> qty aggregate (for lines without exact print)
+
+            for (const it of itemsRaw) {
+            const nm = String(it.name || '').trim();
+            if (!nm) continue;
+
+            if (it.setCode && it.collectorNumber) {
+                // Resolve exact print now
+                const print = await fetchCardBySetAndNumber(it.setCode, it.collectorNumber);
+                if (print?.id && print?.oracle_id) {
+                const k = `${nm.toLowerCase()}|${String(it.setCode).toLowerCase()}|${String(it.collectorNumber).toLowerCase()}`;
+                exactPrintByLineKey.set(k, { print, qty: it.qty || 1, name: nm });
+                // Also store canonical oracle card for later
+                ORACLE_TO_CARD.set(print.oracle_id, print); // ok to overwrite with a print; we want oracle mapping anyway
+                continue;
+                }
+                // If exact print lookup fails, fall back to name
+            }
+
+            nameFallbackCounts.set(nm, (nameFallbackCounts.get(nm) || 0) + (it.qty || 1));
+            }
+
+            // 2) Resolve remaining names via collection (your existing behavior)
+            const fallbackNames = [...nameFallbackCounts.keys()];
+            const cards = fallbackNames.length ? await fetchCollectionByNames(fallbackNames) : [];
+
+            ORACLE_TO_CARD.clear();
+            const nameToOracle = new Map();
+            for (const c of cards) {
+            if (c?.name && c?.oracle_id) {
+                nameToOracle.set(String(c.name).toLowerCase(), c.oracle_id);
+                ORACLE_TO_CARD.set(c.oracle_id, c);
+            }
+            }
+
+            // 3) Build oracleCounts AND track preferred print selection per oracle_id
+            const oracleCounts = new Map();            // oracle_id -> qty total
+            const oracleDisplayName = new Map();       // oracle_id -> display name
+            const oraclePreferredPrint = new Map();    // oracle_id -> { printId, ui, printUrl }
+
+            // 3a) Apply exact-print lines first (these should win the default art)
+            for (const [k, v] of exactPrintByLineKey.entries()) {
+            const { print, qty, name } = v;
+            const oracleId = print.oracle_id;
+
+            oracleCounts.set(oracleId, (oracleCounts.get(oracleId) || 0) + qty);
+            oracleDisplayName.set(oracleId, name || print.name);
+
+            // If multiple exact-print lines for the same oracle_id exist, last one wins;
+            // you could also decide "first wins" if you prefer.
+            oraclePreferredPrint.set(oracleId, {
+                printId: print.id,
+                ui: UI_IMG(print),
+                printUrl: PRINT_IMG(print)
+            });
+
+            // Keep a canonical oracle card entry
+            if (!ORACLE_TO_CARD.has(oracleId)) ORACLE_TO_CARD.set(oracleId, print);
+            }
+
+            // 3b) Apply fallback-by-name lines
+            for (const [rawName, qty] of nameFallbackCounts.entries()) {
+            const key = String(rawName || '').toLowerCase();
+            let oracleId = nameToOracle.get(key);
+
+            if (!oracleId) {
+                const found = cards.find(c => String(c?.name || '').toLowerCase() === key);
+                oracleId = found?.oracle_id;
+                if (oracleId && found) {
+                ORACLE_TO_CARD.set(oracleId, found);
+                oracleDisplayName.set(oracleId, found.name);
+                }
+            }
+            if (!oracleId) continue;
+
+            oracleCounts.set(oracleId, (oracleCounts.get(oracleId) || 0) + qty);
+            const c = ORACLE_TO_CARD.get(oracleId);
+            if (c?.name && !oracleDisplayName.has(oracleId)) oracleDisplayName.set(oracleId, c.name);
+            }
+
+            // 4) Build ITEMS, preselecting art where we have an exact print
+            ITEMS = [...oracleCounts.entries()].map(([oracleId, qty]) => {
+            const c = ORACLE_TO_CARD.get(oracleId);
+            const pref = oraclePreferredPrint.get(oracleId);
+
+            return {
+                oracle_id: oracleId,
+                name: oracleDisplayName.get(oracleId) || c?.name || 'Unknown',
+                qty,
+
+                chosen_print_id: pref?.printId || null,
+                chosen_img_ui: pref?.ui || null,
+                chosen_img_print: pref?.printUrl || null
+            };
+            }).sort((a,b) => a.name.localeCompare(b.name));
+
+            renderCards();
+            setStatus(`Loaded ${ITEMS.length} unique cards. Prints preselected where provided.`);
+        } catch (e) {
+            console.error(e);
+            setStatus(`ERROR: ${e?.message || e}`);
+        } finally {
+            els.spinner.hidden = true;
         }
-
-        ITEMS = [...oracleCounts.entries()].map(([oracleId, qty]) => {
-          const c = ORACLE_TO_CARD.get(oracleId);
-          return {
-            oracle_id: oracleId,
-            name: oracleDisplayName.get(oracleId) || c?.name || 'Unknown',
-            qty,
-            chosen_print_id: null,
-            chosen_img_ui: null,
-            chosen_img_print: null
-          };
-        }).sort((a,b) => a.name.localeCompare(b.name));
-
-        renderCards();
-      } finally {
-        els.spinner.hidden = true;
-      }
-    }
+        }
 
     // ---------- Events ----------
     document.addEventListener('DOMContentLoaded', () => {
