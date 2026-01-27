@@ -4,18 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Print Sheet Builder — Cowy’s Void</title>
-  <meta name="description" content="Paste card names, pick arts, and print a clean MTG-sized sheet." />
+  <meta name="description" content="Paste card names, pick arts, export a print-ready PDF." />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
   <link rel="stylesheet" href="/assets/css/void.css">
+
   <style>
-    /* Page-only layout helpers (keeps your void.css look) */
     .controls-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; }
     .controls-row .control { display:flex; gap:8px; align-items:center; }
     .inline-hint code { font-size: .95em; }
 
     .btn-group { display:flex; gap:10px; align-items:center; }
 
+    /* Your request: picklist = white text, black bg */
     .select {
       appearance: none;
       background: #000;
@@ -30,7 +31,7 @@
 
     .card-list {
       display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 12px;
       margin-top: 12px;
     }
@@ -47,19 +48,18 @@
     }
 
     .thumb {
-      width: 88px;
+      width: 96px;
       height: auto;
-      border-radius: 10px;
+      border-radius: 12px;
       border: 1px solid rgba(255,255,255,.12);
       background: rgba(255,255,255,.06);
       flex: 0 0 auto;
     }
 
     .tile-meta { min-width: 0; flex: 1 1 auto; }
-    .tile-meta .name { font-weight: 700; }
+    .tile-meta .name { font-weight: 750; }
     .tile-meta .sub { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
     .tile-actions { margin-top: 10px; display:flex; gap:10px; flex-wrap:wrap; }
-    .tile-actions .btn { white-space: nowrap; }
 
     .status {
       margin-top: 10px;
@@ -70,6 +70,17 @@
       color: var(--muted);
       white-space: pre-wrap;
     }
+
+    .empty { padding: 18px 14px; border-radius: 16px; border: 1px dashed rgba(255,255,255,.18); color: var(--muted); margin-top: 12px; }
+
+    .spinner { display:inline-flex; align-items:center; gap:8px; color: var(--muted); }
+    .spin-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent);
+      display:inline-block;
+      animation: pulse 1s infinite ease-in-out;
+    }
+    @keyframes pulse { 0%,100%{ transform: scale(.8); opacity:.6 } 50%{ transform: scale(1.2); opacity:1 } }
 
     /* Modal */
     .modal-backdrop {
@@ -109,8 +120,7 @@
       background: rgba(0,0,0,.86);
       z-index: 2;
     }
-    .modal-title { font-weight: 700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .modal-head .btn { flex: 0 0 auto; }
+    .modal-title { font-weight: 750; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
     .modal-body {
       padding: 12px;
@@ -134,7 +144,7 @@
     }
     .print-tile:hover { transform: translateY(-1px); }
     .print-tile.selected {
-      border-color: rgba(255,255,255,.85);
+      border-color: rgba(255,255,255,.90);
       box-shadow: 0 0 0 2px rgba(255,255,255,.18) inset, 0 10px 24px rgba(0,0,0,.35);
     }
     .print-tile img {
@@ -151,17 +161,6 @@
       text-overflow:ellipsis;
       white-space:nowrap;
     }
-
-    .empty { padding: 18px 14px; border-radius: 16px; border: 1px dashed rgba(255,255,255,.18); color: var(--muted); margin-top: 12px; }
-
-    .spinner { display:inline-flex; align-items:center; gap:8px; color: var(--muted); }
-    .spin-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: var(--accent);
-      display:inline-block;
-      animation: pulse 1s infinite ease-in-out;
-    }
-    @keyframes pulse { 0%,100%{ transform: scale(.8); opacity:.6 } 50%{ transform: scale(1.2); opacity:1 } }
   </style>
 </head>
 
@@ -177,7 +176,9 @@
       <section class="panel page-panel solid-surface">
         <header class="page">
           <h1>Print Sheet Builder</h1>
-          <p class="sub">Paste card names (qty optional). Choose alternate arts per card, then <strong>Print</strong> a clean, correctly-sized sheet.</p>
+          <p class="sub">
+            Paste card names (qty optional). Choose alternate arts per card, then click <strong>Print</strong> to generate a clean, print-ready <strong>PDF</strong>.
+          </p>
         </header>
 
         <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
@@ -213,11 +214,10 @@ Arcane Signet
         </div>
 
         <div class="inline-hint">
-          Notes: Card names are matched case-insensitively. If a card is double-faced, the first face print will be used unless you pick another print.
+          This loader is <strong>case-insensitive</strong> (uses Scryfall <code>/cards/named?fuzzy=</code> so <code>sol ring</code> works).
         </div>
 
         <div id="status" class="status" hidden></div>
-
         <div id="empty" class="empty">Paste some cards and click <strong>Load Cards</strong>.</div>
 
         <div id="cards" class="card-list" aria-label="Loaded cards"></div>
@@ -239,9 +239,12 @@ Arcane Signet
   </div>
 
 <script>
-/* ----------------------------
-   Utilities
----------------------------- */
+/* =========================================================
+   Print Sheet Builder — single-file “full class”
+   - Robust load: /cards/named?fuzzy= (case-insensitive)
+   - Art swap: oracleid prints search
+   - Print: generates a real PDF (no browser headers/footers)
+   ========================================================= */
 
 function esc(s) {
   return (s || '').replace(/[&<>\"']/g, m => ({
@@ -249,10 +252,7 @@ function esc(s) {
   }[m]));
 }
 
-function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
-
 function normalizeName(s = '') {
-  // Case-insensitive, normalize unicode, collapse spaces
   return s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
@@ -282,24 +282,13 @@ function parseCardText(text) {
   return items;
 }
 
-function getCardFrontImage(card) {
-  // normal layout
+function getFrontImage(card) {
   if (card?.image_uris?.normal) return card.image_uris.normal;
-  // MDFC / DFC
-  if (Array.isArray(card?.card_faces) && card.card_faces[0]?.image_uris?.normal) {
-    return card.card_faces[0].image_uris.normal;
-  }
+  if (Array.isArray(card?.card_faces) && card.card_faces[0]?.image_uris?.normal) return card.card_faces[0].image_uris.normal;
   return null;
 }
 
-function getCardPrintId(card) {
-  // prefer exact print id if present; fallback oracle
-  return card?.id || card?.oracle_id || null;
-}
-
-/* ----------------------------
-   DOM
----------------------------- */
+function mmToPt(mm) { return mm * 72 / 25.4; }
 
 const els = {
   input: document.getElementById('cardInput'),
@@ -323,51 +312,60 @@ function setStatus(msg) {
   els.status.textContent = msg || '';
 }
 
-/* ----------------------------
-   State
----------------------------- */
-
-let ITEMS = []; // [{qty, name, key}]
-let KEY_TO_CARD = new Map(); // key -> scryfall card
-let PRINT_CACHE = new Map(); // oracle_id -> prints array
+let ITEMS = [];           // [{ key, name, qty, card, selectedPrint:{id,img} }]
+let PRINT_CACHE = new Map(); // oracleId -> prints[]
 let MODAL_KEY = null;
 
-function itemKeyFor(name) {
-  return normalizeName(name);
+function itemKey(name) { return normalizeName(name); }
+
+/* ----------------------------
+   Scryfall: robust card resolve
+   Uses /cards/named?fuzzy=
+---------------------------- */
+
+async function fetchNamedFuzzy(name) {
+  const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`;
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  return await r.json();
+}
+
+async function resolveUniqueCards(names) {
+  // limit concurrency so we don’t slam Scryfall
+  const uniq = [...new Set(names.map(n => normalizeName(n)))];
+  const normToOriginal = new Map();
+  for (const n of names) {
+    const k = normalizeName(n);
+    if (!normToOriginal.has(k)) normToOriginal.set(k, n);
+  }
+
+  const out = new Map(); // norm -> card
+  const MAX = 6;
+  let idx = 0;
+
+  async function worker() {
+    while (idx < uniq.length) {
+      const i = idx++;
+      const norm = uniq[i];
+      const original = normToOriginal.get(norm) || norm;
+      const card = await fetchNamedFuzzy(original);
+      if (card && card.object === 'card') out.set(norm, card);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(MAX, uniq.length) }, () => worker());
+  await Promise.all(workers);
+  return out;
 }
 
 /* ----------------------------
-   Scryfall API
+   Prints (alt arts)
 ---------------------------- */
-
-async function fetchCollectionByNames(names) {
-  const CHUNK = 70;
-  const uniq = [...new Set(names.filter(Boolean))];
-
-  const out = [];
-  for (let i = 0; i < uniq.length; i += CHUNK) {
-    const slice = uniq.slice(i, i + CHUNK);
-    const body = { identifiers: slice.map(n => ({ name: n })) };
-    const r = await fetch('https://api.scryfall.com/cards/collection', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) {
-      console.warn('Scryfall collection error', r.status);
-      continue;
-    }
-    const j = await r.json();
-    for (const card of (j.data || [])) out.push(card);
-  }
-  return out;
-}
 
 async function fetchPrintsForOracle(oracleId) {
   if (!oracleId) return [];
   if (PRINT_CACHE.has(oracleId)) return PRINT_CACHE.get(oracleId);
 
-  // Search all prints by oracle id, then page through
   const all = [];
   let url = `https://api.scryfall.com/cards/search?order=released&q=oracleid%3A${encodeURIComponent(oracleId)}&unique=prints`;
   while (url) {
@@ -378,9 +376,7 @@ async function fetchPrintsForOracle(oracleId) {
     url = j.has_more ? j.next_page : null;
   }
 
-  // Sort newest first for nicer browsing
   all.sort((a,b) => String(b.released_at || '').localeCompare(String(a.released_at || '')));
-
   PRINT_CACHE.set(oracleId, all);
   return all;
 }
@@ -390,21 +386,14 @@ async function fetchPrintsForOracle(oracleId) {
 ---------------------------- */
 
 function renderCards() {
-  const list = [];
-  for (const it of ITEMS) {
-    const card = KEY_TO_CARD.get(it.key);
-    const img = card ? getCardFrontImage(card) : null;
+  const list = ITEMS.map(it => {
+    const card = it.card;
+    const img = it.selectedPrint?.img || getFrontImage(card);
 
-    const picked = it.selectedPrint
-      ? it.selectedPrint
-      : card
-        ? { id: getCardPrintId(card), img }
-        : null;
-
-    list.push(`
+    return `
       <article class="card-tile">
-        <img class="thumb" src="${esc(picked?.img || '')}" alt="${esc(it.name)}" loading="lazy" referrerpolicy="no-referrer"
-          onerror="this.style.opacity='.3'; this.alt='(image failed) ' + this.alt;">
+        <img class="thumb" src="${esc(img || '')}" alt="${esc(it.name)}" loading="lazy" referrerpolicy="no-referrer"
+          onerror="this.style.opacity='.3';">
         <div class="tile-meta">
           <div class="name">${esc(it.qty)}× ${esc(it.name)}</div>
           <div class="sub">${card ? esc(card.type_line || '') : 'Not found'}</div>
@@ -413,66 +402,59 @@ function renderCards() {
           </div>
         </div>
       </article>
-    `);
-  }
-  els.cards.innerHTML = list.join('');
+    `;
+  }).join('');
+
+  els.cards.innerHTML = list;
   els.empty.hidden = ITEMS.length > 0;
 }
 
 /* ----------------------------
-   Modal: art picker
+   Modal
 ---------------------------- */
 
-function openArtModalFor(key) {
+async function openArtModalFor(key) {
   const it = ITEMS.find(x => x.key === key);
-  const base = KEY_TO_CARD.get(key);
-  if (!it || !base) return;
+  if (!it || !it.card) return;
 
   MODAL_KEY = key;
   els.artTitle.textContent = `Choose print — ${it.name}`;
   els.artBody.innerHTML = `<div class="inline-hint">Loading prints…</div>`;
   els.artBackdrop.classList.add('open');
 
-  // keep close button always visible via sticky header
-  loadPrintsIntoModal(it, base).catch(err => {
-    console.warn(err);
+  try {
+    const prints = await fetchPrintsForOracle(it.card.oracle_id);
+    if (!prints.length) {
+      els.artBody.innerHTML = `<div class="inline-hint">No alternate prints found.</div>`;
+      return;
+    }
+
+    const selectedId = it.selectedPrint?.id || it.card.id;
+
+    const tiles = prints.map(p => {
+      const img = getFrontImage(p);
+      const cap = `${String(p.set || '').toUpperCase()} · #${p.collector_number || ''} · ${p.released_at || ''}`;
+      const isSel = p.id === selectedId;
+      return `
+        <div class="print-tile ${isSel ? 'selected' : ''}" role="button" tabindex="0"
+             data-print-id="${esc(p.id)}" data-img="${esc(img || '')}">
+          <img src="${esc(img || '')}" alt="${esc(p.name)}" loading="lazy" referrerpolicy="no-referrer"
+            onerror="this.style.opacity='.3'">
+          <div class="cap">${esc(cap)}</div>
+        </div>
+      `;
+    }).join('');
+
+    els.artBody.innerHTML = `<div class="print-grid">${tiles}</div>`;
+  } catch (e) {
+    console.warn(e);
     els.artBody.innerHTML = `<div class="inline-hint">Failed to load prints.</div>`;
-  });
+  }
 }
 
 function closeArtModal() {
   MODAL_KEY = null;
   els.artBackdrop.classList.remove('open');
-}
-
-async function loadPrintsIntoModal(item, baseCard) {
-  const oracleId = baseCard.oracle_id;
-  const prints = await fetchPrintsForOracle(oracleId);
-
-  if (!prints.length) {
-    els.artBody.innerHTML = `<div class="inline-hint">No alternate prints found.</div>`;
-    return;
-  }
-
-  const selectedId = item.selectedPrint?.id || baseCard.id;
-
-  const tiles = prints.map(p => {
-    const img = getCardFrontImage(p);
-    const id = p.id;
-    const cap = `${p.set?.toUpperCase?.() || String(p.set || '').toUpperCase()} · #${p.collector_number || ''} · ${p.released_at || ''}`;
-    const isSel = (id === selectedId);
-    return `
-      <div class="print-tile ${isSel ? 'selected' : ''}" role="button" tabindex="0"
-           data-print-id="${esc(id)}"
-           data-img="${esc(img || '')}">
-        <img src="${esc(img || '')}" alt="${esc(p.name)}" loading="lazy" referrerpolicy="no-referrer"
-          onerror="this.style.opacity='.3'">
-        <div class="cap">${esc(cap)}</div>
-      </div>
-    `;
-  }).join('');
-
-  els.artBody.innerHTML = `<div class="print-grid">${tiles}</div>`;
 }
 
 function applySelectedPrintToItem(key, printId, imgUrl) {
@@ -483,187 +465,156 @@ function applySelectedPrintToItem(key, printId, imgUrl) {
 }
 
 /* ----------------------------
-   Print tab generation
+   PDF generation (pdf-lib)
+   This avoids browser headers/footers entirely.
 ---------------------------- */
 
-function computeLayoutForLetter() {
-  // MTG card: 63mm × 88mm
-  // Letter: 215.9mm × 279.4mm
-  // Typical good fit: 3 cols × 3 rows = 9 per page with room for small gaps
-  return { cols: 3, rows: 3, perPage: 9 };
+async function loadPdfLib() {
+  if (window.PDFLib) return true;
+
+  // Load from CDN (works well on Cloudflare Pages, with CSP allowing it)
+  const s = document.createElement('script');
+  s.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+  s.async = true;
+
+  const ok = await new Promise(resolve => {
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+
+  return ok && !!window.PDFLib;
 }
 
-function buildPrintPages() {
+async function fetchAsBytes(url) {
+  const r = await fetch(url, { mode: 'cors' });
+  if (!r.ok) throw new Error('Image fetch failed: ' + r.status);
+  return new Uint8Array(await r.arrayBuffer());
+}
+
+async function buildPdfBlob() {
+  // Letter size in points
+  const pageW = 612; // 8.5 * 72
+  const pageH = 792; // 11 * 72
+
+  // MTG card size in mm
+  const cardWpt = mmToPt(63);
+  const cardHpt = mmToPt(88);
+
   const gapMm = parseFloat(els.gapSel.value || '0');
-  const layout = computeLayoutForLetter();
+  const gapPt = mmToPt(gapMm);
 
-  // Flatten items into one entry per physical card
-  const pickedImages = [];
+  // 3x3 grid per letter
+  const cols = 3, rows = 3;
+  const perPage = cols * rows;
+
+  const totalW = cols * cardWpt + (cols - 1) * gapPt;
+  const totalH = rows * cardHpt + (rows - 1) * gapPt;
+
+  const marginX = (pageW - totalW) / 2;
+  const marginY = (pageH - totalH) / 2;
+
+  // Flatten images by qty
+  const imgs = [];
   for (const it of ITEMS) {
-    const base = KEY_TO_CARD.get(it.key);
-    if (!base) continue;
-
-    const img = it.selectedPrint?.img || getCardFrontImage(base);
+    if (!it.card) continue;
+    const img = it.selectedPrint?.img || getFrontImage(it.card);
     if (!img) continue;
-
-    for (let i = 0; i < (it.qty || 1); i++) pickedImages.push(img);
+    for (let i = 0; i < (it.qty || 1); i++) imgs.push(img);
   }
 
-  const pages = [];
-  for (let i = 0; i < pickedImages.length; i += layout.perPage) {
-    pages.push(pickedImages.slice(i, i + layout.perPage));
+  if (!imgs.length) throw new Error('No printable images.');
+
+  const { PDFDocument } = window.PDFLib;
+  const pdfDoc = await PDFDocument.create();
+
+  // Basic cache so repeats don’t refetch / re-embed
+  const bytesCache = new Map();
+  const embedCache = new Map(); // url -> embedded image
+
+  for (let i = 0; i < imgs.length; i += perPage) {
+    const page = pdfDoc.addPage([pageW, pageH]);
+    const slice = imgs.slice(i, i + perPage);
+
+    for (let n = 0; n < perPage; n++) {
+      const url = slice[n];
+      if (!url) continue;
+
+      let emb = embedCache.get(url);
+      if (!emb) {
+        let bytes = bytesCache.get(url);
+        if (!bytes) {
+          bytes = await fetchAsBytes(url);
+          bytesCache.set(url, bytes);
+        }
+
+        // Scryfall "normal" is jpg; but just in case:
+        const isPng = /\.png(\?|$)/i.test(url);
+        emb = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+        embedCache.set(url, emb);
+      }
+
+      const c = n % cols;
+      const r = Math.floor(n / cols);
+
+      // pdf-lib origin is bottom-left
+      const x = marginX + c * (cardWpt + gapPt);
+      const y = pageH - marginY - cardHpt - r * (cardHpt + gapPt);
+
+      page.drawImage(emb, { x, y, width: cardWpt, height: cardHpt });
+    }
   }
 
-  return { pages, layout, gapMm };
+  const pdfBytes = await pdfDoc.save();
+  return new Blob([pdfBytes], { type: 'application/pdf' });
 }
 
-function openPrintPreview() {
-  // Popups must be opened synchronously from click handler; this function is called directly from click.
+async function printPdf() {
+  els.spinner.hidden = false;
+  setStatus('');
+
+  // Must open tab synchronously to avoid popup blocking
   const w = window.open('', '_blank');
   if (!w) {
     setStatus(
       'Popup blocked.\n' +
-      'Allow popups for this site, then click Print again.\n' +
-      'Chrome: icon in address bar → Always allow pop-ups and redirects.'
+      'Allow popups for this site, then click Print again.'
     );
+    els.spinner.hidden = true;
     return;
   }
 
-  const { pages, layout, gapMm } = buildPrintPages();
-  if (!pages.length) {
-    w.document.write('<!doctype html><title>Print</title><body style="font-family:sans-serif">No printable cards found.</body>');
-    w.document.close();
-    setStatus('No printable cards found (missing images or no loaded cards).');
-    return;
-  }
-
-  const cardWmm = 63;
-  const cardHmm = 88;
-
-  // Grid cell size includes gap around each card
-  const cellW = cardWmm + gapMm;
-  const cellH = cardHmm + gapMm;
-
-  const htmlPages = pages.map((imgs, idx) => {
-    const cells = [];
-    for (let i = 0; i < layout.perPage; i++) {
-      const img = imgs[i] || null;
-      cells.push(`
-        <div class="cell">
-          ${img ? `<img class="card-img" src="${esc(img)}" alt="" referrerpolicy="no-referrer">` : ''}
-        </div>
-      `);
+  try {
+    const ok = await loadPdfLib();
+    if (!ok) {
+      w.document.write('<!doctype html><title>PDF error</title><body style="font-family:sans-serif">Failed to load PDF library (pdf-lib). Check CSP/script-src.</body>');
+      w.document.close();
+      setStatus('Failed to load pdf-lib. If you use CSP, allow https://unpkg.com in script-src.');
+      return;
     }
 
-    return `
-      <section class="page">
-        <div class="grid" style="
-          grid-template-columns: repeat(${layout.cols}, ${cellW}mm);
-          grid-template-rows: repeat(${layout.rows}, ${cellH}mm);
-        ">
-          ${cells.join('')}
-        </div>
-      </section>
-    `;
-  }).join('');
+    const blob = await buildPdfBlob();
+    const url = URL.createObjectURL(blob);
 
-  const style = `
-    <style>
-      /* Make the tab itself not show UI; print should be clean */
-      html, body {
-        margin: 0;
-        padding: 0;
-        background: #fff;
-        overflow: hidden;
-      }
+    // Navigate the already-opened tab to the PDF blob URL
+    w.location.replace(url);
 
-      /* Remove any default focus outlines etc. */
-      * { box-sizing: border-box; }
-
-      /* Print settings */
-      @page {
-        size: letter;
-        margin: 0;
-      }
-
-      /* In-screen preview also matches print */
-      .page {
-        width: 215.9mm;
-        height: 279.4mm;
-        margin: 0;
-        padding: 0;
-        page-break-after: always;
-        background: #fff;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .grid {
-        display: grid;
-        gap: 0mm; /* gap is baked into cell dimensions */
-        align-content: center;
-        justify-content: center;
-      }
-
-      .cell {
-        width: ${cellW}mm;
-        height: ${cellH}mm;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        background: #fff;
-        border: none;
-        outline: none;
-      }
-
-      .card-img {
-        width: ${cardWmm}mm;
-        height: ${cardHmm}mm;
-        display: block;
-        border: none;
-        outline: none;
-        box-shadow: none;
-      }
-
-      /* Print-only cleanup: show ONLY pages, no scrollbars, no extra text */
-      @media print {
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          overflow: hidden !important;
-          background: #fff !important;
-        }
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-        /* Avoid any accidental headers/controls (we don't render any) */
-        a, button, input, select, textarea { display: none !important; }
-      }
-    </style>
-  `;
-
-  w.document.open();
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8">${style}</head><body>${htmlPages}</body></html>`);
-  w.document.close();
-
-  // Auto-open print dialog after images have a moment to resolve.
-  // (If you prefer manual, remove this.)
-  setTimeout(() => {
-    try { w.focus(); w.print(); } catch (e) {}
-  }, 350);
-
-  setStatus(
-    `Opened print tab.\n` +
-    `Layout: ${layout.cols}×${layout.rows} (${layout.perPage}/page)\n` +
-    `Gap: ${gapMm}mm · Pages: ${pages.length}\n\n` +
-    `If you still see date/title/url: disable "Headers and footers" in the browser print dialog.`
-  );
+    setStatus(
+      'PDF generated and opened in a new tab.\n' +
+      'Print from that tab (no browser headers/footers are embedded in the PDF).'
+    );
+  } catch (e) {
+    console.warn(e);
+    w.document.write('<!doctype html><title>PDF error</title><body style="font-family:sans-serif">PDF generation failed. Check console.</body>');
+    w.document.close();
+    setStatus('PDF generation failed: ' + (e?.message || String(e)));
+  } finally {
+    els.spinner.hidden = true;
+  }
 }
 
 /* ----------------------------
-   Load cards
+   Load / Clear
 ---------------------------- */
 
 async function load() {
@@ -674,46 +625,34 @@ async function load() {
     const parsed = parseCardText(els.input.value);
     if (!parsed.length) {
       ITEMS = [];
-      KEY_TO_CARD = new Map();
       renderCards();
       setStatus('No cards found in input.');
       return;
     }
 
-    // Build normalized keys so Sol Ring == sol ring
-    const names = [];
-    const items = [];
+    // Build items + resolve unique cards via fuzzy
+    const temp = parsed.map(it => ({
+      key: itemKey(it.name),
+      name: it.name,
+      qty: it.qty || 1,
+      card: null,
+      selectedPrint: null
+    }));
 
-    for (const it of parsed) {
-      const key = itemKeyFor(it.name);
-      names.push(it.name); // original cased name request still works
-      items.push({ qty: it.qty || 1, name: it.name, key, selectedPrint: null });
+    const normToCard = await resolveUniqueCards(temp.map(x => x.name));
+
+    for (const it of temp) {
+      it.card = normToCard.get(it.key) || null;
     }
 
-    // Fetch card objects
-    const cards = await fetchCollectionByNames(names);
-
-    // Map by normalized name, because Scryfall returns canonical casing ("Sol Ring")
-    const normToCard = new Map();
-    for (const c of cards) normToCard.set(normalizeName(c.name), c);
-
-    // Resolve each item to a card using normalized lookup
-    KEY_TO_CARD = new Map();
-    for (const it of items) {
-      const c = normToCard.get(normalizeName(it.name));
-      if (c) KEY_TO_CARD.set(it.key, c);
-    }
-
-    ITEMS = items;
-
+    ITEMS = temp;
     renderCards();
 
-    const missing = ITEMS.filter(it => !KEY_TO_CARD.get(it.key)).map(it => it.name);
+    const missing = ITEMS.filter(it => !it.card).map(it => it.name);
     if (missing.length) {
       setStatus(
         `Loaded ${ITEMS.length} line item(s).\n` +
-        `Not found (${missing.length}):\n- ` + missing.slice(0, 12).join('\n- ') +
-        (missing.length > 12 ? `\n… +${missing.length - 12} more` : '')
+        `Not found (${missing.length}):\n- ${missing.slice(0, 14).join('\n- ')}${missing.length > 14 ? `\n… +${missing.length - 14} more` : ''}`
       );
     } else {
       setStatus(`Loaded ${ITEMS.length} line item(s).`);
@@ -726,61 +665,58 @@ async function load() {
   }
 }
 
+function clearAll() {
+  els.input.value = '';
+  els.cards.innerHTML = '';
+  els.empty.hidden = false;
+  setStatus('');
+  ITEMS = [];
+  PRINT_CACHE.clear();
+}
+
 /* ----------------------------
    Events
 ---------------------------- */
 
 document.addEventListener('DOMContentLoaded', () => {
   els.loadBtn.addEventListener('click', load);
+  els.clearBtn.addEventListener('click', clearAll);
 
-  els.clearBtn.addEventListener('click', () => {
-    els.input.value = '';
-    els.cards.innerHTML = '';
-    els.empty.hidden = false;
-    setStatus('');
-    ITEMS = [];
-    KEY_TO_CARD = new Map();
-    PRINT_CACHE.clear();
-  });
-
-  // Single Print button (build + open + print)
   els.printBtn.addEventListener('click', () => {
     if (!ITEMS.length) {
       setStatus('No cards loaded. Click "Load Cards" first.');
       return;
     }
-    openPrintPreview();
+    printPdf();
   });
 
-  // Swap art button on each tile
   els.cards.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action="art"]');
     if (!btn) return;
     openArtModalFor(btn.getAttribute('data-key'));
   });
 
-  // Close modal always visible in sticky header
   els.artClose.addEventListener('click', closeArtModal);
   els.artBackdrop.addEventListener('click', (e) => {
     if (e.target === els.artBackdrop) closeArtModal();
   });
 
-  // Select print in modal -> highlight + apply
   els.artBody.addEventListener('click', (e) => {
     const tile = e.target.closest('.print-tile');
     if (!tile || !MODAL_KEY) return;
 
-    // Update selected highlight
+    // show selected border
     els.artBody.querySelectorAll('.print-tile.selected').forEach(n => n.classList.remove('selected'));
     tile.classList.add('selected');
 
-    // Apply selection
-    const pid = tile.getAttribute('data-print-id');
-    const img = tile.getAttribute('data-img');
-    applySelectedPrintToItem(MODAL_KEY, pid, img);
+    // apply art
+    applySelectedPrintToItem(
+      MODAL_KEY,
+      tile.getAttribute('data-print-id'),
+      tile.getAttribute('data-img')
+    );
   });
 
-  // Keyboard select for accessibility (optional)
   els.artBody.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const tile = e.target.closest('.print-tile');
