@@ -4,131 +4,164 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Print Sheet Builder — Cowy’s Void</title>
-  <meta name="description" content="Paste a list of cards, swap arts, then print a formatted sheet." />
-
+  <meta name="description" content="Paste card names, pick arts, and print a clean MTG-sized sheet." />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
   <link rel="stylesheet" href="/assets/css/void.css">
-
   <style>
-    .ps-controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between}
-    .ps-controls .left,.ps-controls .right{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .control-inline{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18)}
-    .control-inline label{font-size:13px;color:var(--muted);user-select:none;white-space:nowrap}
-    .control-inline input[type="number"]{width:84px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.22);color:var(--text);outline:none}
+    /* Page-only layout helpers (keeps your void.css look) */
+    .controls-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; }
+    .controls-row .control { display:flex; gap:8px; align-items:center; }
+    .inline-hint code { font-size: .95em; }
 
-    /* picklist: pure black bg, pure white text */
-    .control-inline select{
-      padding:8px 10px;border-radius:10px;
-      border:1px solid rgba(255,255,255,.18);
-      background:#000;color:#fff;outline:none;
-    }
-    .control-inline select option{background:#000;color:#fff}
+    .btn-group { display:flex; gap:10px; align-items:center; }
 
-    .btn-group{display:inline-flex;gap:8px;padding:8px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.16)}
-
-    .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:10px}
-    .card-tile{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.14);box-shadow:0 10px 24px rgba(0,0,0,.24);overflow:hidden}
-    .thumb{width:96px;height:134px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.06)}
-    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-    .tile-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-    .tile-title strong{font-size:14px;line-height:1.2}
-    .tile-meta{margin-top:4px;font-size:12px;color:var(--muted)}
-    .tile-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-
-    .mono-pre{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px}
-
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
-    .modal-backdrop.open{display:flex}
-    .modal{width:min(1080px,96vw);max-height:88vh;overflow:auto;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(10,10,14,.92);box-shadow:0 18px 44px rgba(0,0,0,.55);padding:14px}
-
-    /* Modal header always visible */
-    .modal-head{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
-      padding:6px 6px 12px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      margin-bottom:12px;
-
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: rgba(10,10,14,.96);
-      backdrop-filter: blur(10px);
-    }
-    .modal-head h3{margin:0;font-size:16px}
-
-    .prints-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
-    .print-tile{
-      border-radius:16px;border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.16);overflow:hidden;cursor:pointer;transition:transform .08s ease;
-      position:relative;
-    }
-    .print-tile:hover{transform:translateY(-1px)}
-    .print-tile img{width:100%;height:auto;display:block}
-    .print-cap{padding:10px}
-    .print-cap .line1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-    .print-cap .line1 strong{font-size:12px}
-    .print-cap .line2{margin-top:4px;font-size:11px;color:var(--muted)}
-
-    .badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);font-size:11px;color:var(--text)}
-
-    /* Selected art border */
-    .print-tile.selected{
-      outline: 3px solid var(--accent);
-      box-shadow: 0 0 0 1px rgba(0,0,0,.7) inset, 0 10px 26px rgba(0,0,0,.35);
-    }
-    .print-tile.selected::after{
-      content: "Selected";
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(0,0,0,.75);
-      border: 1px solid rgba(255,255,255,.16);
+    .select {
+      appearance: none;
+      background: #000;
       color: #fff;
-      font-size: 12px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 12px;
+      padding: 10px 12px;
+      line-height: 1;
+      font: inherit;
+    }
+    .select:focus { outline: 2px solid rgba(255,255,255,.22); outline-offset: 2px; }
+
+    .card-list {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
     }
 
-    /* Print preview overlay (no popups) */
-    #printPreview {
+    .card-tile {
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.20);
+      backdrop-filter: blur(6px);
+    }
+
+    .thumb {
+      width: 88px;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      flex: 0 0 auto;
+    }
+
+    .tile-meta { min-width: 0; flex: 1 1 auto; }
+    .tile-meta .name { font-weight: 700; }
+    .tile-meta .sub { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
+    .tile-actions { margin-top: 10px; display:flex; gap:10px; flex-wrap:wrap; }
+    .tile-actions .btn { white-space: nowrap; }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+
+    /* Modal */
+    .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: #fff;
-      color: #000;
       display: none;
-      z-index: 10000;
-      overflow: auto;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      background: rgba(0,0,0,.65);
+      padding: 16px;
     }
-    #printPreview.open { display: block; }
-    #printPreview .topbar {
+    .modal-backdrop.open { display:flex; }
+
+    .modal {
+      width: min(980px, 100%);
+      max-height: min(86vh, 860px);
+      overflow: hidden;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.82);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display:flex;
+      flex-direction: column;
+    }
+
+    .modal-head {
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
       position: sticky;
       top: 0;
+      background: rgba(0,0,0,.86);
       z-index: 2;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 12px;
-      background: rgba(255,255,255,.92);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(0,0,0,.15);
     }
-    #printPreview .topbar strong { font-size: 14px; }
-    #printPreview .topbar .btn {
-      background: #000 !important;
-      color: #fff !important;
-      border: 1px solid #000 !important;
-    }
-    #printPreview .pages { padding: 12px; display: grid; gap: 14px; justify-content: center; }
+    .modal-title { font-weight: 700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .modal-head .btn { flex: 0 0 auto; }
 
-    /* Print-only rendering: hide site, show preview */
-    @media print {
-      body > *:not(#printPreview) { display: none !important; }
-      #printPreview { display: block !important; position: static !important; inset: auto !important; }
-      #printPreview .topbar { display: none !important; }
-      #printPreview .pages { padding: 0 !important; gap: 0 !important; }
+    .modal-body {
+      padding: 12px;
+      overflow: auto;
     }
+
+    .print-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .print-tile {
+      border-radius: 14px;
+      border: 2px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      padding: 8px;
+      cursor: pointer;
+      transition: transform .08s ease, border-color .08s ease, box-shadow .08s ease;
+      user-select: none;
+    }
+    .print-tile:hover { transform: translateY(-1px); }
+    .print-tile.selected {
+      border-color: rgba(255,255,255,.85);
+      box-shadow: 0 0 0 2px rgba(255,255,255,.18) inset, 0 10px 24px rgba(0,0,0,.35);
+    }
+    .print-tile img {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      display:block;
+    }
+    .print-tile .cap {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .empty { padding: 18px 14px; border-radius: 16px; border: 1px dashed rgba(255,255,255,.18); color: var(--muted); margin-top: 12px; }
+
+    .spinner { display:inline-flex; align-items:center; gap:8px; color: var(--muted); }
+    .spin-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent);
+      display:inline-block;
+      animation: pulse 1s infinite ease-in-out;
+    }
+    @keyframes pulse { 0%,100%{ transform: scale(.8); opacity:.6 } 50%{ transform: scale(1.2); opacity:1 } }
   </style>
 </head>
 
@@ -144,728 +177,706 @@
       <section class="panel page-panel solid-surface">
         <header class="page">
           <h1>Print Sheet Builder</h1>
-          <p class="sub">Paste card names. Load → swap art per card → Print formats the sheet and prints.</p>
+          <p class="sub">Paste card names (qty optional). Choose alternate arts per card, then <strong>Print</strong> a clean, correctly-sized sheet.</p>
         </header>
 
         <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
           <label class="input input-solid solid-input" style="align-items:start">
             <textarea id="cardInput" class="textarea" placeholder="Examples:
-Sol Ring
-sol ring
-Dark Ritual
-3x Arcane Signet
-1 Command Tower"></textarea>
+1 Sol Ring
+2x Dark Ritual
+Arcane Signet
+..."></textarea>
           </label>
         </div>
 
         <div class="controls-row">
-          <button id="loadBtn" class="btn">Load</button>
+          <button id="loadBtn" class="btn">Load Cards</button>
           <button id="clearBtn" class="btn ghost solid-ghost-btn" type="button">Clear</button>
 
-          <span id="spinner" class="spinner" hidden>
-            <span class="spin-dot" aria-hidden="true"></span>
-            <span class="inline-hint">Loading…</span>
+          <span class="control">
+            <label for="gapSel"><strong>Bleed / gap</strong></label>
+            <select id="gapSel" class="select">
+              <option value="0">No gap (0mm)</option>
+              <option value="0.2">0.2mm</option>
+              <option value="3">3mm</option>
+            </select>
           </span>
+
+          <div class="btn-group">
+            <button id="printBtn" class="btn">Print</button>
+            <span id="spinner" class="spinner" hidden>
+              <span class="spin-dot" aria-hidden="true"></span>
+              <span class="inline-hint">Working…</span>
+            </span>
+          </div>
         </div>
 
         <div class="inline-hint">
-          Case-insensitive matching is enabled: <code>Sol Ring</code> and <code>sol ring</code> resolve to the same card.
-        </div>
-      </section>
-
-      <section class="panel solid-surface">
-        <h2>Print Settings</h2>
-
-        <div class="ps-controls" style="margin-top:10px">
-          <div class="left">
-            <span class="control-inline">
-              <label for="scalePct"><strong>Scale</strong></label>
-              <button id="scaleDown" class="btn ghost solid-ghost-btn" type="button">−</button>
-              <input id="scalePct" type="number" min="50" max="140" step="1" value="100" />
-              <span class="inline-hint">%</span>
-              <button id="scaleUp" class="btn ghost solid-ghost-btn" type="button">+</button>
-            </span>
-
-            <span class="control-inline">
-              <label for="bleed"><strong>Bleed / Gap</strong></label>
-              <select id="bleed">
-                <option value="0">No gap</option>
-                <option value="0.2">0.2mm</option>
-                <option value="3">3mm</option>
-              </select>
-            </span>
-          </div>
-
-          <div class="right">
-            <div class="btn-group" aria-label="Print">
-              <button id="printBtn" class="btn" type="button">Print</button>
-            </div>
-          </div>
+          Notes: Card names are matched case-insensitively. If a card is double-faced, the first face print will be used unless you pick another print.
         </div>
 
-        <div id="status" class="mono-pre" style="margin-top:10px; opacity:.9"></div>
-      </section>
+        <div id="status" class="status" hidden></div>
 
-      <section class="panel solid-surface">
-        <h2>Cards</h2>
-        <div id="empty" class="empty" hidden>Paste cards and click Load.</div>
-        <div id="cards" class="cards-grid"></div>
+        <div id="empty" class="empty">Paste some cards and click <strong>Load Cards</strong>.</div>
+
+        <div id="cards" class="card-list" aria-label="Loaded cards"></div>
       </section>
     </main>
   </div>
 
-  <!-- Art Modal -->
-  <div id="artModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Choose art">
-    <div class="modal solid-surface">
+  <!-- Art Picker Modal -->
+  <div id="artBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="artTitle">
+    <div class="modal">
       <div class="modal-head">
-        <h3 id="artModalTitle" style="margin:0">Choose Art</h3>
-        <button id="artModalClose" class="btn ghost solid-ghost-btn" type="button">Close</button>
+        <div id="artTitle" class="modal-title">Choose print</div>
+        <button id="artClose" class="btn ghost solid-ghost-btn" type="button">Close</button>
       </div>
-      <div id="artModalBody"></div>
-    </div>
-  </div>
-
-  <!-- Print Preview (no popup) -->
-  <div id="printPreview" aria-label="Print preview">
-    <div class="topbar">
-      <strong>Print Preview</strong>
-      <div style="display:flex;gap:10px;align-items:center">
-        <span id="printPreviewHint" style="font-size:12px;color:#333">Loading images…</span>
-        <button id="closePreview" class="btn" type="button">Back</button>
+      <div id="artBody" class="modal-body">
+        <div class="inline-hint">Loading prints…</div>
       </div>
     </div>
-    <div id="printPages" class="pages"></div>
   </div>
 
 <script>
-  // ---------- Helpers ----------
-  function esc(s) {
-    return (s || '').replace(/[&<>\"']/g, m => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[m]));
-  }
+/* ----------------------------
+   Utilities
+---------------------------- */
 
-  function stripNameAnnotations(s = '') {
-    s = s.trim();
-    const cuts = [s.indexOf('['), s.indexOf('{'), s.indexOf('('), s.indexOf('^^')].filter(i => i >= 0);
-    if (!cuts.length) return s;
-    return s.slice(0, Math.min(...cuts)).trim();
-  }
+function esc(s) {
+  return (s || '').replace(/[&<>\"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
 
-  function keyName(s='') {
-    return stripNameAnnotations(s).toLowerCase().replace(/\s+/g,' ').trim();
-  }
+function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
-  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+function normalizeName(s = '') {
+  // Case-insensitive, normalize unicode, collapse spaces
+  return s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+}
 
-  function parseCardLines(text) {
-    const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
-    const out = [];
-    for (let raw of lines) {
-      let line = (raw || '').trim();
-      if (!line) continue;
-      line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
-      if (!line) continue;
+function stripNameAnnotations(s = '') {
+  s = s.trim();
+  const cuts = [s.indexOf('['), s.indexOf('{'), s.indexOf('('), s.indexOf('^^')].filter(i => i >= 0);
+  if (!cuts.length) return s;
+  return s.slice(0, Math.min(...cuts)).trim();
+}
 
-      const m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
-      if (m) {
-        const qty = parseInt(m[1], 10);
-        const nameRaw = stripNameAnnotations(m[2]);
-        out.push({ qty, nameRaw, nameKey: keyName(nameRaw) });
-      } else {
-        const nameRaw = stripNameAnnotations(line);
-        out.push({ qty: 1, nameRaw, nameKey: keyName(nameRaw) });
-      }
+function parseCardText(text) {
+  const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
+  const items = [];
+  for (let raw of lines) {
+    let line = raw.trim();
+    if (!line) continue;
+    line = line.replace(/\s*\/\/.*$/,'').replace(/\s*#.*$/,'').trim();
+    if (!line) continue;
+
+    let m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
+    if (m) {
+      items.push({ qty: parseInt(m[1], 10), name: stripNameAnnotations(m[2]) });
+      continue;
     }
-    return out;
+    items.push({ qty: 1, name: stripNameAnnotations(line) });
   }
+  return items;
+}
 
-  function collapseToUniqueItems(parsedItems) {
-    const byKey = new Map();
-    for (const row of parsedItems) {
-      const k = row.nameKey;
-      const prev = byKey.get(k);
-      if (!prev) byKey.set(k, { nameKey:k, displayName: row.nameRaw, qty: row.qty || 1 });
-      else prev.qty += (row.qty || 1);
+function getCardFrontImage(card) {
+  // normal layout
+  if (card?.image_uris?.normal) return card.image_uris.normal;
+  // MDFC / DFC
+  if (Array.isArray(card?.card_faces) && card.card_faces[0]?.image_uris?.normal) {
+    return card.card_faces[0].image_uris.normal;
+  }
+  return null;
+}
+
+function getCardPrintId(card) {
+  // prefer exact print id if present; fallback oracle
+  return card?.id || card?.oracle_id || null;
+}
+
+/* ----------------------------
+   DOM
+---------------------------- */
+
+const els = {
+  input: document.getElementById('cardInput'),
+  loadBtn: document.getElementById('loadBtn'),
+  clearBtn: document.getElementById('clearBtn'),
+  gapSel: document.getElementById('gapSel'),
+  printBtn: document.getElementById('printBtn'),
+  cards: document.getElementById('cards'),
+  empty: document.getElementById('empty'),
+  status: document.getElementById('status'),
+  spinner: document.getElementById('spinner'),
+
+  artBackdrop: document.getElementById('artBackdrop'),
+  artTitle: document.getElementById('artTitle'),
+  artBody: document.getElementById('artBody'),
+  artClose: document.getElementById('artClose')
+};
+
+function setStatus(msg) {
+  els.status.hidden = !msg;
+  els.status.textContent = msg || '';
+}
+
+/* ----------------------------
+   State
+---------------------------- */
+
+let ITEMS = []; // [{qty, name, key}]
+let KEY_TO_CARD = new Map(); // key -> scryfall card
+let PRINT_CACHE = new Map(); // oracle_id -> prints array
+let MODAL_KEY = null;
+
+function itemKeyFor(name) {
+  return normalizeName(name);
+}
+
+/* ----------------------------
+   Scryfall API
+---------------------------- */
+
+async function fetchCollectionByNames(names) {
+  const CHUNK = 70;
+  const uniq = [...new Set(names.filter(Boolean))];
+
+  const out = [];
+  for (let i = 0; i < uniq.length; i += CHUNK) {
+    const slice = uniq.slice(i, i + CHUNK);
+    const body = { identifiers: slice.map(n => ({ name: n })) };
+    const r = await fetch('https://api.scryfall.com/cards/collection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      console.warn('Scryfall collection error', r.status);
+      continue;
     }
-    return [...byKey.values()];
+    const j = await r.json();
+    for (const card of (j.data || [])) out.push(card);
+  }
+  return out;
+}
+
+async function fetchPrintsForOracle(oracleId) {
+  if (!oracleId) return [];
+  if (PRINT_CACHE.has(oracleId)) return PRINT_CACHE.get(oracleId);
+
+  // Search all prints by oracle id, then page through
+  const all = [];
+  let url = `https://api.scryfall.com/cards/search?order=released&q=oracleid%3A${encodeURIComponent(oracleId)}&unique=prints`;
+  while (url) {
+    const r = await fetch(url);
+    if (!r.ok) break;
+    const j = await r.json();
+    (j.data || []).forEach(c => all.push(c));
+    url = j.has_more ? j.next_page : null;
   }
 
-  // ---------- Scryfall ----------
-  async function fetchCollectionByNames(namesOriginalCasing) {
-    const CHUNK = 70;
-    const uniq = [...new Set(namesOriginalCasing.filter(Boolean))];
-    const out = new Map(); // keyName(card.name) -> card
+  // Sort newest first for nicer browsing
+  all.sort((a,b) => String(b.released_at || '').localeCompare(String(a.released_at || '')));
 
-    for (let i = 0; i < uniq.length; i += CHUNK) {
-      const slice = uniq.slice(i, i + CHUNK);
-      const body = { identifiers: slice.map(n => ({ name: n })) };
-      const r = await fetch('https://api.scryfall.com/cards/collection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!r.ok) continue;
-      const j = await r.json();
-      for (const card of (j.data || [])) out.set(keyName(card.name), card);
-    }
-    return out;
-  }
+  PRINT_CACHE.set(oracleId, all);
+  return all;
+}
 
-  async function fetchPrintsForOracle(oracleId) {
-    const url = `https://api.scryfall.com/cards/search?order=released&q=oracleid:${encodeURIComponent(oracleId)}&unique=prints`;
-    let next = url;
-    const all = [];
-    while (next) {
-      const r = await fetch(next);
-      if (!r.ok) break;
-      const j = await r.json();
-      all.push(...(j.data || []));
-      next = j.has_more ? j.next_page : null;
-    }
-    return all;
-  }
+/* ----------------------------
+   Render main list
+---------------------------- */
 
-  function getFrontImage(card, version = 'normal') {
-    if (!card) return null;
-    if (card.image_uris?.[version]) return card.image_uris[version];
-    if (Array.isArray(card.card_faces) && card.card_faces[0]?.image_uris?.[version]) return card.card_faces[0].image_uris[version];
-    if (card.id) return `https://api.scryfall.com/cards/${card.id}?format=image&version=${encodeURIComponent(version)}`;
-    return null;
-  }
+function renderCards() {
+  const list = [];
+  for (const it of ITEMS) {
+    const card = KEY_TO_CARD.get(it.key);
+    const img = card ? getCardFrontImage(card) : null;
 
-  function bestPrintImageUrl(card) {
-    return getFrontImage(card, 'png')
-        || getFrontImage(card, 'large')
-        || getFrontImage(card, 'normal')
-        || getFrontImage(card, 'border_crop')
-        || null;
-  }
+    const picked = it.selectedPrint
+      ? it.selectedPrint
+      : card
+        ? { id: getCardPrintId(card), img }
+        : null;
 
-  // ---------- State ----------
-  let ITEMS = [];                 // [{ nameKey, displayName, qty, oracleId, selectedPrintId, selectedImg }]
-  let KEY_TO_CARD = new Map();    // nameKey -> base card
-  const PRINT_CACHE = new Map();  // oracleId -> prints
-
-  // ---------- Elements ----------
-  const els = {
-    input: document.getElementById('cardInput'),
-    loadBtn: document.getElementById('loadBtn'),
-    clearBtn: document.getElementById('clearBtn'),
-    spinner: document.getElementById('spinner'),
-    empty: document.getElementById('empty'),
-    cards: document.getElementById('cards'),
-    status: document.getElementById('status'),
-
-    scalePct: document.getElementById('scalePct'),
-    scaleDown: document.getElementById('scaleDown'),
-    scaleUp: document.getElementById('scaleUp'),
-    bleed: document.getElementById('bleed'),
-    printBtn: document.getElementById('printBtn'),
-
-    artBackdrop: document.getElementById('artModalBackdrop'),
-    artClose: document.getElementById('artModalClose'),
-    artTitle: document.getElementById('artModalTitle'),
-    artBody: document.getElementById('artModalBody'),
-
-    preview: document.getElementById('printPreview'),
-    previewPages: document.getElementById('printPages'),
-    previewHint: document.getElementById('printPreviewHint'),
-    closePreview: document.getElementById('closePreview')
-  };
-
-  function setStatus(msg='') { els.status.textContent = msg; }
-  function setBusy(b) { els.spinner.hidden = !b; }
-
-  // ---------- UI render ----------
-  function renderCards() {
-    els.cards.innerHTML = '';
-
-    const total = ITEMS.reduce((s, it) => s + (it.qty || 1), 0);
-    setStatus(`Loaded ${ITEMS.length} unique name(s), ${total} total card(s).`);
-
-    for (const it of ITEMS) {
-      const base = KEY_TO_CARD.get(it.nameKey);
-      const img = it.selectedImg || getFrontImage(base, 'normal') || getFrontImage(base, 'large');
-
-      const setName = (base?.set || '').toUpperCase();
-      const cn = base?.collector_number || '—';
-      const artist = base?.artist || '—';
-
-      const div = document.createElement('div');
-      div.className = 'card-tile';
-      div.innerHTML = `
-        <div class="thumb">
-          ${img ? `<img src="${img}" alt="${esc(it.displayName)}" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">` : ''}
-        </div>
-        <div>
-          <div class="tile-title">
-            <strong>${esc(it.displayName)}</strong>
-            <span class="pill">× <strong>${it.qty || 1}</strong></span>
-          </div>
-          <div class="tile-meta">${esc(setName)} · #${esc(cn)} · ${esc(artist)}</div>
+    list.push(`
+      <article class="card-tile">
+        <img class="thumb" src="${esc(picked?.img || '')}" alt="${esc(it.name)}" loading="lazy" referrerpolicy="no-referrer"
+          onerror="this.style.opacity='.3'; this.alt='(image failed) ' + this.alt;">
+        <div class="tile-meta">
+          <div class="name">${esc(it.qty)}× ${esc(it.name)}</div>
+          <div class="sub">${card ? esc(card.type_line || '') : 'Not found'}</div>
           <div class="tile-actions">
-            <button class="btn ghost solid-ghost-btn" type="button"
-              data-action="art"
-              data-key="${esc(it.nameKey)}">Change Art</button>
-          </div>
-          <div class="inline-hint" style="margin-top:8px; opacity:.9">
-            ${it.selectedPrintId ? `Selected print set.` : `Using default print.`}
+            <button class="btn ghost solid-ghost-btn" type="button" data-action="art" data-key="${esc(it.key)}">Swap art</button>
           </div>
         </div>
-      `;
-      els.cards.appendChild(div);
-    }
+      </article>
+    `);
+  }
+  els.cards.innerHTML = list.join('');
+  els.empty.hidden = ITEMS.length > 0;
+}
+
+/* ----------------------------
+   Modal: art picker
+---------------------------- */
+
+function openArtModalFor(key) {
+  const it = ITEMS.find(x => x.key === key);
+  const base = KEY_TO_CARD.get(key);
+  if (!it || !base) return;
+
+  MODAL_KEY = key;
+  els.artTitle.textContent = `Choose print — ${it.name}`;
+  els.artBody.innerHTML = `<div class="inline-hint">Loading prints…</div>`;
+  els.artBackdrop.classList.add('open');
+
+  // keep close button always visible via sticky header
+  loadPrintsIntoModal(it, base).catch(err => {
+    console.warn(err);
+    els.artBody.innerHTML = `<div class="inline-hint">Failed to load prints.</div>`;
+  });
+}
+
+function closeArtModal() {
+  MODAL_KEY = null;
+  els.artBackdrop.classList.remove('open');
+}
+
+async function loadPrintsIntoModal(item, baseCard) {
+  const oracleId = baseCard.oracle_id;
+  const prints = await fetchPrintsForOracle(oracleId);
+
+  if (!prints.length) {
+    els.artBody.innerHTML = `<div class="inline-hint">No alternate prints found.</div>`;
+    return;
   }
 
-  // ---------- Load flow ----------
-  async function load() {
-    setBusy(true);
-    try {
-      const parsed = parseCardLines(els.input.value);
-      els.empty.hidden = parsed.length > 0;
+  const selectedId = item.selectedPrint?.id || baseCard.id;
 
-      if (!parsed.length) {
-        ITEMS = [];
-        KEY_TO_CARD = new Map();
-        els.cards.innerHTML = '';
-        setStatus('Paste cards and click Load.');
-        return;
-      }
-
-      const uniqItems = collapseToUniqueItems(parsed);
-      const namesForScryfall = uniqItems.map(it => it.displayName);
-      const mapKeyToCard = await fetchCollectionByNames(namesForScryfall);
-
-      KEY_TO_CARD = mapKeyToCard;
-
-      const missing = [];
-      ITEMS = uniqItems.map(it => {
-        const base = mapKeyToCard.get(it.nameKey);
-        if (!base) missing.push(it.displayName);
-        return {
-          ...it,
-          oracleId: base?.oracle_id || null,
-          selectedPrintId: null,
-          selectedImg: null
-        };
-      });
-
-      renderCards();
-
-      if (missing.length) {
-        setStatus(
-          `Loaded ${uniqItems.length - missing.length}/${uniqItems.length} unique name(s).\nMissing:\n- ` +
-          missing.slice(0, 20).join('\n- ') +
-          (missing.length > 20 ? `\n…and ${missing.length - 20} more` : '')
-        );
-      }
-    } catch (e) {
-      console.error(e);
-      setStatus(String(e?.message || e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // ---------- Art swap modal ----------
-  let MODAL_KEY = null;
-
-  function openArtModalFor(nameKey) {
-    MODAL_KEY = nameKey;
-    const item = ITEMS.find(x => x.nameKey === nameKey);
-    const base = KEY_TO_CARD.get(nameKey);
-    if (!item || !base?.oracle_id) return;
-
-    els.artTitle.textContent = `Choose Art — ${item.displayName}`;
-    els.artBody.innerHTML = `<div class="inline-hint">Loading prints…</div>`;
-    els.artBackdrop.classList.add('open');
-
-    loadPrintsIntoModal(base.oracle_id, item.selectedPrintId);
-  }
-
-  async function loadPrintsIntoModal(oracleId, selectedPrintId) {
-    try {
-      let prints = PRINT_CACHE.get(oracleId);
-      if (!prints) {
-        prints = await fetchPrintsForOracle(oracleId);
-        PRINT_CACHE.set(oracleId, prints);
-      }
-
-      const good = prints
-        .map(p => ({
-          id: p.id,
-          set: (p.set || '').toUpperCase(),
-          cn: p.collector_number || '—',
-          artist: p.artist || '—',
-          released: p.released_at || '—',
-          img: getFrontImage(p, 'small') || getFrontImage(p, 'normal') || getFrontImage(p, 'large')
-        }))
-        .filter(p => !!p.img);
-
-      if (!good.length) {
-        els.artBody.innerHTML = `<div class="inline-hint">No printable images found for this card.</div>`;
-        return;
-      }
-
-      els.artBody.innerHTML = `
-        <div class="inline-hint" style="margin-bottom:10px">
-          Click a print to select its art. (${good.length} found)
-        </div>
-        <div class="prints-grid">
-          ${good.map(p => `
-            <div class="print-tile ${p.id === selectedPrintId ? 'selected' : ''}"
-                 data-print-id="${esc(p.id)}"
-                 data-img="${esc(p.img)}">
-              <img src="${esc(p.img)}" alt="${esc(p.set)} ${esc(p.cn)}" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">
-              <div class="print-cap">
-                <div class="line1">
-                  <strong>${esc(p.set)}</strong>
-                  <span class="badge">${`#${esc(p.cn)}`}</span>
-                </div>
-                <div class="line2">${esc(p.released)} · ${esc(p.artist)}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    } catch (e) {
-      console.error(e);
-      els.artBody.innerHTML = `<div class="inline-hint">Failed to load prints: ${esc(e?.message || String(e))}</div>`;
-    }
-  }
-
-  function closeArtModal() {
-    els.artBackdrop.classList.remove('open');
-    MODAL_KEY = null;
-  }
-
-  function applySelectedPrintToItem(nameKey, printId, imgUrl) {
-    const idx = ITEMS.findIndex(x => x.nameKey === nameKey);
-    if (idx < 0) return;
-    ITEMS[idx].selectedPrintId = printId;
-    ITEMS[idx].selectedImg = imgUrl;
-
-    // ensure that selected print is cached for printing at high res
-    const base = KEY_TO_CARD.get(nameKey);
-    if (base?.oracle_id && !PRINT_CACHE.has(base.oracle_id)) {
-      // non-blocking; modal already fetched in most cases
-      fetchPrintsForOracle(base.oracle_id).then(p => PRINT_CACHE.set(base.oracle_id, p)).catch(() => {});
-    }
-
-    renderCards();
-  }
-
-  // ---------- Print Preview (no popup) ----------
-  const PAGE_MM = { w: 215.9, h: 279.4 }; // US Letter in mm
-
-  function computeLayout(scalePct, gapMm, paddingMm = 6) {
-    const scale = scalePct / 100;
-    const cardW = 63 * scale;
-    const cardH = 88 * scale;
-
-    const availW = PAGE_MM.w - (paddingMm * 2);
-    const availH = PAGE_MM.h - (paddingMm * 2);
-
-    const cols = Math.max(1, Math.floor((availW + gapMm) / (cardW + gapMm)));
-    const rows = Math.max(1, Math.floor((availH + gapMm) / (cardH + gapMm)));
-    const perPage = Math.max(1, cols * rows);
-
-    return { cardW, cardH, cols, rows, perPage, gapMm, paddingMm };
-  }
-
-  function getSelectedPrintCardForItem(item) {
-    if (!item) return null;
-
-    if (item.selectedPrintId && item.oracleId) {
-      const prints = PRINT_CACHE.get(item.oracleId);
-      const found = prints?.find(p => p.id === item.selectedPrintId);
-      if (found) return found;
-    }
-    return KEY_TO_CARD.get(item.nameKey) || null;
-  }
-
-  function expandToCopies() {
-    const out = [];
-    for (const it of ITEMS) {
-      const card = getSelectedPrintCardForItem(it);
-      const url = bestPrintImageUrl(card);
-      if (!url) continue;
-      for (let i = 0; i < (it.qty || 1); i++) out.push({ name: it.displayName, url });
-    }
-    return out;
-  }
-
-  function chunk(arr, size) {
-    const out = [];
-    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-    return out;
-  }
-
-  function openPrintPreview() {
-    if (!ITEMS.length) { setStatus('Load cards first.'); return; }
-
-    const scalePct = clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140);
-    const gapMm = Number(els.bleed.value || 0);
-    els.scalePct.value = String(scalePct);
-
-    const copies = expandToCopies();
-    if (!copies.length) { setStatus('No hookup for printable images.'); return; }
-
-    const layout = computeLayout(scalePct, gapMm, 6);
-    const pages = chunk(copies, layout.perPage);
-
-    // Build preview DOM
-    els.previewPages.innerHTML = '';
-    els.previewHint.textContent = 'Loading images…';
-    els.preview.classList.add('open');
-
-    const style = document.createElement('style');
-    style.id = 'printPageStyle';
-    style.textContent = `
-      .print-page {
-        width: ${PAGE_MM.w}mm;
-        height: ${PAGE_MM.h}mm;
-        background: #fff;
-        box-shadow: 0 10px 30px rgba(0,0,0,.18);
-        overflow: hidden;
-      }
-      .print-grid {
-        width: 100%;
-        height: 100%;
-        display: grid;
-        justify-content: center;
-        align-content: start;
-        box-sizing: border-box;
-        padding: ${layout.paddingMm}mm;
-        gap: ${layout.gapMm}mm;
-        grid-template-columns: repeat(${layout.cols}, ${layout.cardW}mm);
-        grid-auto-rows: ${layout.cardH}mm;
-      }
-      .print-card {
-        width: 100%;
-        height: 100%;
-        outline: 0.2mm solid #000;
-        box-sizing: border-box;
-        overflow: hidden;
-        background: #fff;
-      }
-      .print-card img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
+  const tiles = prints.map(p => {
+    const img = getCardFrontImage(p);
+    const id = p.id;
+    const cap = `${p.set?.toUpperCase?.() || String(p.set || '').toUpperCase()} · #${p.collector_number || ''} · ${p.released_at || ''}`;
+    const isSel = (id === selectedId);
+    return `
+      <div class="print-tile ${isSel ? 'selected' : ''}" role="button" tabindex="0"
+           data-print-id="${esc(id)}"
+           data-img="${esc(img || '')}">
+        <img src="${esc(img || '')}" alt="${esc(p.name)}" loading="lazy" referrerpolicy="no-referrer"
+          onerror="this.style.opacity='.3'">
+        <div class="cap">${esc(cap)}</div>
+      </div>
     `;
-    // Replace if exists
-    const old = document.getElementById('printPageStyle');
-    if (old) old.remove();
-    document.head.appendChild(style);
+  }).join('');
 
-    const imgs = [];
+  els.artBody.innerHTML = `<div class="print-grid">${tiles}</div>`;
+}
 
-    for (const page of pages) {
-      const pageEl = document.createElement('div');
-      pageEl.className = 'print-page';
+function applySelectedPrintToItem(key, printId, imgUrl) {
+  const it = ITEMS.find(x => x.key === key);
+  if (!it) return;
+  it.selectedPrint = { id: printId, img: imgUrl };
+  renderCards();
+}
 
-      const grid = document.createElement('div');
-      grid.className = 'print-grid';
+/* ----------------------------
+   Print tab generation
+---------------------------- */
 
-      page.forEach(c => {
-        const card = document.createElement('div');
-        card.className = 'print-card';
+function computeLayoutForLetter() {
+  // MTG card: 63mm × 88mm
+  // Letter: 215.9mm × 279.4mm
+  // Typical good fit: 3 cols × 3 rows = 9 per page with room for small gaps
+  return { cols: 3, rows: 3, perPage: 9 };
+}
 
-        const img = document.createElement('img');
-        img.src = c.url;
-        img.alt = c.name;
-        img.loading = 'eager';
-        img.referrerPolicy = 'no-referrer';
-        img.crossOrigin = 'anonymous';
+function buildPrintPages() {
+  const gapMm = parseFloat(els.gapSel.value || '0');
+  const layout = computeLayoutForLetter();
 
-        imgs.push(img);
+  // Flatten items into one entry per physical card
+  const pickedImages = [];
+  for (const it of ITEMS) {
+    const base = KEY_TO_CARD.get(it.key);
+    if (!base) continue;
 
-        card.appendChild(img);
-        grid.appendChild(card);
-      });
+    const img = it.selectedPrint?.img || getCardFrontImage(base);
+    if (!img) continue;
 
-      pageEl.appendChild(grid);
-      els.previewPages.appendChild(pageEl);
+    for (let i = 0; i < (it.qty || 1); i++) pickedImages.push(img);
+  }
+
+  const pages = [];
+  for (let i = 0; i < pickedImages.length; i += layout.perPage) {
+    pages.push(pickedImages.slice(i, i + layout.perPage));
+  }
+
+  return { pages, layout, gapMm };
+}
+
+function openPrintPreview() {
+  // Popups must be opened synchronously from click handler; this function is called directly from click.
+  const w = window.open('', '_blank');
+  if (!w) {
+    setStatus(
+      'Popup blocked.\n' +
+      'Allow popups for this site, then click Print again.\n' +
+      'Chrome: icon in address bar → Always allow pop-ups and redirects.'
+    );
+    return;
+  }
+
+  const { pages, layout, gapMm } = buildPrintPages();
+  if (!pages.length) {
+    w.document.write('<!doctype html><title>Print</title><body style="font-family:sans-serif">No printable cards found.</body>');
+    w.document.close();
+    setStatus('No printable cards found (missing images or no loaded cards).');
+    return;
+  }
+
+  const cardWmm = 63;
+  const cardHmm = 88;
+
+  // Grid cell size includes gap around each card
+  const cellW = cardWmm + gapMm;
+  const cellH = cardHmm + gapMm;
+
+  const htmlPages = pages.map((imgs, idx) => {
+    const cells = [];
+    for (let i = 0; i < layout.perPage; i++) {
+      const img = imgs[i] || null;
+      cells.push(`
+        <div class="cell">
+          ${img ? `<img class="card-img" src="${esc(img)}" alt="" referrerpolicy="no-referrer">` : ''}
+        </div>
+      `);
     }
 
-    // Wait for images then print
-    let pending = imgs.length;
-    if (!pending) {
-      els.previewHint.textContent = 'Ready.';
-      window.print();
+    return `
+      <section class="page">
+        <div class="grid" style="
+          grid-template-columns: repeat(${layout.cols}, ${cellW}mm);
+          grid-template-rows: repeat(${layout.rows}, ${cellH}mm);
+        ">
+          ${cells.join('')}
+        </div>
+      </section>
+    `;
+  }).join('');
+
+  const style = `
+    <style>
+      /* Make the tab itself not show UI; print should be clean */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        overflow: hidden;
+      }
+
+      /* Remove any default focus outlines etc. */
+      * { box-sizing: border-box; }
+
+      /* Print settings */
+      @page {
+        size: letter;
+        margin: 0;
+      }
+
+      /* In-screen preview also matches print */
+      .page {
+        width: 215.9mm;
+        height: 279.4mm;
+        margin: 0;
+        padding: 0;
+        page-break-after: always;
+        background: #fff;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .grid {
+        display: grid;
+        gap: 0mm; /* gap is baked into cell dimensions */
+        align-content: center;
+        justify-content: center;
+      }
+
+      .cell {
+        width: ${cellW}mm;
+        height: ${cellH}mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: #fff;
+        border: none;
+        outline: none;
+      }
+
+      .card-img {
+        width: ${cardWmm}mm;
+        height: ${cardHmm}mm;
+        display: block;
+        border: none;
+        outline: none;
+        box-shadow: none;
+      }
+
+      /* Print-only cleanup: show ONLY pages, no scrollbars, no extra text */
+      @media print {
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          background: #fff !important;
+        }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+        /* Avoid any accidental headers/controls (we don't render any) */
+        a, button, input, select, textarea { display: none !important; }
+      }
+    </style>
+  `;
+
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8">${style}</head><body>${htmlPages}</body></html>`);
+  w.document.close();
+
+  // Auto-open print dialog after images have a moment to resolve.
+  // (If you prefer manual, remove this.)
+  setTimeout(() => {
+    try { w.focus(); w.print(); } catch (e) {}
+  }, 350);
+
+  setStatus(
+    `Opened print tab.\n` +
+    `Layout: ${layout.cols}×${layout.rows} (${layout.perPage}/page)\n` +
+    `Gap: ${gapMm}mm · Pages: ${pages.length}\n\n` +
+    `If you still see date/title/url: disable "Headers and footers" in the browser print dialog.`
+  );
+}
+
+/* ----------------------------
+   Load cards
+---------------------------- */
+
+async function load() {
+  els.spinner.hidden = false;
+  setStatus('');
+
+  try {
+    const parsed = parseCardText(els.input.value);
+    if (!parsed.length) {
+      ITEMS = [];
+      KEY_TO_CARD = new Map();
+      renderCards();
+      setStatus('No cards found in input.');
       return;
     }
 
-    const done = () => {
-      pending--;
-      if (pending <= 0) {
-        els.previewHint.textContent = 'Ready. Opening print dialog…';
-        setTimeout(() => window.print(), 80);
-      } else {
-        els.previewHint.textContent = `Loading images… (${pending} left)`;
-      }
-    };
+    // Build normalized keys so Sol Ring == sol ring
+    const names = [];
+    const items = [];
 
-    imgs.forEach(img => {
-      if (img.complete) return done();
-      img.addEventListener('load', done, { once: true });
-      img.addEventListener('error', done, { once: true });
-    });
-
-    setStatus(
-      `Print preview built.\n` +
-      `Layout: ${layout.cols}×${layout.rows} (${layout.perPage}/page)\n` +
-      `Scale: ${scalePct}% · Gap: ${gapMm}mm · Pages: ${pages.length}`
-    );
-  }
-
-  function closePrintPreview() {
-    els.preview.classList.remove('open');
-    els.previewPages.innerHTML = '';
-    els.previewHint.textContent = '';
-  }
-
-  // ---------- Events ----------
-  document.addEventListener('DOMContentLoaded', () => {
-    els.loadBtn.addEventListener('click', load);
-
-    els.clearBtn.addEventListener('click', () => {
-      els.input.value = '';
-      els.cards.innerHTML = '';
-      els.empty.hidden = false;
-      setStatus('');
-      ITEMS = [];
-      KEY_TO_CARD = new Map();
-      PRINT_CACHE.clear();
-      closePrintPreview();
-    });
-
-    els.scaleDown.addEventListener('click', () => {
-      els.scalePct.value = String(clamp((parseInt(els.scalePct.value, 10) || 100) - 1, 50, 140));
-    });
-    els.scaleUp.addEventListener('click', () => {
-      els.scalePct.value = String(clamp((parseInt(els.scalePct.value, 10) || 100) + 1, 50, 140));
-    });
-    els.scalePct.addEventListener('change', () => {
-      els.scalePct.value = String(clamp(parseInt(els.scalePct.value, 10) || 100, 50, 140));
-    });
-
-    els.printBtn.addEventListener('click', openPrintPreview);
-    els.closePreview.addEventListener('click', closePrintPreview);
-
-    els.cards.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-action="art"]');
-      if (!btn) return;
-      openArtModalFor(btn.getAttribute('data-key'));
-    });
-
-    els.artClose.addEventListener('click', closeArtModal);
-    els.artBackdrop.addEventListener('click', (e) => {
-      if (e.target === els.artBackdrop) closeArtModal();
-    });
-
-    els.artBody.addEventListener('click', (e) => {
-      const tile = e.target.closest('.print-tile');
-      if (!tile || !MODAL_KEY) return;
-
-      els.artBody.querySelectorAll('.print-tile.selected').forEach(n => n.classList.remove('selected'));
-      tile.classList.add('selected');
-
-      const pid = tile.getAttribute('data-print-id');
-      const img = tile.getAttribute('data-img');
-      applySelectedPrintToItem(MODAL_KEY, pid, img);
-    });
-  });
-</script>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
-    const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
-    const allowVideo = isFast && isWifiLike;
-
-    const wrap = document.getElementById('bgVideo');
-    const vid  = document.getElementById('bgVideoEl');
-    if (!wrap || !vid) return;
-
-    if (!allowVideo) { wrap.style.display = 'none'; return; }
-
-    vid.src = '/assets/Blackhole_Animtation.mp4';
-
-    const onReady = () => {
-      wrap.classList.add('ready');
-      const p = vid.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    };
-
-    vid.addEventListener('canplay', onReady, { once: true });
-    vid.addEventListener('loadeddata', onReady, { once: true });
-    vid.addEventListener('loadedmetadata', () => wrap.classList.add('ready'), { once: true });
-  });
-</script>
-
-<script>
-  (async () => {
-    try {
-      async function loadPartial(url) {
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) return null;
-        const html = await res.text();
-        const tpl = document.createElement('template');
-        tpl.innerHTML = html.trim();
-        tpl.content.querySelectorAll('style').forEach(st => {
-          document.head.appendChild(st.cloneNode(true));
-          st.remove();
-        });
-        return tpl.content.firstElementChild || null;
-      }
-
-      const header = document.getElementById('site-header');
-      const navEl = await loadPartial('/partials/nav.html');
-      if (header && navEl) {
-        header.innerHTML = '';
-        header.appendChild(navEl);
-        initNav(header);
-      }
-
-      const discordEl = await loadPartial('/partials/discord.html');
-      if (discordEl) document.body.appendChild(discordEl);
-
-      const footerEl = await loadPartial('/partials/footer.html');
-      if (footerEl) document.body.appendChild(footerEl);
-
-      function initNav(scope) {
-        const btn = scope.querySelector('.menu-toggle');
-        const panel = scope.querySelector('#nav-panel');
-        if (btn && panel) {
-          btn.addEventListener('click', () => {
-            const open = panel.classList.toggle('open');
-            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-          });
-        }
-        const here = location.pathname.toLowerCase().replace(/\/+$/, '');
-        scope.querySelectorAll('.nav-link').forEach(a => {
-          let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
-          if (href === '/blog/') href = '/blog';
-          if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
-            a.setAttribute('aria-current', 'page');
-          }
-          if (here.includes('/projects')) a.setAttribute('aria-current', 'page');
-          if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
-        });
-      }
-    } catch (e) {
-      console.warn('Partial load failed:', e);
+    for (const it of parsed) {
+      const key = itemKeyFor(it.name);
+      names.push(it.name); // original cased name request still works
+      items.push({ qty: it.qty || 1, name: it.name, key, selectedPrint: null });
     }
-  })();
+
+    // Fetch card objects
+    const cards = await fetchCollectionByNames(names);
+
+    // Map by normalized name, because Scryfall returns canonical casing ("Sol Ring")
+    const normToCard = new Map();
+    for (const c of cards) normToCard.set(normalizeName(c.name), c);
+
+    // Resolve each item to a card using normalized lookup
+    KEY_TO_CARD = new Map();
+    for (const it of items) {
+      const c = normToCard.get(normalizeName(it.name));
+      if (c) KEY_TO_CARD.set(it.key, c);
+    }
+
+    ITEMS = items;
+
+    renderCards();
+
+    const missing = ITEMS.filter(it => !KEY_TO_CARD.get(it.key)).map(it => it.name);
+    if (missing.length) {
+      setStatus(
+        `Loaded ${ITEMS.length} line item(s).\n` +
+        `Not found (${missing.length}):\n- ` + missing.slice(0, 12).join('\n- ') +
+        (missing.length > 12 ? `\n… +${missing.length - 12} more` : '')
+      );
+    } else {
+      setStatus(`Loaded ${ITEMS.length} line item(s).`);
+    }
+  } catch (e) {
+    console.warn(e);
+    setStatus('Load failed. Check console for details.');
+  } finally {
+    els.spinner.hidden = true;
+  }
+}
+
+/* ----------------------------
+   Events
+---------------------------- */
+
+document.addEventListener('DOMContentLoaded', () => {
+  els.loadBtn.addEventListener('click', load);
+
+  els.clearBtn.addEventListener('click', () => {
+    els.input.value = '';
+    els.cards.innerHTML = '';
+    els.empty.hidden = false;
+    setStatus('');
+    ITEMS = [];
+    KEY_TO_CARD = new Map();
+    PRINT_CACHE.clear();
+  });
+
+  // Single Print button (build + open + print)
+  els.printBtn.addEventListener('click', () => {
+    if (!ITEMS.length) {
+      setStatus('No cards loaded. Click "Load Cards" first.');
+      return;
+    }
+    openPrintPreview();
+  });
+
+  // Swap art button on each tile
+  els.cards.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action="art"]');
+    if (!btn) return;
+    openArtModalFor(btn.getAttribute('data-key'));
+  });
+
+  // Close modal always visible in sticky header
+  els.artClose.addEventListener('click', closeArtModal);
+  els.artBackdrop.addEventListener('click', (e) => {
+    if (e.target === els.artBackdrop) closeArtModal();
+  });
+
+  // Select print in modal -> highlight + apply
+  els.artBody.addEventListener('click', (e) => {
+    const tile = e.target.closest('.print-tile');
+    if (!tile || !MODAL_KEY) return;
+
+    // Update selected highlight
+    els.artBody.querySelectorAll('.print-tile.selected').forEach(n => n.classList.remove('selected'));
+    tile.classList.add('selected');
+
+    // Apply selection
+    const pid = tile.getAttribute('data-print-id');
+    const img = tile.getAttribute('data-img');
+    applySelectedPrintToItem(MODAL_KEY, pid, img);
+  });
+
+  // Keyboard select for accessibility (optional)
+  els.artBody.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const tile = e.target.closest('.print-tile');
+    if (!tile || !MODAL_KEY) return;
+    e.preventDefault();
+    tile.click();
+  });
+});
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
+  const isWifiLike = !c || (['wifi','ethernet'].includes(c.type || '') || typeof c.type === 'undefined');
+  const allowVideo = isFast && isWifiLike;
+
+  const wrap = document.getElementById('bgVideo');
+  const vid  = document.getElementById('bgVideoEl');
+  if (!wrap || !vid) return;
+
+  if (!allowVideo) {
+    wrap.style.display = 'none';
+    return;
+  }
+
+  vid.src = '/assets/Blackhole_Animtation.mp4';
+
+  const onReady = () => {
+    wrap.classList.add('ready');
+    const p = vid.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  };
+
+  vid.addEventListener('canplay', onReady, { once: true });
+  vid.addEventListener('loadeddata', onReady, { once: true });
+  vid.addEventListener('loadedmetadata', () => {
+    wrap.classList.add('ready');
+  }, { once: true });
+});
+</script>
+
+<script>
+(async () => {
+  try {
+    async function loadPartial(url) {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return null;
+      const html = await res.text();
+      const tpl = document.createElement('template');
+      tpl.innerHTML = html.trim();
+      tpl.content.querySelectorAll('style').forEach(st => {
+        document.head.appendChild(st.cloneNode(true));
+        st.remove();
+      });
+      return tpl.content.firstElementChild || null;
+    }
+
+    const header = document.getElementById('site-header');
+    const navEl = await loadPartial('/partials/nav.html');
+    if (header && navEl) {
+      header.innerHTML = '';
+      header.appendChild(navEl);
+      initNav(header);
+    }
+
+    const discordEl = await loadPartial('/partials/discord.html');
+    if (discordEl) document.body.appendChild(discordEl);
+
+    const footerEl = await loadPartial('/partials/footer.html');
+    if (footerEl) document.body.appendChild(footerEl);
+
+    function initNav(scope) {
+      const btn = scope.querySelector('.menu-toggle');
+      const panel = scope.querySelector('#nav-panel');
+      if (btn && panel) {
+        btn.addEventListener('click', () => {
+          const open = panel.classList.toggle('open');
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+      }
+      const here = location.pathname.toLowerCase().replace(/\/+$/, '');
+      scope.querySelectorAll('.nav-link').forEach(a => {
+        let href = (a.getAttribute('href') || '').toLowerCase().replace(/\/+$/, '');
+        if (href === '/blog/') href = '/blog';
+        if (here === href || ((here === '' || here === '/') && href === '/index.html')) {
+          a.setAttribute('aria-current', 'page');
+        }
+        if (here.includes('/projects')) a.setAttribute('aria-current', 'page');
+        if (here.startsWith('/blog') && href === '/blog') a.setAttribute('aria-current', 'page');
+      });
+    }
+  } catch (e) {
+    console.warn('Partial load failed:', e);
+  }
+})();
+</script>
 </body>
 </html>
