@@ -10,10 +10,9 @@
   <link rel="stylesheet" href="/assets/css/void.css">
 
   <style>
-    /* ---- Local UI additions (keeps your void.css look) ---- */
     .controls-row { flex-wrap: wrap; gap: 10px; align-items: center; }
     .control.inline { display: inline-flex; align-items: center; gap: 8px; }
-    .control.inline input[type="number"] { width: 90px; }
+    .control.inline input[type="number"] { width: 92px; }
     .divider { height: 1px; background: rgba(255,255,255,.12); margin: 14px 0; }
 
     .card-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 12px; }
@@ -35,14 +34,18 @@
       background: rgba(0,0,0,.25);
       border: 1px solid rgba(255,255,255,.12);
       overflow: hidden;
+      display: grid;
+      place-items: center;
     }
     .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .thumb-fallback { padding: 8px; font-size: 12px; color: var(--muted); text-align: center; }
 
     .card-meta { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
     .card-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
     .card-title strong { font-size: 14px; }
-    .card-title .muted { color: var(--muted); font-size: 12px; }
+    .muted { color: var(--muted); }
     .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
     .chip {
       display: inline-flex;
       gap: 6px;
@@ -56,7 +59,7 @@
       user-select: none;
     }
 
-    /* ---- Modal ---- */
+    /* Modal */
     .modal-backdrop {
       position: fixed; inset: 0;
       background: rgba(0,0,0,.65);
@@ -96,10 +99,7 @@
       flex-wrap: wrap;
       align-items: center;
     }
-    .modal-controls input {
-      width: 260px;
-      max-width: 100%;
-    }
+    .modal-controls input { width: 280px; max-width: 100%; }
     .prints-grid {
       padding: 12px 14px;
       overflow: auto;
@@ -115,7 +115,7 @@
       cursor: pointer;
       transition: transform .08s ease, border-color .08s ease;
       display: grid;
-      grid-template-rows: 1fr auto;
+      grid-template-rows: 180px auto;
       min-height: 210px;
     }
     .print-opt:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.20); }
@@ -131,15 +131,9 @@
     .print-opt .cap strong { color: var(--text); font-size: 12px; }
     .print-opt.selected { border-color: rgba(255,255,255,.35); box-shadow: 0 10px 30px rgba(0,0,0,.25); }
 
-    /* ---- Print layout preview area ---- */
-    .print-panel { margin-top: 12px; }
+    /* Print preview panels */
     .print-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-
-    .sheet-wrap {
-      margin-top: 12px;
-      display: grid;
-      gap: 14px;
-    }
+    .sheet-wrap { margin-top: 12px; display: grid; gap: 14px; }
     .print-page {
       background: rgba(255,255,255,.03);
       border: 1px solid rgba(255,255,255,.10);
@@ -147,13 +141,8 @@
       overflow: hidden;
       padding: 10px;
     }
-    .print-page .page-label {
-      color: var(--muted);
-      font-size: 12px;
-      padding: 4px 6px 10px 6px;
-    }
+    .print-page .page-label { color: var(--muted); font-size: 12px; padding: 4px 6px 10px 6px; }
 
-    /* Print grid uses CSS variables set by JS */
     .print-grid {
       display: grid;
       grid-template-columns: repeat(var(--cols), var(--cardOuterW));
@@ -176,13 +165,7 @@
       overflow: hidden;
       background: rgba(0,0,0,.25);
     }
-    .print-card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    /* Cut line inside bleed */
+    .print-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .print-card .cutline {
       position: absolute;
       left: var(--bleed);
@@ -194,7 +177,7 @@
       pointer-events: none;
     }
 
-    /* ---- Print styles ---- */
+    /* Print-only output */
     @media print {
       body { background: #fff !important; }
       .app-layer, #bgVideo { display: none !important; }
@@ -202,10 +185,7 @@
       .no-print { display: none !important; }
     }
     .print-only { display: none; }
-
-    /* Print sheet pages */
     .print-sheet {
-      /* JS will set --pageW/--pageH and --padMM */
       width: var(--pageW);
       min-height: var(--pageH);
       padding: var(--padMM);
@@ -214,7 +194,6 @@
       background: #fff;
     }
     .print-sheet:last-child { page-break-after: auto; }
-
     .print-sheet .print-grid {
       border: none;
       background: transparent;
@@ -239,7 +218,7 @@
       <section class="panel page-panel solid-surface">
         <header class="page">
           <h1>Proxy Printer</h1>
-          <p class="sub">Paste a card list, choose your preferred art per card, then generate a print-ready sheet sized for MTG cards.</p>
+          <p class="sub">Paste a card list, pick your preferred art per card, then generate a print-ready sheet sized for MTG cards.</p>
         </header>
 
         <div class="toolbar toolbar-wide" role="region" aria-label="Paste cards">
@@ -268,7 +247,7 @@ Hints:
             <button id="scaleUp" class="btn ghost solid-ghost-btn" type="button" aria-label="Scale up">+</button>
           </span>
 
-          <span class="control inline" title="Bleed expands the printed image beyond the cut line. With multiple cards on one sheet, bleed also creates a 'cut gap' between cut lines (2× bleed).">
+          <span class="control inline" title="Bleed expands the printed image beyond the cut line. With multiple cards on one sheet, bleed also creates a cut-gap between cut lines (2× bleed).">
             <label for="bleedMm"><strong>Bleed</strong></label>
             <select id="bleedMm">
               <option value="0" selected>0mm</option>
@@ -285,6 +264,11 @@ Hints:
             </select>
           </span>
 
+          <label class="control inline" title="Logs Scryfall JSON into the console (collection + printings).">
+            <input id="debugToggle" type="checkbox">
+            <strong>DEBUG</strong>
+          </label>
+
           <span id="spinner" class="spinner" hidden>
             <span class="spin-dot" aria-hidden="true"></span>
             <span class="inline-hint">Loading…</span>
@@ -292,7 +276,7 @@ Hints:
         </div>
 
         <div class="inline-hint">
-          MTG cut size is treated as <code>63×88mm</code>. For best accuracy: in your browser print dialog, disable “Fit to page” / “Scale to fit” and print at 100%.
+          MTG cut size is treated as <code>63×88mm</code>. For best accuracy: in your browser print dialog, disable “Fit to page / Scale to fit” and print at 100%.
         </div>
 
         <div class="divider"></div>
@@ -310,9 +294,9 @@ Hints:
         <div id="empty" class="empty" hidden>Paste some cards and click Load Cards.</div>
       </section>
 
-      <section class="panel solid-surface print-panel">
+      <section class="panel solid-surface" style="margin-top:12px">
         <h2>Sheet Preview</h2>
-        <div class="inline-hint">This preview is for sanity-checking. Actual printing uses a dedicated print-only layout below.</div>
+        <div class="inline-hint">Preview is for sanity-checking. Printing uses the dedicated print-only layout below.</div>
         <div id="sheetPreview" class="sheet-wrap"></div>
       </section>
     </main>
@@ -343,57 +327,68 @@ Hints:
   </div>
 
   <script>
-    // ---------- Scryfall helpers ----------
-    async function fetchCollectionByNames(names) {
-      const CHUNK = 70;
-      const uniq = [...new Set(names.filter(Boolean))];
-      const out = new Map();
+    // ---------- Constants / geometry ----------
+    const CUT_W_MM = 63;
+    const CUT_H_MM = 88;
 
-      for (let i = 0; i < uniq.length; i += CHUNK) {
-        const slice = uniq.slice(i, i + CHUNK);
-        const body = { identifiers: slice.map(n => ({ name: n })) };
-        const r = await fetch('https://api.scryfall.com/cards/collection', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        if (!r.ok) {
-          console.warn('Scryfall collection error', r.status);
-          continue;
-        }
-        const j = await r.json();
-        for (const card of (j.data || [])) out.set(card.name, card);
-      }
-      return out;
+    function pageDimsMM(size) {
+      if (size === 'a4') return { w: 210, h: 297 };
+      return { w: 215.9, h: 279.4 }; // Letter
     }
+    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
-    async function fetchAllPages(uri, hardCap = 1200) {
-      const all = [];
-      let next = uri;
-      while (next && all.length < hardCap) {
-        const r = await fetch(next);
-        if (!r.ok) break;
-        const j = await r.json();
-        const data = j.data || [];
-        all.push(...data);
-        next = j.has_more ? j.next_page : null;
-      }
-      return all;
+    // ---------- State ----------
+    let LAST_ITEMS = [];
+    let NAME_TO_CARD = new Map();      // name -> base card
+    let SELECTED_PRINT = new Map();    // name -> selected printing card
+    let PRINTS_CACHE = new Map();      // key -> printings array
+
+    let MODAL_ACTIVE_NAME = null;
+    let MODAL_PRINTS = [];
+    let MODAL_SELECTED_ID = null;
+
+    // ---------- DOM ----------
+    const els = {
+      input: document.getElementById('cardsInput'),
+      loadBtn: document.getElementById('loadBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      spinner: document.getElementById('spinner'),
+      list: document.getElementById('cardList'),
+      empty: document.getElementById('empty'),
+
+      scalePct: document.getElementById('scalePct'),
+      scaleDown: document.getElementById('scaleDown'),
+      scaleUp: document.getElementById('scaleUp'),
+      bleedMm: document.getElementById('bleedMm'),
+      pageSize: document.getElementById('pageSize'),
+
+      buildSheetBtn: document.getElementById('buildSheetBtn'),
+      printBtn: document.getElementById('printBtn'),
+      fitHint: document.getElementById('fitHint'),
+
+      debugToggle: document.getElementById('debugToggle'),
+
+      sheetPreview: document.getElementById('sheetPreview'),
+      printRoot: document.getElementById('printRoot'),
+
+      modalBackdrop: document.getElementById('modalBackdrop'),
+      modalClose: document.getElementById('modalClose'),
+      modalTitle: document.getElementById('modalTitle'),
+      modalSub: document.getElementById('modalSub'),
+      modalFilter: document.getElementById('modalFilter'),
+      printsGrid: document.getElementById('printsGrid'),
+      modalCount: document.getElementById('modalCount'),
+      modalHint: document.getElementById('modalHint'),
+    };
+
+    // ---------- Escaping ----------
+    function esc(s) {
+      return (s || '').replace(/[&<>\"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[m]));
     }
-
-    function getFrontImage(card, kind = 'png') {
-      // kind can be: png | normal | small | border_crop
-      if (!card) return null;
-
-      const iu = card.image_uris;
-      if (iu && iu[kind]) return iu[kind];
-
-      const faces = card.card_faces;
-      if (Array.isArray(faces) && faces.length && faces[0].image_uris && faces[0].image_uris[kind]) {
-        return faces[0].image_uris[kind];
-      }
-
-      return null;
+    function escAttr(s) {
+      return esc(s).replace(/"/g, '&quot;');
     }
 
     // ---------- Parsing ----------
@@ -402,16 +397,6 @@ Hints:
     }
 
     function parseLine(line) {
-      // supports:
-      //  3x Name
-      //  3 Name
-      //  Name
-      // optional set hint:
-      //  Name [neo]
-      //  Name [set:neo]
-      //  Name [set=neo]
-      // optional collector hint (basic):
-      //  Name {123}
       let raw = stripComments(line);
       if (!raw) return null;
 
@@ -432,7 +417,7 @@ Hints:
         collector = mCol[2];
       }
 
-      // set hint [neo] or [set:neo]
+      // set hint [neo] or [set:neo] or [set=neo]
       let setHint = null;
       const mSet = namePart.match(/^(.*)\[(.+)\]\s*$/);
       if (mSet) {
@@ -458,56 +443,126 @@ Hints:
       return items;
     }
 
-    // ---------- Print geometry ----------
-    const CUT_W_MM = 63;
-    const CUT_H_MM = 88;
+    // ---------- Scryfall API ----------
+    async function fetchCollectionByNames(names) {
+      const CHUNK = 70;
+      const uniq = [...new Set(names.filter(Boolean))];
+      const out = new Map();
 
-    function pageDimsMM(size) {
-      // returns { w, h } in mm
-      if (size === 'a4') return { w: 210, h: 297 };
-      // letter
-      return { w: 215.9, h: 279.4 };
+      for (let i = 0; i < uniq.length; i += CHUNK) {
+        const slice = uniq.slice(i, i + CHUNK);
+        const body = { identifiers: slice.map(n => ({ name: n })) };
+
+        const r = await fetch('https://api.scryfall.com/cards/collection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!r.ok) {
+          console.warn('Scryfall collection error', r.status);
+          continue;
+        }
+
+        const j = await r.json();
+
+        if (els.debugToggle.checked) {
+          console.log('[DEBUG] /cards/collection response JSON:', j);
+          console.log('[DEBUG] /cards/collection JSON.stringify:', JSON.stringify(j));
+        }
+
+        for (const card of (j.data || [])) out.set(card.name, card);
+      }
+      return out;
     }
 
-    function clamp(n, a, b) {
-      return Math.max(a, Math.min(b, n));
+    async function fetchAllPages(uri, hardCap = 1500) {
+      const all = [];
+      let next = uri;
+      while (next && all.length < hardCap) {
+        const r = await fetch(next);
+        if (!r.ok) break;
+        const j = await r.json();
+        all.push(...(j.data || []));
+        next = j.has_more ? j.next_page : null;
+      }
+      return all;
     }
 
-    // ---------- State ----------
-    let LAST_ITEMS = [];
-    let NAME_TO_CARD = new Map();      // name -> canonical card object
-    let SELECTED_PRINT = new Map();    // name -> selected print card object
-    let PRINTS_CACHE = new Map();      // oracle-ish key -> print list (array of card objects)
+    // ---------- Image resolution (FIXED) ----------
+    function getFrontImage(card, version = 'normal') {
+      // version: png | border_crop | art_crop | large | normal | small
+      if (!card) return null;
 
-    const els = {
-      input: document.getElementById('cardsInput'),
-      loadBtn: document.getElementById('loadBtn'),
-      clearBtn: document.getElementById('clearBtn'),
-      spinner: document.getElementById('spinner'),
-      list: document.getElementById('cardList'),
-      empty: document.getElementById('empty'),
-      scalePct: document.getElementById('scalePct'),
-      scaleDown: document.getElementById('scaleDown'),
-      scaleUp: document.getElementById('scaleUp'),
-      bleedMm: document.getElementById('bleedMm'),
-      pageSize: document.getElementById('pageSize'),
-      buildSheetBtn: document.getElementById('buildSheetBtn'),
-      printBtn: document.getElementById('printBtn'),
-      fitHint: document.getElementById('fitHint'),
-      sheetPreview: document.getElementById('sheetPreview'),
-      printRoot: document.getElementById('printRoot'),
+      // 1) direct image_uris
+      const iu = card.image_uris;
+      if (iu && iu[version]) return iu[version];
 
-      modalBackdrop: document.getElementById('modalBackdrop'),
-      modalClose: document.getElementById('modalClose'),
-      modalTitle: document.getElementById('modalTitle'),
-      modalSub: document.getElementById('modalSub'),
-      modalFilter: document.getElementById('modalFilter'),
-      printsGrid: document.getElementById('printsGrid'),
-      modalCount: document.getElementById('modalCount'),
-      modalHint: document.getElementById('modalHint'),
-    };
+      // 2) face 0 image_uris (DFCs, etc)
+      const faces = card.card_faces;
+      if (Array.isArray(faces) && faces.length) {
+        const fiu = faces[0]?.image_uris;
+        if (fiu && fiu[version]) return fiu[version];
+      }
 
-    // ---------- Rendering (card list) ----------
+      // 3) redirect fallback (works even if image_uris are missing)
+      if (card.id) {
+        return `https://api.scryfall.com/cards/${card.id}?format=image&version=${encodeURIComponent(version)}`;
+      }
+
+      return null;
+    }
+
+    function makeImgHTML(url, alt, onFailHTML, extraClass = '') {
+      if (!url) return onFailHTML;
+
+      // NOTE: If images are blocked by CSP, this will onerror and show fallback.
+      const safeAlt = esc(alt || '');
+      return `
+        <img
+          class="${extraClass}"
+          src="${escAttr(url)}"
+          alt="${safeAlt}"
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+          crossorigin="anonymous"
+          onerror="this.onerror=null; this.replaceWith((() => { const d=document.createElement('div'); d.className='thumb-fallback'; d.textContent='Image blocked/failed'; return d; })());"
+        >
+      `;
+    }
+
+    // ---------- Settings / fit ----------
+    function currentSettings() {
+      const scalePct = clamp(parseFloat(els.scalePct.value || '100'), 50, 140);
+      const scale = scalePct / 100;
+      const bleed = Math.max(0, parseFloat(els.bleedMm.value || '0')) || 0;
+      const page = els.pageSize.value || 'letter';
+      return { scalePct, scale, bleed, page };
+    }
+
+    function computeFit(copiesCount) {
+      const { scale, bleed, page } = currentSettings();
+      const { w: pageW, h: pageH } = pageDimsMM(page);
+
+      // Pad to help with non-printable margins (adjust if you do borderless)
+      const pad = 5; // mm
+
+      const outerW = (CUT_W_MM + 2 * bleed) * scale;
+      const outerH = (CUT_H_MM + 2 * bleed) * scale;
+
+      const usableW = pageW - 2 * pad;
+      const usableH = pageH - 2 * pad;
+
+      const cols = Math.max(1, Math.floor(usableW / outerW));
+      const rows = Math.max(1, Math.floor(usableH / outerH));
+      const perPage = cols * rows;
+      const pages = perPage ? Math.ceil(copiesCount / perPage) : 0;
+
+      return { pageW, pageH, pad, outerW, outerH, cols, rows, perPage, pages };
+    }
+
+    // ---------- Rendering: card list ----------
     function renderCardList() {
       if (!LAST_ITEMS.length) {
         els.list.innerHTML = '';
@@ -516,6 +571,7 @@ Hints:
       }
       els.empty.hidden = true;
 
+      // combine qty by name
       const uniqByName = new Map();
       for (const it of LAST_ITEMS) {
         uniqByName.set(it.name, {
@@ -530,26 +586,34 @@ Hints:
       for (const it of uniqByName.values()) {
         const base = NAME_TO_CARD.get(it.name);
         const chosen = SELECTED_PRINT.get(it.name) || base;
-        const thumb = getFrontImage(chosen, 'normal') || getFrontImage(chosen, 'small') || '';
+
+        const thumbUrl = getFrontImage(chosen, 'small') || getFrontImage(chosen, 'normal') || getFrontImage(chosen, 'png');
         const chosenMeta = chosen
           ? `${(chosen.set || '').toUpperCase()} · #${chosen.collector_number || '—'} · ${chosen.artist || '—'}`
           : '—';
-        const hintText = it.setHint ? `Default hint: [${it.setHint}]` : 'No set hint';
 
         rows.push(`
           <div class="card-row">
             <div class="card-thumb">
-              ${thumb ? `<img src="${thumb}" alt="${esc(it.name)}">` : `<div class="inline-hint" style="padding:8px">No image</div>`}
+              ${makeImgHTML(
+                thumbUrl,
+                it.name,
+                `<div class="thumb-fallback">No image</div>`
+              )}
             </div>
             <div class="card-meta">
               <div class="card-title">
                 <strong>${esc(it.name)}</strong>
                 <span class="chip">Qty <strong>${it.qty}</strong></span>
               </div>
+
               <div class="muted" style="font-size:12px; line-height:1.25">
                 <div><span class="chip">Selected</span> ${esc(chosenMeta)}</div>
-                <div class="inline-hint" style="margin-top:4px">${esc(hintText)}</div>
+                <div class="inline-hint" style="margin-top:4px">
+                  ${it.setHint ? `Default hint: <code>[${esc(it.setHint)}]</code>` : 'No set hint'}
+                </div>
               </div>
+
               <div class="card-actions">
                 <button class="btn" type="button" data-action="choose-art" data-name="${escAttr(it.name)}">Choose Art</button>
                 <button class="btn ghost solid-ghost-btn" type="button" data-action="reset-art" data-name="${escAttr(it.name)}">Reset</button>
@@ -562,19 +626,16 @@ Hints:
       els.list.innerHTML = rows.join('');
     }
 
-    // ---------- Modal (choose art) ----------
-    let MODAL_ACTIVE_NAME = null;
-    let MODAL_PRINTS = [];
-    let MODAL_SELECTED_ID = null;
-
+    // ---------- Modal: choose art ----------
     function openModalFor(name) {
       MODAL_ACTIVE_NAME = name;
       els.modalFilter.value = '';
-      els.modalHint.textContent = 'Tip: huge lists are normal for staples. Filter by set (e.g. “cmm”), artist, or collector #.';
+      els.modalHint.textContent = 'Filter by set (e.g. “cmm”), artist, collector #, year, etc.';
       els.modalTitle.textContent = `Choose art — ${name}`;
       els.modalSub.textContent = 'Loading printings…';
       els.printsGrid.innerHTML = '';
       els.modalCount.textContent = '—';
+
       els.modalBackdrop.classList.add('open');
       els.modalBackdrop.setAttribute('aria-hidden', 'false');
 
@@ -599,17 +660,22 @@ Hints:
         return;
       }
 
-      // Use prints_search_uri to get all printings.
-      // Cache by prints_search_uri (good-enough stable key).
       const key = base.prints_search_uri || base.oracle_id || base.id || name;
+
       let prints = PRINTS_CACHE.get(key);
       if (!prints) {
         prints = await fetchAllPages(base.prints_search_uri);
         PRINTS_CACHE.set(key, prints);
+
+        if (els.debugToggle.checked) {
+          console.log('[DEBUG] prints_search_uri:', base.prints_search_uri);
+          console.log('[DEBUG] printings response array:', prints);
+          console.log('[DEBUG] printings JSON.stringify:', JSON.stringify(prints));
+        }
       }
 
-      // Prefer printings that actually have images
-      prints = (prints || []).filter(p => !!getFrontImage(p, 'normal') || !!getFrontImage(p, 'small'));
+      // keep only entries that can produce an image via our resolver
+      prints = (prints || []).filter(p => !!getFrontImage(p, 'small') || !!getFrontImage(p, 'normal') || !!getFrontImage(p, 'png'));
 
       MODAL_PRINTS = prints;
       const current = SELECTED_PRINT.get(name) || base;
@@ -624,15 +690,12 @@ Hints:
       const name = MODAL_ACTIVE_NAME;
       if (!name) return;
 
-      const base = NAME_TO_CARD.get(name);
-      const selectedId = MODAL_SELECTED_ID;
-
       let prints = MODAL_PRINTS.slice();
       if (q) {
         prints = prints.filter(p => {
           const hay = [
             p.set, p.set_name, p.collector_number, p.artist, p.released_at,
-            p.frame, p.border_color, p.finishes?.join(','), p.lang
+            p.frame, p.border_color, (p.finishes || []).join(','), p.lang
           ].filter(Boolean).join(' ').toLowerCase();
           return hay.includes(q);
         });
@@ -640,15 +703,19 @@ Hints:
 
       els.modalCount.textContent = `${prints.length.toLocaleString()} shown`;
 
-      // Render
       const html = prints.map(p => {
-        const img = getFrontImage(p, 'small') || getFrontImage(p, 'normal') || '';
+        const imgUrl = getFrontImage(p, 'small') || getFrontImage(p, 'normal') || getFrontImage(p, 'png');
         const cap1 = `${(p.set || '').toUpperCase()} · #${p.collector_number || '—'}`;
         const cap2 = `${p.artist || '—'} · ${p.released_at || '—'}`;
-        const sel = (p.id === selectedId) ? 'selected' : '';
+        const sel = (p.id === MODAL_SELECTED_ID) ? 'selected' : '';
+
         return `
           <div class="print-opt ${sel}" data-action="pick-print" data-id="${escAttr(p.id)}">
-            ${img ? `<img src="${img}" alt="${esc(p.name)}">` : `<div class="inline-hint" style="padding:10px">No image</div>`}
+            ${makeImgHTML(
+              imgUrl,
+              p.name,
+              `<div class="thumb-fallback" style="height:180px; display:grid; place-items:center;">No image</div>`
+            )}
             <div class="cap">
               <strong>${esc(cap1)}</strong>
               <span>${esc(cap2)}</span>
@@ -671,17 +738,14 @@ Hints:
       MODAL_SELECTED_ID = id;
 
       renderCardList();
-      rebuildSheets(); // keep preview + print output in sync
+      rebuildSheets();
       closeModal();
     }
 
     // ---------- Print sheet generation ----------
     function buildCopiesFromItems() {
-      // Expand quantities into an array of card names (one per printed card)
       const byName = new Map();
-      for (const it of LAST_ITEMS) {
-        byName.set(it.name, (byName.get(it.name) || 0) + (it.qty || 1));
-      }
+      for (const it of LAST_ITEMS) byName.set(it.name, (byName.get(it.name) || 0) + (it.qty || 1));
 
       const copies = [];
       for (const [name, qty] of byName.entries()) {
@@ -690,35 +754,9 @@ Hints:
       return copies;
     }
 
-    function currentSettings() {
-      const scalePct = clamp(parseFloat(els.scalePct.value || '100'), 50, 140);
-      const scale = scalePct / 100;
-      const bleed = Math.max(0, parseFloat(els.bleedMm.value || '0')) || 0;
-      const page = els.pageSize.value || 'letter';
-      return { scalePct, scale, bleed, page };
-    }
-
-    function computeFit(copiesCount) {
-      const { scale, bleed, page } = currentSettings();
-      const { w: pageW, h: pageH } = pageDimsMM(page);
-
-      // Pad to avoid printer non-printable margins; still printable if borderless.
-      // You can change this to 0 if you always print borderless.
-      const pad = 5; // mm
-
-      const outerW = (CUT_W_MM + 2 * bleed) * scale;
-      const outerH = (CUT_H_MM + 2 * bleed) * scale;
-
-      const usableW = pageW - 2 * pad;
-      const usableH = pageH - 2 * pad;
-
-      const cols = Math.max(1, Math.floor(usableW / outerW));
-      const rows = Math.max(1, Math.floor(usableH / outerH));
-      const perPage = cols * rows;
-
-      const pages = perPage ? Math.ceil(copiesCount / perPage) : 0;
-
-      return { pageW, pageH, pad, outerW, outerH, cols, rows, perPage, pages };
+    function cardImageForName(name, kind = 'png') {
+      const chosen = SELECTED_PRINT.get(name) || NAME_TO_CARD.get(name);
+      return getFrontImage(chosen, kind) || getFrontImage(chosen, 'normal') || getFrontImage(chosen, 'small') || null;
     }
 
     function rebuildSheets() {
@@ -734,26 +772,19 @@ Hints:
       renderPrintOnly(copies, fit);
     }
 
-    function cardImageForName(name, kind = 'png') {
-      const chosen = SELECTED_PRINT.get(name) || NAME_TO_CARD.get(name);
-      // For printing, PNG is best (largest); for preview normal is fine
-      return getFrontImage(chosen, kind) || getFrontImage(chosen, 'normal') || getFrontImage(chosen, 'small') || '';
-    }
-
     function renderSheetPreview(copies, fit) {
       els.sheetPreview.innerHTML = '';
       if (!copies.length) return;
 
-      const { cols, rows, perPage, pages, bleed } = fit;
-      const { scale, page } = currentSettings();
+      const { cols, rows, perPage, pages } = fit;
+      const { scale, bleed, page } = currentSettings();
 
-      // CSS variables in mm (preview box uses same grid but inside panels)
       const cardOuterW = `${fit.outerW.toFixed(3)}mm`;
       const cardOuterH = `${fit.outerH.toFixed(3)}mm`;
       const cardCutW   = `${(CUT_W_MM * scale).toFixed(3)}mm`;
       const cardCutH   = `${(CUT_H_MM * scale).toFixed(3)}mm`;
       const bleedMM    = `${(bleed * scale).toFixed(3)}mm`;
-      const padMM      = `${(fit.pad).toFixed(3)}mm`;
+      const padMM      = `${fit.pad.toFixed(3)}mm`;
 
       for (let p = 0; p < pages; p++) {
         const start = p * perPage;
@@ -763,7 +794,7 @@ Hints:
           const img = cardImageForName(n, 'normal');
           return `
             <div class="print-card" title="${esc(n)}">
-              ${img ? `<img src="${img}" alt="${esc(n)}">` : ''}
+              ${img ? makeImgHTML(img, n, '') : ''}
               <div class="cutline"></div>
             </div>
           `;
@@ -773,7 +804,7 @@ Hints:
         const el = document.createElement('div');
         el.className = 'print-page';
         el.innerHTML = `
-          <div class="page-label">Preview page ${p + 1} · ${pageLabel} · ${cols}×${rows} · Bleed ${fit.pad ? '' : ''}${(parseFloat(els.bleedMm.value)||0)}mm · Scale ${Math.round(scale*100)}%</div>
+          <div class="page-label">Preview page ${p + 1} · ${pageLabel} · ${cols}×${rows} · Bleed ${bleed}mm · Scale ${Math.round(scale*100)}%</div>
           <div class="print-grid" style="
             --cols:${cols};
             --cardOuterW:${cardOuterW};
@@ -803,17 +834,9 @@ Hints:
       const cardCutH   = `${(CUT_H_MM * scale).toFixed(3)}mm`;
       const bleedMM    = `${(bleed * scale).toFixed(3)}mm`;
 
-      const pageWmm = `${pageW}mm`;
-      const pageHmm = `${pageH}mm`;
-      const padMM   = `${pad}mm`;
-
-      // Note: Some browsers respect @page size best when printing from a separate doc,
-      // but this works well enough for Chromium-based browsers.
-      // We include a style tag inside printRoot to lock @page size per selection.
+      // lock @page
       const style = document.createElement('style');
-      style.textContent = `
-        @page { size: ${page === 'a4' ? 'A4' : 'Letter'}; margin: 0; }
-      `;
+      style.textContent = `@page { size: ${page === 'a4' ? 'A4' : 'Letter'}; margin: 0; }`;
       els.printRoot.appendChild(style);
 
       for (let p = 0; p < pages; p++) {
@@ -821,10 +844,10 @@ Hints:
         const slice = copies.slice(start, start + perPage);
 
         const cards = slice.map(n => {
-          const img = cardImageForName(n, 'png'); // best for printing
+          const img = cardImageForName(n, 'png'); // best quality
           return `
             <div class="print-card">
-              ${img ? `<img src="${img}" alt="${esc(n)}">` : ''}
+              ${img ? makeImgHTML(img, n, '') : ''}
               <div class="cutline"></div>
             </div>
           `;
@@ -833,9 +856,9 @@ Hints:
         const sheet = document.createElement('div');
         sheet.className = 'print-sheet';
         sheet.style.cssText = `
-          --pageW:${pageWmm};
-          --pageH:${pageHmm};
-          --padMM:${padMM};
+          --pageW:${pageW}mm;
+          --pageH:${pageH}mm;
+          --padMM:${pad}mm;
         `;
         sheet.innerHTML = `
           <div class="print-grid" style="
@@ -854,7 +877,7 @@ Hints:
       }
     }
 
-    // ---------- Load / default art selection ----------
+    // ---------- Loading cards ----------
     async function loadCards() {
       els.spinner.hidden = false;
       try {
@@ -873,28 +896,31 @@ Hints:
         const nameToCard = await fetchCollectionByNames(names);
         NAME_TO_CARD = nameToCard;
 
-        // Default selection:
-        // - if the line has [setcode], pick first printing from that set (only when needed)
-        // - otherwise just use the base card from /collection
+        // Default selections
         SELECTED_PRINT = new Map();
 
-        // Group hints by name (prefer first provided hint)
+        // Prefer first hint per name
         const hintByName = new Map();
         for (const it of items) {
           if (!hintByName.has(it.name)) hintByName.set(it.name, { setHint: it.setHint, collector: it.collector });
         }
 
-        // Apply set-hint defaults (lazy: fetch prints only for hinted cards)
+        // Apply set hint default by scanning printings once per hinted card
         for (const [name, hint] of hintByName.entries()) {
           const base = NAME_TO_CARD.get(name);
           if (!base) continue;
 
-          if (hint?.setHint) {
+          if (hint?.setHint && base.prints_search_uri) {
             const key = base.prints_search_uri || base.oracle_id || base.id || name;
             let prints = PRINTS_CACHE.get(key);
             if (!prints) {
               prints = await fetchAllPages(base.prints_search_uri);
               PRINTS_CACHE.set(key, prints);
+
+              if (els.debugToggle.checked) {
+                console.log('[DEBUG] (default set hint) prints_search_uri:', base.prints_search_uri);
+                console.log('[DEBUG] (default set hint) printings JSON.stringify:', JSON.stringify(prints));
+              }
             }
             const match = (prints || []).find(p => (p.set || '').toLowerCase() === hint.setHint.toLowerCase());
             if (match) SELECTED_PRINT.set(name, match);
@@ -913,23 +939,11 @@ Hints:
       LAST_ITEMS = [];
       NAME_TO_CARD = new Map();
       SELECTED_PRINT = new Map();
-      // keep PRINTS_CACHE (nice for UX)
       renderCardList();
       els.sheetPreview.innerHTML = '';
       els.printRoot.innerHTML = '';
       els.fitHint.textContent = '';
       els.empty.hidden = false;
-    }
-
-    // ---------- UI helpers ----------
-    function esc(s) {
-      return (s || '').replace(/[&<>\"']/g, m => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-      }[m]));
-    }
-    function escAttr(s) {
-      // safe enough for data-attrs
-      return esc(s).replace(/"/g, '&quot;');
     }
 
     function bumpScale(delta) {
@@ -940,33 +954,30 @@ Hints:
 
     // ---------- Events ----------
     document.addEventListener('click', (e) => {
-      const btn = e.target.closest('button,[data-action]');
-      if (!btn) return;
+      const el = e.target.closest('button,[data-action]');
+      if (!el) return;
 
-      const action = btn.getAttribute('data-action');
+      const action = el.getAttribute('data-action');
+
       if (action === 'choose-art') {
-        const name = btn.getAttribute('data-name');
+        const name = el.getAttribute('data-name');
         openModalFor(name);
       }
       if (action === 'reset-art') {
-        const name = btn.getAttribute('data-name');
+        const name = el.getAttribute('data-name');
         SELECTED_PRINT.delete(name);
         renderCardList();
         rebuildSheets();
       }
       if (action === 'pick-print') {
-        const id = btn.getAttribute('data-id');
+        const id = el.getAttribute('data-id');
         pickPrintingById(id);
       }
     });
 
     els.modalClose.addEventListener('click', closeModal);
-    els.modalBackdrop.addEventListener('click', (e) => {
-      if (e.target === els.modalBackdrop) closeModal();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && els.modalBackdrop.classList.contains('open')) closeModal();
-    });
+    els.modalBackdrop.addEventListener('click', (e) => { if (e.target === els.modalBackdrop) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && els.modalBackdrop.classList.contains('open')) closeModal(); });
     els.modalFilter.addEventListener('input', renderModalGrid);
 
     els.loadBtn.addEventListener('click', loadCards);
@@ -974,18 +985,20 @@ Hints:
 
     els.scaleDown.addEventListener('click', () => bumpScale(-1));
     els.scaleUp.addEventListener('click', () => bumpScale(+1));
-    els.scalePct.addEventListener('input', () => rebuildSheets());
-    els.bleedMm.addEventListener('change', () => rebuildSheets());
-    els.pageSize.addEventListener('change', () => rebuildSheets());
+    els.scalePct.addEventListener('input', rebuildSheets);
+    els.bleedMm.addEventListener('change', rebuildSheets);
+    els.pageSize.addEventListener('change', rebuildSheets);
 
-    els.buildSheetBtn.addEventListener('click', () => rebuildSheets());
+    els.buildSheetBtn.addEventListener('click', rebuildSheets);
     els.printBtn.addEventListener('click', () => {
-      // ensure print-only output is current before printing
       rebuildSheets();
       window.print();
     });
 
-    // ---------- Background video + partial loader (copied pattern) ----------
+    // ---------- Modal helpers ----------
+    // (openModalFor / loadPrintsFor / renderModalGrid / pickPrintingById above)
+
+    // ---------- Background video (same pattern) ----------
     document.addEventListener('DOMContentLoaded', () => {
       const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       const isFast = !c || (c.effectiveType === '4g' && c.downlink >= 5 && !c.saveData);
@@ -1011,11 +1024,10 @@ Hints:
 
       vid.addEventListener('canplay', onReady, { once: true });
       vid.addEventListener('loadeddata', onReady, { once: true });
-      vid.addEventListener('loadedmetadata', () => {
-        wrap.classList.add('ready');
-      }, { once: true });
+      vid.addEventListener('loadedmetadata', () => wrap.classList.add('ready'), { once: true });
     });
 
+    // ---------- Partials (nav/discord/footer) ----------
     (async () => {
       try {
         async function loadPartial(url) {
@@ -1070,7 +1082,7 @@ Hints:
       }
     })();
 
-    // initial empty state
+    // initial state
     els.empty.hidden = false;
   </script>
 </body>
