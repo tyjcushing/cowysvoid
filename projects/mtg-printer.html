@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Print Sheet Builder — Cowy’s Void</title>
+  <title>Print Sheet Builder - Cowy’s Void</title>
   <meta name="description" content="Paste a list of Magic cards, select specific prints, and generate a print-ready PDF." />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/assets/icons/BlackHole.png" sizes="32x32">
@@ -100,6 +100,28 @@
 
       /* Remove any default margins */
       @page { margin: 0; }
+      #site-header,
+      footer,
+      .site-footer,
+      #site-footer,
+      .footer,
+      #discord,
+      .discord,
+      .discord-fab,
+      .discord-button,
+      .floating-discord,
+      .floating-action,
+      .fab,
+      .fab-wrap {
+        display: none !important;
+        visibility: hidden !important;
+      }
+
+      /* Also hide anything explicitly marked as "no print" */
+      .no-print {
+        display: none !important;
+        visibility: hidden !important;
+      }
     }
 
     /* These vars get set in JS right before printing */
