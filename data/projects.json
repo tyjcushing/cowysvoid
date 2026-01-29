@@ -1,11 +1,11 @@
 [
   {
-    "title": "Check Lists",
-    "subtitle": "xyz",
-    "blurb": "xyz",
+    "title": "Check Lists - WIP",
+    "subtitle": "WIP - Checklist maker",
+    "blurb": "WIP - Checklist maker",
     "tags": ["Utility", "Tracker"],
     "tech": ["JavaScript", "JSON"],
-    "image": "/assets/projects/xyzx.png",
+    "image": "/assets/projects/checklist.png",
     "url": "/projects/checklists.html",
     "updated": "2025-10-21"
   },
@@ -59,7 +59,7 @@
     "blurb": "Generate Magic card proxeis in correct print sizes.",
     "tags": ["Tool", "MTG", "Utility"],
     "tech": ["HTML", "JS", "Canvas"],
-    "image": "/assets/projects/holy-cow.jpg",
+    "image": "/assets/projects/mtg-cards.png",
     "updated": "2026-01-27"
   }
 
