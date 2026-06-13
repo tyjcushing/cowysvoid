@@ -1,0 +1,33 @@
+.tellastory-page {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f5f5f5;
+    padding: 20px;
+}
+
+.tellastory-page h1 {
+    margin-bottom: 20px;
+}
+
+.tellastory-page .hidden {
+    display: none;
+}
+
+.tellastory-page #cardImage {
+    max-width: 90vw;
+    max-height: 75vh;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+.tellastory-page .buttons {
+    margin-top: 20px;
+}
+
+.tellastory-page button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
