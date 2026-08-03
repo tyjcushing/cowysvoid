@@ -9,7 +9,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&display=swap"
+        rel="stylesheet"
+    >
 
     <style>
         * {
@@ -18,14 +21,10 @@
 
         :root {
             --title-font: "Cinzel Decorative", serif;
-            --stat-font: "Cinzel Decorative", sans-serif;
             --body-font: Arial, Helvetica, sans-serif;
 
             --card-width: 2.5in;
             --card-height: 3.5in;
-
-            --page-width: 8.5in;
-            --page-height: 11in;
         }
 
         html,
@@ -79,7 +78,6 @@
         .input-label {
             display: block;
             margin-bottom: 8px;
-            font-family: var(--stat-font);
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.08em;
@@ -122,7 +120,6 @@
             cursor: pointer;
             background: #ffffff;
             color: #111111;
-            font-family: var(--stat-font);
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.04em;
@@ -206,10 +203,10 @@
             overflow: hidden;
             margin-top: 3px;
             color: #555555;
-            font-family: var(--stat-font);
+            font-family: var(--body-font);
             font-size: 7px;
-            font-weight: 500;
-            letter-spacing: 0.04em;
+            font-weight: 700;
+            letter-spacing: 0.05em;
             line-height: 1.1;
             text-overflow: ellipsis;
             text-transform: uppercase;
@@ -261,7 +258,7 @@
             border-radius: 50%;
             background: #090909;
             color: #ffffff;
-            font-family: var(--stat-font);
+            font-family: var(--body-font);
             font-size: 17px;
             font-weight: 700;
             line-height: 1;
@@ -273,10 +270,10 @@
             overflow: hidden;
             margin-top: 3px;
             color: #333333;
-            font-family: var(--stat-font);
+            font-family: var(--body-font);
             font-size: 6px;
-            font-weight: 600;
-            letter-spacing: 0.02em;
+            font-weight: 700;
+            letter-spacing: 0.03em;
             line-height: 1.05;
             text-overflow: ellipsis;
             text-transform: uppercase;
@@ -304,8 +301,6 @@
         @media print {
             html,
             body {
-                width: var(--page-width);
-                min-height: var(--page-height);
                 margin: 0;
                 padding: 0;
                 background: #ffffff;
@@ -372,14 +367,14 @@
             <h1 class="app-title">Test Play Card Maker</h1>
 
             <p class="app-description">
-                Copy seven columns from Excel and paste them below. The expected
-                order is Name, Category, Pillar, Ability, followed by three values.
+                Paste seven columns from Excel: Name, Category, Pillar,
+                Ability, followed by three values.
             </p>
         </header>
 
         <section class="editor-panel">
             <label class="input-label" for="excelInput">
-                Paste Excel data
+                Paste Excel Data
             </label>
 
             <textarea
@@ -593,7 +588,10 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
                         </div>
                     </header>
 
-                    <div class="art-area" aria-label="Reserved artwork area"></div>
+                    <div
+                        class="art-area"
+                        aria-label="Reserved artwork area"
+                    ></div>
 
                     <div class="stats">
                         ${statsHtml}
@@ -612,7 +610,8 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
             if (parsed.headers.length === 0) {
                 cardsContainer.innerHTML = "";
                 emptyState.hidden = false;
-                status.textContent = "Paste Excel data before generating cards.";
+                status.textContent =
+                    "Paste Excel data before generating cards.";
                 return;
             }
 
@@ -673,7 +672,10 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
         });
 
         excelInput.addEventListener("keydown", (event) => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                event.key === "Enter"
+            ) {
                 generateCards();
             }
         });
