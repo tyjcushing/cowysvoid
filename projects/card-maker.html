@@ -1,317 +1,674 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Card Builder</title>
-
-<style>
-
-*{
-    box-sizing:border-box;
-}
-
-body{
-
-    margin:30px;
-    background:#2d2d2d;
-    color:white;
-    font-family:Segoe UI,Arial,sans-serif;
-
-}
-
-h1{
-
-    margin-top:0;
-
-}
-
-textarea{
-
-    width:100%;
-    height:180px;
-    padding:10px;
-    font-family:Consolas,monospace;
-    font-size:14px;
-
-}
-
-button{
-
-    margin-top:15px;
-    padding:12px 24px;
-    font-size:16px;
-    cursor:pointer;
-
-}
-
-#cards{
-
-    margin-top:30px;
-
-    display:flex;
-    flex-wrap:wrap;
-    gap:20px;
-
-}
-
-.card{
-
-    width:260px;
-    height:390px;
-
-    background:white;
-    color:black;
-
-    border-radius:16px;
-
-    overflow:hidden;
-
-    box-shadow:0 6px 18px rgba(0,0,0,.35);
-
-    display:flex;
-    flex-direction:column;
-
-}
-
-.header{
-
-    padding:15px;
-
-}
-
-.name{
-
-    font-size:20px;
-    font-weight:bold;
-
-}
-
-.subtitle{
-
-    margin-top:4px;
-
-    font-size:13px;
-
-    color:#666;
-
-}
-
-.art{
-
-    margin:0 15px;
-
-    height:145px;
-
-    border:2px dashed #bbb;
-
-    border-radius:12px;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    color:#999;
-
-    font-size:18px;
-
-    background:#f5f5f5;
-
-}
-
-.stats{
-
-    margin-top:15px;
-
-    display:flex;
-
-    justify-content:space-evenly;
-
-}
-
-.stat{
-
-    text-align:center;
-
-}
-
-.circle{
-
-    width:56px;
-    height:56px;
-
-    border-radius:50%;
-
-    background:#111;
-
-    color:white;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    margin:auto;
-
-    font-size:24px;
-
-    font-weight:bold;
-
-}
-
-.label{
-
-    margin-top:8px;
-
-    font-size:12px;
-
-    color:#555;
-
-}
-
-.ability{
-
-    margin:18px;
-
-    margin-top:20px;
-
-    border-top:1px solid #ddd;
-
-    padding-top:15px;
-
-    line-height:1.4;
-
-    font-size:15px;
-
-    flex-grow:1;
-
-}
-
-</style>
-
-</head>
-
-<body>
-
-<h1>Excel Card Builder</h1>
-
-<p>Copy rows directly from Excel and paste below.</p>
-
-<textarea id="input"></textarea>
-
-<br>
-
-<button onclick="generateCards()">
-Generate Cards
-</button>
-
-<div id="cards"></div>
-
-<script>
-
-function generateCards(){
-
-    const input=document.getElementById("input").value.trim();
-
-    if(input=="")
-        return;
-
-    const rows=input.split(/\r?\n/);
-
-    const headers=rows[0].split("\t");
-
-    const cards=document.getElementById("cards");
-
-    cards.innerHTML="";
-
-    for(let r=1;r<rows.length;r++){
-
-        const values=rows[r].split("\t");
-
-        const name=values[0];
-
-        if(!name || name.trim()=="")
-            continue;
-
-        const category=values[1] || "";
-        const pillar=values[2] || "";
-        const ability=values[3] || "";
-
-        let stats="";
-
-        for(let i=4;i<headers.length;i++){
-
-            stats+=`
-
-            <div class="stat">
-
-                <div class="circle">
-
-                    ${values[i] || 0}
-
-                </div>
-
-                <div class="label">
-
-                    ${headers[i]}
-
-                </div>
-
-            </div>
-
-            `;
-
-        }
-
-        cards.innerHTML+=`
-
-        <div class="card">
-
-            <div class="header">
-
-                <div class="name">
-
-                    ${name}
-
-                </div>
-
-                <div class="subtitle">
-
-                    ${pillar} ${category}
-
-                </div>
-
-            </div>
-
-            <div class="art">
-
-                Artwork
-
-            </div>
-
-            <div class="stats">
-
-                ${stats}
-
-            </div>
-
-            <div class="ability">
-
-                ${ability}
-
-            </div>
-
-        </div>
-
-        `;
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Play Card Maker</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page-bg: #1f2126;
+      --panel-bg: #2a2d34;
+      --panel-border: #3c414b;
+      --text: #f4f5f7;
+      --muted: #aeb4bf;
+      --accent: #8ab4ff;
+      --card-width: 2.5in;
+      --card-height: 3.5in;
     }
 
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page-bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    textarea,
+    select,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1400px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    .page-header {
+      margin-bottom: 22px;
+    }
+
+    .page-header h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      line-height: 1;
+    }
+
+    .page-header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.5;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+    }
+
+    .input-panel {
+      margin-bottom: 24px;
+    }
+
+    .input-label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .input-help {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.94rem;
+    }
+
+    textarea {
+      display: block;
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      border: 1px solid #4a505c;
+      border-radius: 14px;
+      padding: 14px;
+      background: #17191e;
+      color: #fff;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(138, 180, 255, 0.16);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 16px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    .button:hover { transform: translateY(-1px); }
+    .button:active { transform: translateY(0); }
+
+    .button-primary {
+      background: var(--accent);
+      color: #10141a;
+    }
+
+    .button-secondary {
+      background: #3a3f49;
+      color: #fff;
+      border: 1px solid #505762;
+    }
+
+    .button-danger {
+      background: transparent;
+      color: #ffd4d4;
+      border: 1px solid #714646;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .preview-heading {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .preview-heading h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .card-count {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .empty-state {
+      min-height: 180px;
+      border: 1px dashed #515865;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      text-align: center;
+      padding: 24px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 22px;
+      align-items: start;
+    }
+
+    .game-card {
+      width: var(--card-width);
+      height: var(--card-height);
+      max-width: 100%;
+      justify-self: center;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      color: #111;
+      border: 2px solid #111;
+      border-radius: 15px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+      padding: 13px 14px 10px;
+      min-height: 58px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .card-name {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.05;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    .card-subtitle {
+      margin-top: 4px;
+      min-height: 15px;
+      color: #5f6368;
+      font-size: 11px;
+      line-height: 1.1;
+      font-weight: 650;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .art-space {
+      height: 1.48in;
+      margin: 0 12px;
+      border: 1px solid #c7c7c7;
+      border-radius: 9px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.7), rgba(237,237,237,.9)),
+        repeating-linear-gradient(45deg, #ececec 0, #ececec 8px, #e7e7e7 8px, #e7e7e7 16px);
+      display: grid;
+      place-items: center;
+      color: #999;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      flex: 0 0 auto;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px 14px 7px;
+      flex: 0 0 auto;
+    }
+
+    .stat-block {
+      min-width: 0;
+      text-align: center;
+    }
+
+    .stat-circle {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #090909;
+      color: #fff;
+      border: 2px solid #000;
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-label {
+      margin-top: 5px;
+      color: #424242;
+      font-size: 10px;
+      line-height: 1.05;
+      font-weight: 750;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ability-text {
+      margin: 5px 14px 14px;
+      padding-top: 10px;
+      border-top: 1px solid #cfcfcf;
+      color: #171717;
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      overflow: hidden;
+      flex: 1 1 auto;
+    }
+
+    #printRoot {
+      display: none;
+    }
+
+    @page {
+      size: Letter portrait;
+      margin: 0.35in;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+        background: #fff !important;
+      }
+
+      .app {
+        display: none !important;
+      }
+
+      #printRoot {
+        display: block !important;
+      }
+
+      .print-page {
+        width: 7.8in;
+        min-height: 10.3in;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 2.5in);
+        grid-auto-rows: 3.5in;
+        gap: 0.1in;
+        justify-content: center;
+        align-content: start;
+        break-after: page;
+        page-break-after: always;
+      }
+
+      .print-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      .print-page .game-card {
+        width: 2.5in;
+        height: 3.5in;
+        max-width: none;
+        box-shadow: none;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .app {
+        width: min(100% - 18px, 1400px);
+        padding-top: 18px;
+      }
+
+      .panel { padding: 14px; }
+
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="page-header">
+      <h1>Test Play Card Maker</h1>
+      <p>
+        Copy seven columns from Excel and paste them below. The expected order is
+        Name, Category, Pillar, Ability, then three stat columns. Rows with no name are skipped.
+      </p>
+    </header>
+
+    <section class="panel input-panel" aria-labelledby="paste-heading">
+      <label id="paste-heading" class="input-label" for="excelInput">Paste Excel data</label>
+      <p class="input-help">
+        Keep the header row. The final three header names become the stat labels shown beneath the black circles.
+      </p>
+
+      <textarea id="excelInput" spellcheck="false" placeholder="Name&#9;Category&#9;Pillar&#9;Ability&#9;Power&#9;Range&#9;Cost&#10;Stone Guard&#9;Unit&#9;Earth&#9;Reduce the next damage taken by 2.&#9;3&#9;1&#9;2"></textarea>
+
+      <div class="toolbar">
+        <button id="generateButton" class="button button-primary" type="button">Generate Cards</button>
+        <button id="printButton" class="button button-secondary" type="button">Print Cards</button>
+        <button id="sampleButton" class="button button-secondary" type="button">Load Sample</button>
+        <button id="clearButton" class="button button-danger" type="button">Clear</button>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="preview-heading">
+      <div class="preview-heading">
+        <h2 id="preview-heading">Card Preview</h2>
+        <div id="cardCount" class="card-count">0 cards</div>
+      </div>
+
+      <div id="emptyState" class="empty-state">
+        Paste your spreadsheet data and select Generate Cards.
+      </div>
+
+      <div id="cards" class="cards-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <div id="printRoot" aria-hidden="true"></div>
+
+  <script>
+'use strict';
+
+const REQUIRED_COLUMN_COUNT = 7;
+const STATS_START_INDEX = 4;
+const STAT_COUNT = 3;
+const CARDS_PER_PRINT_PAGE = 9;
+
+const elements = {
+  input: document.getElementById('excelInput'),
+  generateButton: document.getElementById('generateButton'),
+  printButton: document.getElementById('printButton'),
+  sampleButton: document.getElementById('sampleButton'),
+  clearButton: document.getElementById('clearButton'),
+  cards: document.getElementById('cards'),
+  emptyState: document.getElementById('emptyState'),
+  status: document.getElementById('status'),
+  cardCount: document.getElementById('cardCount'),
+  printRoot: document.getElementById('printRoot')
+};
+
+let currentCards = [];
+
+const SAMPLE_DATA = [
+  ['Name', 'Category', 'Pillar', 'Ability', 'Power', 'Range', 'Cost'],
+  ['Stone Guard', 'Unit', 'Earth', 'Reduce the next damage taken by 2.', '3', '1', '2'],
+  ['Sky Scout', 'Unit', 'Air', 'After this card moves, it may look at the top card of the deck.', '1', '4', '1'],
+  ['Ember Burst', 'Action', 'Fire', 'Deal 2 damage to one adjacent target.', '2', '', '3']
+].map((row) => row.join('\t')).join('\n');
+
+function normalizeCell(value) {
+  return String(value ?? '').trim();
 }
 
-</script>
+function parseExcelText(text) {
+  const cleaned = String(text ?? '')
+    .replace(/\r\n?/g, '\n')
+    .trim();
 
+  if (!cleaned) {
+    return { headers: [], cards: [], warnings: [] };
+  }
+
+  const rows = cleaned
+    .split('\n')
+    .map((line) => line.split('\t'));
+
+  const headers = rows.shift().map(normalizeCell);
+  const warnings = [];
+
+  if (headers.length < REQUIRED_COLUMN_COUNT) {
+    warnings.push(
+      `Expected at least ${REQUIRED_COLUMN_COUNT} columns, but found ${headers.length}.`
+    );
+  }
+
+  const normalizedHeaders = Array.from({ length: REQUIRED_COLUMN_COUNT }, (_, index) => {
+    if (headers[index]) return headers[index];
+
+    const fallbackHeaders = [
+      'Name',
+      'Category',
+      'Pillar',
+      'Ability',
+      'Stat 1',
+      'Stat 2',
+      'Stat 3'
+    ];
+
+    return fallbackHeaders[index];
+  });
+
+  const cards = [];
+
+  rows.forEach((row, rowIndex) => {
+    const values = Array.from({ length: REQUIRED_COLUMN_COUNT }, (_, index) =>
+      normalizeCell(row[index])
+    );
+
+    const name = values[0];
+
+    if (!name) {
+      return;
+    }
+
+    const stats = Array.from({ length: STAT_COUNT }, (_, statIndex) => {
+      const columnIndex = STATS_START_INDEX + statIndex;
+      return {
+        label: normalizedHeaders[columnIndex] || `Stat ${statIndex + 1}`,
+        value: values[columnIndex] || '0'
+      };
+    });
+
+    cards.push({
+      sourceRow: rowIndex + 2,
+      name,
+      category: values[1],
+      pillar: values[2],
+      ability: values[3],
+      stats
+    });
+  });
+
+  return {
+    headers: normalizedHeaders,
+    cards,
+    warnings
+  };
+}
+
+function createTextElement(tagName, className, text) {
+  const element = document.createElement(tagName);
+  element.className = className;
+  element.textContent = text;
+  return element;
+}
+
+function createCardElement(card) {
+  const article = document.createElement('article');
+  article.className = 'game-card';
+
+  const header = document.createElement('header');
+  header.className = 'card-header';
+
+  const name = createTextElement('h3', 'card-name', card.name);
+  const subtitle = createTextElement(
+    'div',
+    'card-subtitle',
+    [card.pillar, card.category].filter(Boolean).join(' ')
+  );
+
+  header.append(name, subtitle);
+
+  const artSpace = createTextElement('div', 'art-space', 'Artwork');
+  artSpace.setAttribute('aria-label', 'Reserved artwork area');
+
+  const statsRow = document.createElement('div');
+  statsRow.className = 'stats-row';
+
+  card.stats.forEach((stat) => {
+    const statBlock = document.createElement('div');
+    statBlock.className = 'stat-block';
+
+    const circle = createTextElement('div', 'stat-circle', stat.value || '0');
+    const label = createTextElement('div', 'stat-label', stat.label);
+    label.title = stat.label;
+
+    statBlock.append(circle, label);
+    statsRow.append(statBlock);
+  });
+
+  const ability = createTextElement('div', 'ability-text', card.ability);
+
+  article.append(header, artSpace, statsRow, ability);
+  return article;
+}
+
+function renderCards(cards) {
+  elements.cards.replaceChildren();
+
+  const fragment = document.createDocumentFragment();
+  cards.forEach((card) => fragment.append(createCardElement(card)));
+  elements.cards.append(fragment);
+
+  const count = cards.length;
+  elements.cardCount.textContent = `${count} ${count === 1 ? 'card' : 'cards'}`;
+  elements.emptyState.hidden = count > 0;
+}
+
+function setStatus(message, isError = false) {
+  elements.status.textContent = message;
+  elements.status.style.color = isError ? '#ffb4b4' : '';
+}
+
+function generateCards() {
+  const result = parseExcelText(elements.input.value);
+  currentCards = result.cards;
+  renderCards(currentCards);
+
+  if (!elements.input.value.trim()) {
+    setStatus('Paste Excel data first.', true);
+    return;
+  }
+
+  if (!currentCards.length) {
+    setStatus('No cards were created. Every data row must have a name.', true);
+    return;
+  }
+
+  const warningText = result.warnings.length
+    ? ` ${result.warnings.join(' ')}`
+    : '';
+
+  setStatus(`Generated ${currentCards.length} ${currentCards.length === 1 ? 'card' : 'cards'}.${warningText}`);
+}
+
+function buildPrintPages(cards) {
+  elements.printRoot.replaceChildren();
+
+  for (let start = 0; start < cards.length; start += CARDS_PER_PRINT_PAGE) {
+    const page = document.createElement('section');
+    page.className = 'print-page';
+
+    cards
+      .slice(start, start + CARDS_PER_PRINT_PAGE)
+      .forEach((card) => page.append(createCardElement(card)));
+
+    elements.printRoot.append(page);
+  }
+}
+
+function printCards() {
+  if (!currentCards.length) {
+    generateCards();
+  }
+
+  if (!currentCards.length) {
+    setStatus('There are no cards to print.', true);
+    return;
+  }
+
+  buildPrintPages(currentCards);
+  setStatus(`Prepared ${currentCards.length} cards for printing.`);
+
+  const cleanup = () => {
+    window.removeEventListener('afterprint', cleanup);
+    elements.printRoot.replaceChildren();
+  };
+
+  window.addEventListener('afterprint', cleanup);
+  window.print();
+}
+
+function loadSample() {
+  elements.input.value = SAMPLE_DATA;
+  generateCards();
+}
+
+function clearAll() {
+  elements.input.value = '';
+  currentCards = [];
+  elements.cards.replaceChildren();
+  elements.printRoot.replaceChildren();
+  elements.emptyState.hidden = false;
+  elements.cardCount.textContent = '0 cards';
+  setStatus('');
+  elements.input.focus();
+}
+
+elements.generateButton.addEventListener('click', generateCards);
+elements.printButton.addEventListener('click', printCards);
+elements.sampleButton.addEventListener('click', loadSample);
+elements.clearButton.addEventListener('click', clearAll);
+
+elements.input.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault();
+    generateCards();
+  }
+});
+
+  </script>
 </body>
 </html>
