@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cardo:wght@400&family=Cinzel+Decorative:wght@400;700;900&display=swap"
         rel="stylesheet"
     >
 
@@ -175,12 +175,27 @@
             flex-direction: column;
             width: var(--card-width);
             height: var(--card-height);
+            padding: 5px;
             overflow: hidden;
-            border: 1px solid #111111;
-            border-radius: 3px;
-            background: #ffffff;
+            border: 0;
+            border-radius: 0;
+            background: var(--card-border-color, #111111);
             color: #111111;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+        }
+
+        .card::before {
+            position: absolute;
+            z-index: 0;
+            inset: 7px;
+            border-radius: 10px;
+            background: #ffffff;
+            content: "";
+        }
+
+        .card > * {
+            position: relative;
+            z-index: 1;
         }
 
         .card-header {
@@ -234,9 +249,9 @@
             z-index: 2;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            flex: 0 0 0.68in;
+            flex: 0 0 0.62in;
             align-items: start;
-            margin-top: -0.24in;
+            margin-top: 0.08in;
             padding: 0 0.1in;
         }
 
@@ -250,8 +265,8 @@
 
         .stat-circle {
             display: flex;
-            width: 0.46in;
-            height: 0.46in;
+            width: 0.4in;
+            height: 0.4in;
             align-items: center;
             justify-content: center;
             border: 2px solid #ffffff;
@@ -259,7 +274,7 @@
             background: #090909;
             color: #ffffff;
             font-family: var(--body-font);
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 700;
             line-height: 1;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
@@ -281,16 +296,22 @@
         }
 
         .ability {
+            display: flex;
             flex: 1 1 auto;
             min-height: 0;
-            margin: 0 0.11in 0.09in;
-            padding-top: 0.06in;
+            align-items: center;
+            justify-content: center;
+            margin: 0.06in 0.13in 0.1in;
+            padding: 0.04in 0.05in 0;
             overflow: hidden;
-            border-top: 1px solid #d0d0d0;
-            font-family: var(--body-font);
+            font-family: "Cardo", Georgia, serif;
             font-size: 9px;
-            line-height: 1.23;
+            font-weight: 400;
+            letter-spacing: 0.015em;
+            line-height: 1.3;
             overflow-wrap: anywhere;
+            text-align: center;
+            text-wrap: balance;
         }
 
         @page {
@@ -342,6 +363,11 @@
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
             }
+
+            .card::before {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
         }
 
         @media (max-width: 600px) {
@@ -368,7 +394,7 @@
 
             <p class="app-description">
                 Paste seven columns from Excel: Name, Category, Pillar,
-                Ability, followed by three values.
+                Ability, three values, and an optional Border Color.
             </p>
         </header>
 
@@ -380,22 +406,14 @@
             <textarea
                 id="excelInput"
                 spellcheck="false"
-                placeholder="Name	Category	Pillar	Ability	Strength	Speed	Spirit
-Eagle	Animal	Air	May move over obstacles.	4	8	6
-Bear	Animal	Earth	Gains strength while defending.	9	3	5"
+                placeholder="Name	Category	Pillar	Ability	Protection	Knowledge	Harmony	Border Color
+Eagle	Animal	Air	May move over obstacles.	4	8	6	rgba(52, 120, 246, 0.9)
+Bear	Animal	Earth	Gains strength while defending.	9	3	5	rgba(38, 140, 75, 1)"
             ></textarea>
 
             <div class="controls">
-                <button id="generateButton" class="button" type="button">
-                    Generate Cards
-                </button>
-
                 <button id="printButton" class="button" type="button">
                     Print Cards
-                </button>
-
-                <button id="sampleButton" class="button secondary" type="button">
-                    Load Sample
                 </button>
 
                 <button id="clearButton" class="button secondary" type="button">
@@ -431,36 +449,20 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
                 "Category",
                 "Pillar",
                 "Ability",
-                "Strength",
-                "Speed",
-                "Spirit"
+                "Protection",
+                "Knowledge",
+                "Harmony",
+                "Border Color"
             ],
             [
                 "Eagle",
-                "Animal",
-                "Air",
-                "May move over obstacles and ignore difficult terrain.",
+                "Pillar",
+                "Gaurdian",
+                "Draw a Card",
                 "4",
-                "8",
-                "6"
-            ],
-            [
-                "Bear",
-                "Animal",
-                "Earth",
-                "Gains two Strength while defending a forest space.",
-                "9",
-                "3",
-                "5"
-            ],
-            [
-                "Fox",
-                "Animal",
-                "Flame",
-                "After avoiding an attack, move one additional space.",
-                "3",
-                "7",
-                "8"
+                "1",
+                "1",
+                "rgba(52, 120, 246, 0.9)"
             ]
         ]
             .map((row) => row.join("\t"))
@@ -540,6 +542,32 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
             return value === "" ? "0" : value;
         }
 
+        function isSupportedStatLabel(label) {
+            return [
+                "protection",
+                "prot",
+                "harmony",
+                "harm",
+                "knowledge",
+                "know"
+            ].includes(normalizeValue(label).toLowerCase());
+        }
+
+        function getBorderColor(row, headers) {
+            const borderColorIndex = headers.findIndex((header) =>
+                ["border color", "border colour"].includes(
+                    normalizeValue(header).toLowerCase()
+                )
+            );
+
+            if (borderColorIndex === -1) {
+                return "";
+            }
+
+            const color = normalizeValue(row[borderColorIndex]);
+            return CSS.supports("color", color) ? color : "";
+        }
+
         function buildSubtitle(pillar, category) {
             return [pillar, category]
                 .filter((value) => normalizeValue(value) !== "")
@@ -551,10 +579,17 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
             const category = normalizeValue(row[1]);
             const pillar = normalizeValue(row[2]);
             const ability = normalizeValue(row[3]);
+            const borderColor = getBorderColor(row, headers);
 
             const subtitle = buildSubtitle(pillar, category);
+            const cardStyle = borderColor
+                ? ` style="--card-border-color: ${escapeHtml(borderColor)}"`
+                : "";
 
             const statsHtml = [4, 5, 6]
+                .filter((index) =>
+                    isSupportedStatLabel(headers[index])
+                )
                 .map((index) => {
                     const label = getStatLabel(headers, index);
                     const value = getStatValue(row, index);
@@ -574,7 +609,7 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
                 .join("");
 
             return `
-                <article class="card">
+                <article class="card"${cardStyle}>
                     <header class="card-header">
                         <div class="card-name" title="${escapeHtml(name)}">
                             ${escapeHtml(name)}
@@ -634,7 +669,7 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
 
             status.textContent =
                 `${cardCount} card${cardCount === 1 ? "" : "s"} generated. ` +
-                `${pageCount} printed page${pageCount === 1 ? "" : "s"}.`;
+                `${pageCount} page${pageCount === 1 ? "" : "s"}.`;
         }
 
         function printCards() {
@@ -657,13 +692,7 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5"
             excelInput.focus();
         }
 
-        generateButton.addEventListener("click", generateCards);
         printButton.addEventListener("click", printCards);
-
-        sampleButton.addEventListener("click", () => {
-            excelInput.value = sampleData;
-            generateCards();
-        });
 
         clearButton.addEventListener("click", clearCards);
 
