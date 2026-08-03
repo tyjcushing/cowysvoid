@@ -195,20 +195,20 @@
       background: #fff;
       color: #111;
       border: 2px solid #111;
-      border-radius: 15px;
+      border-radius: 3px;
       box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
     }
 
     .card-header {
-      padding: 13px 14px 10px;
-      min-height: 58px;
+      padding: 8px 9px 5px;
+      min-height: 42px;
       position: relative;
       z-index: 2;
     }
 
     .card-name {
       margin: 0;
-      font-size: 17px;
+      font-size: 15px;
       line-height: 1.05;
       font-weight: 800;
       letter-spacing: -0.02em;
@@ -217,10 +217,10 @@
     }
 
     .card-subtitle {
-      margin-top: 4px;
-      min-height: 15px;
+      margin-top: 2px;
+      min-height: 12px;
       color: #5f6368;
-      font-size: 11px;
+      font-size: 9px;
       line-height: 1.1;
       font-weight: 650;
       white-space: nowrap;
@@ -229,28 +229,25 @@
     }
 
     .art-space {
-      height: 1.48in;
-      margin: 0 12px;
-      border: 1px solid #c7c7c7;
-      border-radius: 9px;
+      height: 1.62in;
+      margin: 0 8px;
+      border: 1px solid #bdbdbd;
+      border-radius: 2px;
       background:
         linear-gradient(135deg, rgba(255,255,255,.7), rgba(237,237,237,.9)),
         repeating-linear-gradient(45deg, #ececec 0, #ececec 8px, #e7e7e7 8px, #e7e7e7 16px);
       display: grid;
       place-items: center;
-      color: #999;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
+      color: transparent;
+      font-size: 0;
       flex: 0 0 auto;
     }
 
     .stats-row {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-      padding: 12px 14px 7px;
+      gap: 4px;
+      padding: 8px 9px 4px;
       flex: 0 0 auto;
     }
 
@@ -260,8 +257,8 @@
     }
 
     .stat-circle {
-      width: 48px;
-      height: 48px;
+      width: 42px;
+      height: 42px;
       margin: 0 auto;
       border-radius: 50%;
       display: grid;
@@ -269,16 +266,16 @@
       background: #090909;
       color: #fff;
       border: 2px solid #000;
-      font-size: 22px;
+      font-size: 19px;
       line-height: 1;
       font-weight: 850;
       font-variant-numeric: tabular-nums;
     }
 
     .stat-label {
-      margin-top: 5px;
+      margin-top: 3px;
       color: #424242;
-      font-size: 10px;
+      font-size: 8px;
       line-height: 1.05;
       font-weight: 750;
       white-space: nowrap;
@@ -287,12 +284,12 @@
     }
 
     .ability-text {
-      margin: 5px 14px 14px;
-      padding-top: 10px;
+      margin: 3px 9px 8px;
+      padding-top: 6px;
       border-top: 1px solid #cfcfcf;
       color: #171717;
-      font-size: 12px;
-      line-height: 1.35;
+      font-size: 10px;
+      line-height: 1.22;
       white-space: pre-wrap;
       overflow: hidden;
       flex: 1 1 auto;
@@ -304,7 +301,7 @@
 
     @page {
       size: Letter portrait;
-      margin: 0.35in;
+      margin: 0.25in;
     }
 
     @media print {
@@ -322,15 +319,15 @@
       }
 
       .print-page {
-        width: 7.8in;
-        min-height: 10.3in;
+        width: 7.5in;
+        height: 10.5in;
         margin: 0 auto;
         display: grid;
         grid-template-columns: repeat(3, 2.5in);
         grid-auto-rows: 3.5in;
-        gap: 0.1in;
+        gap: 0;
         justify-content: center;
-        align-content: start;
+        align-content: center;
         break-after: page;
         page-break-after: always;
       }
@@ -541,7 +538,7 @@ function createCardElement(card) {
 
   header.append(name, subtitle);
 
-  const artSpace = createTextElement('div', 'art-space', 'Artwork');
+  const artSpace = createTextElement('div', 'art-space', '');
   artSpace.setAttribute('aria-label', 'Reserved artwork area');
 
   const statsRow = document.createElement('div');
