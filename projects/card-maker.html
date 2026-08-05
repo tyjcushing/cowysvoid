@@ -208,7 +208,7 @@
         .card-name {
             overflow: hidden;
             font-family: var(--title-font);
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 700;
             line-height: 1.05;
             text-overflow: ellipsis;
@@ -232,6 +232,9 @@
         .pillar .card-name,
         .challenge .card-name {
             font-size: 17px;
+            overflow-wrap: anywhere;
+            text-overflow: clip;
+            white-space: normal;
         }
 
         .pillar .card-subtitle,
@@ -952,10 +955,6 @@ The Tale of the Raven	Story/Journey	Guardian Story	Raven	Elder, Element, Seeking
                 shrinkTextToFit(element, 7);
             });
 
-            cardsContainer.querySelectorAll(".card-name").forEach((element) => {
-                shrinkTextToFit(element, 8);
-            });
-
             cardsContainer.querySelectorAll(".journey-details").forEach((details) => {
                 const values = [...details.querySelectorAll(".journey-value")];
                 values.forEach((value) => value.style.fontSize = "");
@@ -997,6 +996,12 @@ The Tale of the Raven	Story/Journey	Guardian Story	Raven	Elder, Element, Seeking
                 .join("");
 
             fitGeneratedCardText();
+
+            if (document.fonts?.ready) {
+                document.fonts.ready.then(() => {
+                    fitGeneratedCardText();
+                });
+            }
 
             emptyState.hidden = true;
 
