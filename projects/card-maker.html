@@ -163,9 +163,10 @@
         }
 
         #cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, var(--card-width));
+            display: flex;
+            flex-wrap: wrap;
             justify-content: center;
+            align-items: start;
             gap: 16px;
         }
 
@@ -228,20 +229,34 @@
             white-space: nowrap;
         }
 
+        .pillar .card-header {
+            padding-right: 0.43in;
+        }
+
+        .pillar-type-icon {
+            position: absolute;
+            top: 0.13in;
+            right: 0.14in;
+            width: 0.25in;
+            height: 0.25in;
+            color: #222222;
+        }
+
+        .pillar-type-icon svg,
+        .journey-type-watermark svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+        }
+
         .art-area {
             flex: 0 0 1.48in;
             min-height: 0;
             margin: 0 0.09in;
             overflow: hidden;
-            border: 1px solid #b9b9b9;
-            border-radius: 2px;
-            background:
-                linear-gradient(
-                    135deg,
-                    #f2f2f2 0%,
-                    #e3e3e3 50%,
-                    #eeeeee 100%
-                );
+            border: 0;
+            background: transparent;
         }
 
         .stats {
@@ -249,7 +264,7 @@
             z-index: 2;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            flex: 0 0 0.62in;
+            flex: 0 0 0.52in;
             align-items: start;
             margin-top: 0.08in;
             padding: 0 0.1in;
@@ -265,8 +280,8 @@
 
         .stat-circle {
             display: flex;
-            width: 0.4in;
-            height: 0.4in;
+            width: 0.33in;
+            height: 0.33in;
             align-items: center;
             justify-content: center;
             border: 2px solid #ffffff;
@@ -274,7 +289,7 @@
             background: #090909;
             color: #ffffff;
             font-family: var(--body-font);
-            font-size: 15px;
+            font-size: 12px;
             font-weight: 700;
             line-height: 1;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
@@ -286,7 +301,7 @@
             margin-top: 3px;
             color: #333333;
             font-family: var(--body-font);
-            font-size: 6px;
+            font-size: 5px;
             font-weight: 700;
             letter-spacing: 0.03em;
             line-height: 1.05;
@@ -305,13 +320,117 @@
             padding: 0.04in 0.05in 0;
             overflow: hidden;
             font-family: "Cardo", Georgia, serif;
-            font-size: 9px;
+            font-size: 14px;
             font-weight: 400;
             letter-spacing: 0.015em;
             line-height: 1.3;
             overflow-wrap: anywhere;
             text-align: center;
             text-wrap: balance;
+        }
+
+        .card.challenge .stats {
+            display: none;
+        }
+
+        .card.challenge .art-area {
+            flex-basis: 1.82in;
+        }
+
+        .card.journey {
+            width: var(--card-height);
+            height: var(--card-width);
+        }
+
+        .journey-type-watermark {
+            position: absolute;
+            top: 54%;
+            left: 50%;
+            width: 1.3in;
+            height: 1.3in;
+            color: var(--card-border-color, #111111);
+            opacity: 0.085;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .journey .card-header,
+        .journey .journey-requirements,
+        .journey .journey-circle,
+        .journey .journey-body {
+            z-index: 2;
+        }
+
+        .journey .card-header {
+            min-height: 0.46in;
+            padding: 0.1in 0.14in 0.04in;
+        }
+
+        .journey .card-name {
+            white-space: normal;
+        }
+
+        .journey-requirements {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+            flex: 0 0 auto;
+            gap: 0.16in;
+            margin: 0.02in 0.17in 0.1in;
+        }
+
+        .journey-requirement {
+            min-width: 0;
+            padding: 0;
+        }
+
+        .journey-required-card {
+            border: 0;
+            background: transparent;
+        }
+
+        .journey-required-card .journey-value {
+            font-family: var(--title-font);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .journey-circle {
+            margin: 0 0.17in 0.09in;
+        }
+
+        .journey-body {
+            display: flex;
+            flex: 1 1 auto;
+            min-height: 0;
+            padding: 0 0.17in 0.1in;
+        }
+
+        .journey-details {
+            display: flex;
+            width: 100%;
+            min-width: 0;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .journey-label {
+            margin-bottom: 3px;
+            color: #777777;
+            font-size: 6px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .journey-value {
+            font-family: "Cardo", Georgia, serif;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+
+        .journey-bonus {
+            padding: 0.09in 0 0;
+            border-top: 1px solid #d8d8d8;
         }
 
         @page {
@@ -341,9 +460,8 @@
             }
 
             #cards {
-                display: grid;
-                grid-template-columns: repeat(3, var(--card-width));
-                grid-auto-rows: var(--card-height);
+                display: flex;
+                flex-wrap: wrap;
                 justify-content: center;
                 align-content: start;
                 gap: 0;
@@ -362,6 +480,11 @@
                 box-shadow: none;
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
+            }
+
+            .card.journey {
+                width: var(--card-height);
+                height: var(--card-width);
             }
 
             .card::before {
@@ -393,8 +516,8 @@
             <h1 class="app-title">Test Play Card Maker</h1>
 
             <p class="app-description">
-                Paste seven columns from Excel: Name, Category, Pillar,
-                Ability, three values, and an optional Border Color.
+                Paste Pillar, Challenge, or landscape Journey card rows from Excel.
+                Column names determine which card layout is used.
             </p>
         </header>
 
@@ -406,9 +529,8 @@
             <textarea
                 id="excelInput"
                 spellcheck="false"
-                placeholder="Name	Category	Pillar	Ability	Protection	Knowledge	Harmony	Border Color
-Eagle	Animal	Air	May move over obstacles.	4	8	6	rgba(52, 120, 246, 0.9)
-Bear	Animal	Earth	Gains strength while defending.	9	3	5	rgba(38, 140, 75, 1)"
+                placeholder="Name	Card Type	Journey Type	Prereq. Card	Circle Requirements	Value Requirement	Completion Bonus
+The Tale of the Raven	Story/Journey	Guardian Story	Raven	Elder, Element, Seeking	Knowledge 14	Guardians: At the end of your turn, you can activate one ability from this circle."
             ></textarea>
 
             <div class="controls">
@@ -481,6 +603,22 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5	rgba(38, 140, 75, 1)"
             return String(value ?? "").trim();
         }
 
+        function normalizeHeader(value) {
+            return normalizeValue(value)
+                .toLowerCase()
+                .replace(/[._-]+/g, " ")
+                .replace(/\s+/g, " ");
+        }
+
+        function getField(row, headers, aliases, fallbackIndex = -1) {
+            const normalizedAliases = aliases.map(normalizeHeader);
+            const index = headers.findIndex((header) =>
+                normalizedAliases.includes(normalizeHeader(header))
+            );
+
+            return normalizeValue(row[index === -1 ? fallbackIndex : index]);
+        }
+
         function parseExcelText(text) {
             const normalizedText = String(text ?? "")
                 .replace(/\r\n?/g, "\n")
@@ -506,18 +644,37 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5	rgba(38, 140, 75, 1)"
 
             const headers = rawRows[0].map(normalizeValue);
 
-            const rows = rawRows
-                .slice(1)
-                .map((row) => {
+            let inheritedJourneyBonus = "";
+            const rows = rawRows.slice(1).map((row) => {
                     const paddedRow = [...row];
 
-                    while (paddedRow.length < 7) {
+                    while (paddedRow.length < headers.length) {
                         paddedRow.push("");
                     }
 
                     return paddedRow.map(normalizeValue);
                 })
-                .filter((row) => row[0] !== "");
+                .reduce((cards, row) => {
+                    if (row[0] === "") {
+                        const note = [...row].reverse().find(Boolean);
+                        if (note) inheritedJourneyBonus = note;
+                        return cards;
+                    }
+
+                    const type = getField(
+                        row,
+                        headers,
+                        ["card type", "category"],
+                        1
+                    ).toLowerCase();
+
+                    if (type.includes("journey") && inheritedJourneyBonus) {
+                        row.inheritedJourneyBonus = inheritedJourneyBonus;
+                    }
+
+                    cards.push(row);
+                    return cards;
+                }, []);
 
             return {
                 headers,
@@ -574,12 +731,53 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5	rgba(38, 140, 75, 1)"
                 .join(" ");
         }
 
+        // Font Awesome Free 7.3.1 — https://fontawesome.com/license/free
+        // Copyright 2026 Fonticons, Inc.
+        const typeIconPaths = {
+            guardian: "M298.5 156.9C312.8 199.8 298.2 243.1 265.9 253.7C233.6 264.3 195.8 238.1 181.5 195.2C167.2 152.3 181.8 109 214.1 98.4C246.4 87.8 284.2 114 298.5 156.9zM164.4 262.6C183.3 295 178.7 332.7 154.2 346.7C129.7 360.7 94.5 345.8 75.7 313.4C56.9 281 61.4 243.3 85.9 229.3C110.4 215.3 145.6 230.2 164.4 262.6zM133.2 465.2C185.6 323.9 278.7 288 320 288C361.3 288 454.4 323.9 506.8 465.2C510.4 474.9 512 485.3 512 495.7L512 497.3C512 523.1 491.1 544 465.3 544C453.8 544 442.4 542.6 431.3 539.8L343.3 517.8C328 514 312 514 296.7 517.8L208.7 539.8C197.6 542.6 186.2 544 174.7 544C148.9 544 128 523.1 128 497.3L128 495.7C128 485.3 129.6 474.9 133.2 465.2zM485.8 346.7C461.3 332.7 456.7 295 475.6 262.6C494.5 230.2 529.6 215.3 554.1 229.3C578.6 243.3 583.2 281 564.3 313.4C545.4 345.8 510.3 360.7 485.8 346.7zM374.1 253.7C341.8 243.1 327.2 199.8 341.5 156.9C355.8 114 393.6 87.8 425.9 98.4C458.2 109 472.8 152.3 458.5 195.2C444.2 238.1 406.4 264.3 374.1 253.7z",
+            element: "M535.3 70.7C541.7 64.6 551 62.4 559.6 65.2C569.4 68.5 576 77.7 576 88L576 274.9C576 406.1 467.9 512 337.2 512C260.2 512 193.8 462.5 169.7 393.3C134.3 424.1 112 469.4 112 520C112 533.3 101.3 544 88 544C74.7 544 64 533.3 64 520C64 445.1 102.2 379.1 160.1 340.3C195.4 316.7 237.5 304 280 304L360 304C373.3 304 384 293.3 384 280C384 266.7 373.3 256 360 256L280 256C240.3 256 202.7 264.8 169 280.5C192.3 210.5 258.2 160 336 160C402.4 160 451.8 137.9 484.7 116C503.9 103.2 520.2 87.9 535.4 70.7z",
+            elder: "M598.1 139.4C608.8 131.6 611.2 116.6 603.4 105.9C595.6 95.2 580.6 92.8 569.9 100.6L495.4 154.8L485.5 148.2C465.8 135 442.6 128 418.9 128L359.7 128L359.3 128L215.7 128C189 128 163.2 136.9 142.3 153.1L70.1 100.6C59.4 92.8 44.4 95.2 36.6 105.9C28.8 116.6 31.2 131.6 41.9 139.4L129.9 203.4C139.5 210.3 152.6 209.3 161 201L164.9 197.1C178.4 183.6 196.7 176 215.8 176L262.1 176L170.4 267.7C154.8 283.3 154.8 308.6 170.4 324.3L171.2 325.1C218 372 294 372 340.9 325.1L368 298L465.8 395.8C481.4 411.4 481.4 436.7 465.8 452.4L456 462.2L425 431.2C415.6 421.8 400.4 421.8 391.1 431.2C381.8 440.6 381.7 455.8 391.1 465.1L419.1 493.1C401.6 503.5 381.9 509.8 361.5 511.6L313 463C303.6 453.6 288.4 453.6 279.1 463C269.8 472.4 269.7 487.6 279.1 496.9L294.1 511.9L290.3 511.9C254.2 511.9 219.6 497.6 194.1 472.1L65 343C55.6 333.6 40.4 333.6 31.1 343C21.8 352.4 21.7 367.6 31.1 376.9L160.2 506.1C194.7 540.6 241.5 560 290.3 560L342.1 560L343.1 561L344.1 560L349.8 560C398.6 560 445.4 540.6 479.9 506.1L499.8 486.2C501 485 502.1 483.9 503.2 482.7C503.9 482.2 504.5 481.6 505.1 481L609 377C618.4 367.6 618.4 352.4 609 343.1C599.6 333.8 584.4 333.7 575.1 343.1L521.3 396.9C517.1 384.1 510 372 499.8 361.8L385 247C375.6 237.6 360.4 237.6 351.1 247L307 291.1C280.5 317.6 238.5 319.1 210.3 295.7L309 197C322.4 183.6 340.6 176 359.6 175.9L368.1 175.9L368.3 175.9L419.1 175.9C433.3 175.9 447.2 180.1 459 188L482.7 204C491.1 209.6 502 209.3 510.1 203.4L598.1 139.4z",
+            seeking: "M442.9 144C415.6 144 389.9 157.1 373.9 179.2L339.5 226.8C335 233 327.8 236.7 320.1 236.7C312.4 236.7 305.2 233 300.7 226.8L266.3 179.2C250.3 157.1 224.6 144 197.3 144C150.3 144 112.2 182.1 112.2 229.1C112.2 279 144.2 327.5 180.3 371.4C221.4 421.4 271.7 465.4 306.2 491.7C309.4 494.1 314.1 495.9 320.2 495.9C326.3 495.9 331 494.1 334.2 491.7C368.7 465.4 419 421.3 460.1 371.4C496.3 327.5 528.2 279 528.2 229.1C528.2 182.1 490.1 144 443.1 144zM335 151.1C360 116.5 400.2 96 442.9 96C516.4 96 576 155.6 576 229.1C576 297.7 533.1 358 496.9 401.9C452.8 455.5 399.6 502 363.1 529.8C350.8 539.2 335.6 543.9 320 543.9C304.4 543.9 289.2 539.2 276.9 529.8C240.4 502 187.2 455.5 143.1 402C106.9 358.1 64 297.7 64 229.1C64 155.6 123.6 96 197.1 96C239.8 96 280 116.5 305 151.1L320 171.8L335 151.1z"
+        };
+
+        function getTypeIconKey(value) {
+            const type = normalizeValue(value).toLowerCase();
+
+            if (type.includes("guardian") || type.includes("gaurdian")) return "guardian";
+            if (type.includes("element")) return "element";
+            if (type.includes("elder")) return "elder";
+            if (type.includes("seeking") || type.includes("virtue")) return "seeking";
+            return "";
+        }
+
+        function createTypeIconHtml(value, className) {
+            const key = getTypeIconKey(value);
+            if (!key) return "";
+
+            return `<div class="${className}" aria-hidden="true">
+                <svg viewBox="0 0 640 640" focusable="false">
+                    <path d="${typeIconPaths[key]}"></path>
+                </svg>
+            </div>`;
+        }
+
         function createCardHtml(row, headers) {
-            const name = normalizeValue(row[0]);
-            const category = normalizeValue(row[1]);
-            const pillar = normalizeValue(row[2]);
-            const ability = normalizeValue(row[3]);
+            const name = getField(row, headers, ["name"], 0);
+            const category = getField(
+                row,
+                headers,
+                ["category", "card type"],
+                1
+            );
+            const pillar = getField(row, headers, ["pillar", "sub type"], 2);
+            const ability = getField(row, headers, ["ability"], 3);
             const borderColor = getBorderColor(row, headers);
+
+            if (category.toLowerCase().includes("journey")) {
+                return createJourneyCardHtml(row, headers, borderColor);
+            }
+
+            const isChallenge = category.toLowerCase().includes("challenge");
 
             const subtitle = buildSubtitle(pillar, category);
             const cardStyle = borderColor
@@ -609,7 +807,8 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5	rgba(38, 140, 75, 1)"
                 .join("");
 
             return `
-                <article class="card"${cardStyle}>
+                <article class="card${isChallenge ? " challenge" : " pillar"}"${cardStyle}>
+                    ${isChallenge ? "" : createTypeIconHtml(pillar, "pillar-type-icon")}
                     <header class="card-header">
                         <div class="card-name" title="${escapeHtml(name)}">
                             ${escapeHtml(name)}
@@ -639,6 +838,131 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5	rgba(38, 140, 75, 1)"
             `;
         }
 
+        function createJourneyCardHtml(row, headers, borderColor) {
+            const name = getField(row, headers, ["name"], 0);
+            const cardType = getField(row, headers, ["card type", "category"], 1);
+            const prereqIndex = headers.findIndex((header) =>
+                ["prereq card", "prerequisite card", "prereq"]
+                    .includes(normalizeHeader(header))
+            );
+            const journeyType = getField(
+                row,
+                headers,
+                ["journey type", "story type", "sub type"]
+            ) || (
+                prereqIndex > 1 && !normalizeValue(headers[prereqIndex - 1])
+                    ? normalizeValue(row[prereqIndex - 1])
+                    : ""
+            );
+            const prereq = getField(
+                row,
+                headers,
+                ["prereq card", "prerequisite card", "prereq"]
+            );
+            const circle = getField(
+                row,
+                headers,
+                ["circle requirements", "circle requirement"]
+            );
+            const value = getField(
+                row,
+                headers,
+                ["value requirement", "value requirements"]
+            );
+            const explicitBonus = getField(
+                row,
+                headers,
+                ["completion bonus", "bonus"]
+            );
+            const bonus = explicitBonus || row.inheritedJourneyBonus || "";
+            const cardStyle = borderColor
+                ? ` style="--card-border-color: ${escapeHtml(borderColor)}"`
+                : "";
+
+            return `
+                <article class="card journey"${cardStyle}>
+                    ${createTypeIconHtml(journeyType, "journey-type-watermark")}
+                    <header class="card-header">
+                        <div>
+                            <div class="card-name">${escapeHtml(name)}</div>
+                            <div class="card-subtitle">${escapeHtml(
+                                [journeyType, cardType].filter(Boolean).join(" · ")
+                            )}</div>
+                        </div>
+                    </header>
+
+                    <div class="journey-requirements">
+                        <div class="journey-requirement journey-required-card">
+                            <div class="journey-label">Required Card</div>
+                            <div class="journey-value">${escapeHtml(prereq)}</div>
+                        </div>
+                        <div class="journey-requirement">
+                            <div class="journey-label">Value Requirement</div>
+                            <div class="journey-value">${escapeHtml(value)}</div>
+                        </div>
+                    </div>
+
+                    ${circle ? `
+                        <div class="journey-circle">
+                            <div class="journey-label">Circle Requirements</div>
+                            <div class="journey-value">${escapeHtml(circle)}</div>
+                        </div>
+                    ` : ""}
+
+                    <div class="journey-body">
+                        <div class="journey-details">
+                            ${bonus ? `
+                                <div class="journey-bonus">
+                                    <div class="journey-label">Completion Bonus</div>
+                                    <div class="journey-value">${escapeHtml(bonus)}</div>
+                                </div>
+                            ` : ""}
+                        </div>
+                    </div>
+                </article>
+            `;
+        }
+
+        function shrinkTextToFit(element, minimumSize) {
+            element.style.fontSize = "";
+            let size = parseFloat(getComputedStyle(element).fontSize);
+
+            while (
+                size > minimumSize &&
+                (element.scrollHeight > element.clientHeight ||
+                    element.scrollWidth > element.clientWidth)
+            ) {
+                size -= 0.5;
+                element.style.fontSize = `${size}px`;
+            }
+        }
+
+        function fitGeneratedCardText() {
+            cardsContainer.querySelectorAll(".ability").forEach((element) => {
+                shrinkTextToFit(element, 7);
+            });
+
+            cardsContainer.querySelectorAll(".card-name").forEach((element) => {
+                shrinkTextToFit(element, 8);
+            });
+
+            cardsContainer.querySelectorAll(".journey-details").forEach((details) => {
+                const values = [...details.querySelectorAll(".journey-value")];
+                values.forEach((value) => value.style.fontSize = "");
+
+                let size = values.length
+                    ? parseFloat(getComputedStyle(values[0]).fontSize)
+                    : 10;
+
+                while (size > 7 && details.scrollHeight > details.clientHeight) {
+                    size -= 0.5;
+                    values.forEach((value) => {
+                        value.style.fontSize = `${size}px`;
+                    });
+                }
+            });
+        }
+
         function generateCards() {
             const parsed = parseExcelText(excelInput.value);
 
@@ -662,14 +986,13 @@ Bear	Animal	Earth	Gains strength while defending.	9	3	5	rgba(38, 140, 75, 1)"
                 .map((row) => createCardHtml(row, parsed.headers))
                 .join("");
 
+            fitGeneratedCardText();
+
             emptyState.hidden = true;
 
             const cardCount = parsed.rows.length;
-            const pageCount = Math.ceil(cardCount / 9);
-
             status.textContent =
-                `${cardCount} card${cardCount === 1 ? "" : "s"} generated. ` +
-                `${pageCount} page${pageCount === 1 ? "" : "s"}.`;
+                `${cardCount} card${cardCount === 1 ? "" : "s"} generated.`;
         }
 
         function printCards() {
